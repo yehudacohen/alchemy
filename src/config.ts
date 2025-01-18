@@ -7,12 +7,24 @@ export interface Config {
   state: StateStore;
 }
 
-const iac = path.resolve(process.cwd(), "iac.ts");
+const alchemy = path.resolve(process.cwd(), "alchemy.ts");
 
 let _config: Config | undefined;
 
-if (await fs.promises.exists(iac)) {
-  const mod = await import(iac);
+// Add exists() to fs.promises for older Node versions
+if (!fs.promises.exists) {
+  fs.promises.exists = async function exists(path: string): Promise<boolean> {
+    try {
+      await fs.promises.access(path);
+      return true;
+    } catch {
+      return false;
+    }
+  };
+}
+
+if (await fs.promises.exists(alchemy)) {
+  const mod = await import(alchemy);
   if (mod) {
     const config = mod.default as Config | undefined;
     if (config) {

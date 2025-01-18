@@ -1,5 +1,5 @@
 {
-  "name": "iac",
+  "name": "alchemy",
   "module": "index.ts",
   "type": "module",
   "devDependencies": {

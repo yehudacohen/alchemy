@@ -1,25 +1,33 @@
 import { stage } from "./config";
-import type { Inputs, Output } from "./io";
+import type { FQN } from "./fqn";
+import { Output, type Inputs } from "./io";
 import { currentStack, type Stack } from "./stack";
 import type { State } from "./state";
 
 export type ResourceID = string;
-export const ResourceID = Symbol.for("ResourceID");
-
-export const ResourceInputs = Symbol.for("ResourceInputs");
-export const ResourceStack = Symbol.for("ResourceStack");
-
-export type Resource<In extends readonly any[] = any[], Out = any> = {
-  [ResourceID]: string;
-  [ResourceInputs]: Inputs<In>;
-  [ResourceStack]: Stack;
-} & Output<Out>;
-
 export type ResourceType = string;
+
+export const ResourceID = Symbol.for("ResourceID");
+export const ResourceFQN = Symbol.for("ResourceFQN");
+export const ResourceProvider = Symbol.for("ResourceProvider");
+export const ResourceType = Symbol.for("ResourceType");
+export const ResourceInput = Symbol.for("ResourceInput");
+export const ResourceStack = Symbol.for("ResourceStack");
+export const ResourceOutput = Symbol.for("ResourceOutput");
+
+export type Resource<In extends any[] = any[], Out = any> = {
+  [ResourceFQN]: FQN;
+  [ResourceID]: string;
+  [ResourceProvider]: ResourceProvider<any, any[], any>;
+  [ResourceType]: ResourceType;
+  [ResourceStack]: Stack;
+  [ResourceInput]: Inputs<In>;
+  [ResourceOutput]: Output<Out>;
+} & Output<Out>;
 
 export interface ResourceContext<Type extends ResourceType> {
   type: Type;
-  id: ResourceID;
+  resourceID: ResourceID;
   event: "create" | "update" | "delete";
   stack: Stack;
   get<T>(key: string): Promise<T | undefined>;
@@ -38,22 +46,15 @@ export type ResourceProvider<
   Out,
 > = {
   type: Type;
-  apply(stack: Stack, id: string, ...inputs: Inputs<In>): Promise<Awaited<Out>>;
-  delete(
-    stack: Stack,
-    id: string,
-    state: Record<string, any>,
-    ...inputs: Inputs<In>
-  ): Promise<void>;
+  update(node: Resource, ...inputs: Inputs<In>): Promise<Awaited<Out>>;
+  delete(node: Resource, ...inputs: Inputs<In>): Promise<void>;
 } & (new (
   id: string,
   ...inputs: Inputs<In>
 ) => Resource<In, Out>);
 
-export interface ResourceNode {
-  stack: Stack;
-  provider: ResourceProvider<any, any[], any>;
-  inputs: Inputs<any[]>;
+export function isResource(value: any): value is Resource {
+  return value?.[ResourceID] !== undefined;
 }
 
 export function Resource<
@@ -64,41 +65,71 @@ export function Resource<
   type: Type,
   func: (ctx: ResourceContext<string>, ...args: Args) => Out,
 ): ResourceProvider<Type, Args, Awaited<Out>> {
-  if (getResources().has(type)) {
+  if (getResourceProviders().has(type)) {
     throw new Error(`Resource ${type} already exists`);
   }
 
+  interface Resource {
+    [ResourceID]: ResourceID;
+    [ResourceProvider]: ResourceProvider<Type, Args, Out>;
+    [ResourceType]: Type;
+    [ResourceStack]: Stack;
+    [ResourceInput]: Inputs<Args>;
+    [ResourceOutput]: Output<Out>;
+  }
+
   class Resource {
+    static readonly type = type;
+
     constructor(id: ResourceID, ...input: Inputs<Args>) {
       const stack = currentStack();
-      const resources = stack.resources;
-      if (resources.has(id)) {
+      const fqn = `${stack.id}:${id}` as const;
+      const node: ResourceNode = {
+        // @ts-expect-error - we know this is a ResourceProvider
+        provider: Resource,
+        // @ts-expect-error - we know this is a Resource
+        resource: this,
+      };
+      if (stack.resources.has(id)) {
         throw new Error(
           `Resource ${id} already exists in the stack: ${stack.id}`,
         );
       }
-      // @ts-expect-error - we have a module initialization circle
-      this[Symbol.for("ResourceID")] = id;
-      // @ts-expect-error
-      this[Symbol.for("ResourceStack")] = stack;
-      // @ts-expect-error
-      this[Symbol.for("ResourceInputs")] = input;
+      stack.resources.set(id, node);
 
-      resources.set(id, {
-        // @ts-expect-error - break the rules
-        provider: Resource,
-        inputs: input,
-        stack,
+      const output = Output.source<Out>(fqn);
+
+      this[ResourceID] = id;
+      this[ResourceProvider] = Resource as any;
+      this[ResourceType] = type;
+      this[ResourceStack] = stack;
+      this[ResourceInput] = input;
+      this[ResourceOutput] = output;
+
+      return new Proxy(this, {
+        // TODO(sam): this won't work for the sub-class (class Table extends Resource)
+        getPrototypeOf() {
+          return Resource.prototype;
+        },
+        get(target: any, prop) {
+          if (prop in target) {
+            return target[prop];
+          } else if (prop === "apply") {
+            return output.apply;
+          } else {
+            return output.apply((value) => value[prop as keyof Out]);
+          }
+        },
       });
     }
 
-    static readonly type = type;
-    static async apply(
-      stack: Stack,
-      id: string,
+    static async update(
+      resource: Resource,
       ...args: Args
     ): Promise<Awaited<Out>> {
-      const state: State = (await stack.state.get(stage, id)) ?? {
+      const stack = resource[ResourceStack];
+      const resourceID = resource[ResourceID];
+      const state: State = (await stack.state.get(stage, resourceID)) ?? {
         status: "creating",
         data: {},
         output: undefined,
@@ -111,19 +142,19 @@ export function Resource<
       const result = await func(
         {
           type,
-          id,
+          resourceID,
           event,
           stack,
           replace: () => {
             if (isReplaced) {
               console.warn(
-                `Resource ${type} ${id} is already marked as REPLACE`,
+                `Resource ${type} ${resourceID} is already marked as REPLACE`,
               );
               return;
             }
             isReplaced = true;
             stack.deletions.push({
-              id,
+              id: resourceID,
               data: {
                 ...state.data,
               },
@@ -133,18 +164,18 @@ export function Resource<
           get: (key) => state.data[key],
           set: async (key, value) => {
             state.data[key] = value;
-            await stack.state.set(stage, id, state);
+            await stack.state.set(stage, resourceID, state);
           },
           delete: async (key) => {
             const value = state.data[key];
             delete state.data[key];
-            await stack.state.set(stage, id, state);
+            await stack.state.set(stage, resourceID, state);
             return value;
           },
         },
         ...args,
       );
-      await stack.state.set(stage, id, {
+      await stack.state.set(stage, resourceID, {
         data: state.data,
         status: event === "create" ? "created" : "updated",
         output: result,
@@ -153,15 +184,16 @@ export function Resource<
     }
 
     static async delete(
-      stack: Stack,
-      id: string,
+      resource: Resource,
       state: Record<string, any>,
       ...args: Args
     ) {
+      const stack = resource[ResourceStack];
+      const resourceID = resource[ResourceID];
       await func(
         {
           type,
-          id,
+          resourceID: resourceID,
           event: "delete",
           stack,
           replace() {
@@ -183,7 +215,7 @@ export function Resource<
       );
     }
   }
-  getResources().set(type, Resource as any);
+  getResourceProviders().set(type, Resource as any);
   return Resource as any;
 }
 
@@ -192,8 +224,8 @@ type ResourceTypeMap = Map<
   ResourceProvider<ResourceType, any[], any>
 >;
 
-export function getResources(): ResourceTypeMap {
-  const IAC = Symbol.for("IAC");
+export function getResourceProviders(): ResourceTypeMap {
+  const IAC = Symbol.for("IAC::ResourceProviders");
 
   return ((global as any)[IAC] ??= new Map<
     ResourceType,
@@ -201,8 +233,14 @@ export function getResources(): ResourceTypeMap {
   >());
 }
 
-export function getResource(
+export function getResourceProvider(
   type: ResourceType,
 ): ResourceProvider<ResourceType, any[], any> | undefined {
-  return getResources().get(type);
+  return getResourceProviders().get(type);
+}
+
+export interface ResourceNode {
+  stack: Stack;
+  provider: ResourceProvider<any, any[], any>;
+  resource: Resource<any, any>;
 }

@@ -1,4 +1,4 @@
-import { getResource } from "./resource";
+import { getResourceProvider } from "./resource";
 import type { Stack } from "./stack";
 
 /**
@@ -14,7 +14,7 @@ import type { Stack } from "./stack";
 export async function deleteOrphanedResources(stack: Stack) {
   await Promise.allSettled(
     stack.deletions.map(({ id, data, inputs }) => {
-      const resource = getResource(id);
+      const resource = getResourceProvider(id);
       if (!resource) {
         // TODO(sam): log orphaned resources that cannot be deleted.
         throw new Error("Not Implemented");

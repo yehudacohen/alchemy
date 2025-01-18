@@ -3,7 +3,7 @@ import { Role } from "../src/components/aws/role";
 import { Table } from "../src/components/aws/table";
 import { Bundle } from "../src/components/esbuild";
 
-const environment = process.env.ENVIRONMENT || "dev";
+const environment = process.env.ENVIRONMENT ?? "dev";
 
 // Create DynamoDB table
 const table = new Table("items-table", {

@@ -1,3 +1,6 @@
+import type { FQN } from "./fqn";
+import { ResourceFQN, type Resource } from "./resource";
+
 export type Input<T> =
   | T
   | Output<T>
@@ -12,12 +15,12 @@ export type Input<T> =
 export type Eval<U> = U extends Output<infer V> ? Eval<V> : U;
 
 export namespace Output {
-  export function source<T>(id: string): Output<T> {
+  export function source<T>(fqn: FQN): Output<T> {
     // @ts-expect-error - we know we are an "Output"
-    return new OutputSource<T>(id);
+    return new OutputSource<T>(fqn);
   }
 
-  export function supply<T>(output: Output<T>, value: T) {
+  export function provide<T>(output: Output<T>, value: T) {
     if (output instanceof OutputSource) {
       output.supply(value);
     } else {
@@ -30,13 +33,13 @@ export namespace Output {
   ): Promise<Evaluated<T>> {
     if (output instanceof OutputSource) {
       return new Promise((resolve) => {
-        output.map(async (value) => {
+        output.subscribe(async (value) => {
           const evaluated = await evaluate(value);
           resolve(
             new Evaluated<T>(
               evaluated.value,
               // TODO: immutable set that is m log(n) to merge m elements into a set size n
-              new Set([...evaluated.deps, output.id]),
+              new Set([...evaluated.deps, output.resource[ResourceFQN]]),
             ),
           );
         });
@@ -98,27 +101,35 @@ export type Outputs<P extends readonly any[]> = P extends [
   : [];
 
 export class OutputSource<T> {
-  public box?: {
+  private box?: {
     value: T;
   } = undefined;
 
-  private subscribers: ((value: T) => void)[] = [];
-
-  constructor(public readonly id: string) {}
-
-  public supply(value: T) {
-    this.box = { value };
-    const subscribers = this.subscribers;
-    this.subscribers = [];
-    subscribers.forEach((fn) => fn(value));
-  }
+  constructor(public readonly resource: Resource<any[], T>) {}
 
   public apply<U>(fn: (value: T) => U): Output<U> {
     // @ts-expect-error - we know we are an "Output"
     return new OutputChain<T, U>(this, fn);
   }
 
-  public map(fn: (value: T) => Promise<void>) {
+  public supply(value: T) {
+    if (this.box) {
+      throw new Error(
+        `OutputSource ${this.resource[ResourceFQN]} already has a value`,
+      );
+    }
+    this.box = { value };
+    const subscribers = this.subscribers;
+    this.subscribers = [];
+    subscribers.forEach((fn) => fn(value));
+  }
+
+  private subscribers: ((value: T) => void)[] = [];
+
+  /**
+   * @internal
+   */
+  public subscribe(fn: (value: T) => Promise<void>) {
     if (this.box) {
       fn(this.box.value);
     } else {
