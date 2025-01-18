@@ -1,6 +1,6 @@
 import { deletions, providers, resources, stage, state } from "./global";
 import type { Inputs } from "./input";
-import type { Output } from "./output";
+import { Output } from "./output";
 import type { State } from "./state";
 
 export type ResourceID = string;
@@ -127,8 +127,7 @@ export function Resource<
     }
 
     public [Apply]<U>(fn: (value: Out) => U): Output<U> {
-      // @ts-expect-error - we know we are an "Output"
-      return new OutputChain<Out, U>(this, fn);
+      return new Output<Out, U>(this as any, fn);
     }
 
     private box?: {

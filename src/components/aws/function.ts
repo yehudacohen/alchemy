@@ -15,6 +15,13 @@ import path from "node:path";
 import { ignore } from "../../error";
 import { Resource, type Context } from "../../resource";
 
+async function resolveRegion(client: LambdaClient): Promise<string> {
+  const region = client.config.region;
+  if (typeof region === "string") return region;
+  if (typeof region === "function") return region();
+  throw new Error("Could not resolve AWS region");
+}
+
 export interface FunctionProps {
   functionName: string;
   zipPath: string;
@@ -68,6 +75,7 @@ export class Function extends Resource(
   "lambda::Function",
   async (ctx: Context<FunctionOutput>, props: FunctionProps) => {
     const client = new LambdaClient({});
+    const region = await resolveRegion(client);
 
     const code = await zipCode(props.zipPath);
 
@@ -84,11 +92,11 @@ export class Function extends Resource(
       return {
         ...props,
         id: props.functionName,
-        arn: `arn:aws:lambda:${client.config.region}:${process.env.AWS_ACCOUNT_ID}:function:${props.functionName}`,
+        arn: `arn:aws:lambda:${region}:${process.env.AWS_ACCOUNT_ID}:function:${props.functionName}`,
         lastModified: new Date().toISOString(),
         version: "$LATEST",
-        qualifiedArn: `arn:aws:lambda:${client.config.region}:${process.env.AWS_ACCOUNT_ID}:function:${props.functionName}:$LATEST`,
-        invokeArn: `arn:aws:apigateway:${client.config.region}:lambda:path/2015-03-31/functions/arn:aws:lambda:${client.config.region}:${process.env.AWS_ACCOUNT_ID}:function:${props.functionName}/invocations`,
+        qualifiedArn: `arn:aws:lambda:${region}:${process.env.AWS_ACCOUNT_ID}:function:${props.functionName}:$LATEST`,
+        invokeArn: `arn:aws:apigateway:${region}:lambda:path/2015-03-31/functions/arn:aws:lambda:${region}:${process.env.AWS_ACCOUNT_ID}:function:${props.functionName}/invocations`,
         sourceCodeHash: "",
         sourceCodeSize: 0,
         architectures: props.architecture
@@ -227,7 +235,7 @@ export class Function extends Resource(
         lastModified: config.LastModified!,
         version: config.Version!,
         qualifiedArn: `${config.FunctionArn}:${config.Version}`,
-        invokeArn: `arn:aws:apigateway:${client.config.region}:lambda:path/2015-03-31/functions/${config.FunctionArn}/invocations`,
+        invokeArn: `arn:aws:apigateway:${region}:lambda:path/2015-03-31/functions/${config.FunctionArn}/invocations`,
         sourceCodeHash: config.CodeSha256!,
         sourceCodeSize: config.CodeSize!,
         ephemeralStorageSize: config.EphemeralStorage?.Size,

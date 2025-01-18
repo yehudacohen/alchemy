@@ -97,6 +97,9 @@ describe("AWS Resources", () => {
       );
       expect(output.state).toBe("Active");
       expect(output.lastUpdateStatus).toBe("Successful");
+      expect(output.invokeArn).toMatch(
+        /^arn:aws:apigateway:[a-z0-9-]+:lambda:path\/2015-03-31\/functions\/arn:aws:lambda:[a-z0-9-]+:\d+:function:alchemy-test-function\/invocations$/,
+      );
 
       // Immediately apply again to test stabilization logic
       const secondOutput = (await apply(func)).value as FunctionOutput;
