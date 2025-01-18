@@ -139,23 +139,6 @@ describe("AWS Resources", () => {
 
       await assertRoleNotExists("alchemy-test-update-role");
     });
-
-    // test("delete role", async () => {
-    //   const role = new Role("alchemy-test-delete-role", {
-    //     roleName: "iac-test-role",
-    //     assumeRolePolicy,
-    //   });
-
-    //   await apply(role);
-    //   // Verify deletion by trying to get the role - should throw
-    //   // await expect(async () => {
-    //   //   const role = new Role("test-role", {
-    //   //     roleName: "iac-test-role",
-    //   //     assumeRolePolicy,
-    //   //   });
-    //   //   await apply(role);
-    //   // }).rejects.toThrow();
-    // });
   });
 });
 

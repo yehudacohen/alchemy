@@ -8,7 +8,7 @@ import {
   type KeySchemaElement,
 } from "@aws-sdk/client-dynamodb";
 import { ignore } from "../../error";
-import { Resource } from "../../resource";
+import { Resource, type Context } from "../../resource";
 
 export interface TableProps {
   tableName: string;
@@ -26,9 +26,16 @@ export interface TableProps {
   tags?: Record<string, string>;
 }
 
+export interface TableOutput extends TableProps {
+  id: string; // Same as tableName
+  arn: string;
+  streamArn?: string;
+  tableId: string;
+}
+
 export class Table extends Resource(
   "dynamo::Table",
-  async (ctx, props: TableProps) => {
+  async (ctx: Context<TableOutput>, props: TableProps) => {
     const client = new DynamoDBClient({});
 
     if (ctx.event === "delete") {
@@ -39,6 +46,33 @@ export class Table extends Resource(
           }),
         ),
       );
+
+      // Wait for table to be deleted
+      let tableDeleted = false;
+      while (!tableDeleted) {
+        try {
+          await client.send(
+            new DescribeTableCommand({
+              TableName: props.tableName,
+            }),
+          );
+          // If we get here, table still exists
+          await new Promise((resolve) => setTimeout(resolve, 1000));
+        } catch (error) {
+          if (error instanceof ResourceNotFoundException) {
+            tableDeleted = true;
+          } else {
+            throw error;
+          }
+        }
+      }
+
+      return {
+        ...props,
+        id: props.tableName,
+        arn: `arn:aws:dynamodb:${client.config.region}:${process.env.AWS_ACCOUNT_ID}:table/${props.tableName}`,
+        tableId: "",
+      };
     } else {
       try {
         const attributeDefinitions = [
@@ -90,6 +124,7 @@ export class Table extends Resource(
 
         // Wait for table to be active
         let tableActive = false;
+        let tableDescription;
         while (!tableActive) {
           const response = await client.send(
             new DescribeTableCommand({
@@ -97,18 +132,38 @@ export class Table extends Resource(
             }),
           );
           tableActive = response.Table?.TableStatus === "ACTIVE";
-          if (!tableActive) {
+          if (tableActive) {
+            tableDescription = response.Table;
+          } else {
             await new Promise((resolve) => setTimeout(resolve, 1000));
           }
         }
+
+        return {
+          ...props,
+          id: props.tableName,
+          arn: tableDescription!.TableArn!,
+          streamArn: tableDescription!.LatestStreamArn,
+          tableId: tableDescription!.TableId!,
+        };
       } catch (error) {
         if (error instanceof ResourceInUseException) {
-          // Table already exists
-          return props;
+          // Table already exists, get its details
+          const response = await client.send(
+            new DescribeTableCommand({
+              TableName: props.tableName,
+            }),
+          );
+          return {
+            ...props,
+            id: props.tableName,
+            arn: response.Table!.TableArn!,
+            streamArn: response.Table!.LatestStreamArn,
+            tableId: response.Table!.TableId!,
+          };
         }
         throw error;
       }
     }
-    return props;
   },
 ) {}
