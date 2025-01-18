@@ -1,3 +1,5 @@
+import { apply } from "./apply";
+
 let finalized = false;
 
 /**
@@ -10,6 +12,14 @@ export async function alchemize() {
     return;
   }
   finalized = true;
+
+  const { resources } = await import("./global");
+
+  await Promise.all(
+    Array.from(resources.values())
+      .reverse()
+      .map((resource) => apply(resource.resource)),
+  );
 
   // await deleteOrphanedResources(root);
 }

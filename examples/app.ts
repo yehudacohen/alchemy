@@ -1,5 +1,6 @@
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { alchemize } from "../src/alchemize";
 import { Function } from "../src/components/aws/function";
 import { Role } from "../src/components/aws/role";
 import { Table } from "../src/components/aws/table";
@@ -10,8 +11,8 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const environment = process.env.ENVIRONMENT ?? "dev";
 
 // Create DynamoDB table
-const table = new Table("items-table", {
-  tableName: "items",
+const table = new Table("alchemy-items-table", {
+  tableName: "alchemy-items",
   partitionKey: {
     name: "id",
     type: "S",
@@ -22,8 +23,8 @@ const table = new Table("items-table", {
 });
 
 // Create Lambda execution role with DynamoDB access
-const role = new Role("api-role", {
-  roleName: "api-lambda-role",
+const role = new Role("alchemy-api-role", {
+  roleName: "alchemy-api-lambda-role",
   assumeRolePolicy: {
     Version: "2012-10-17",
     Statement: [
@@ -55,9 +56,9 @@ const bundle = new Bundle("api-bundle", {
 });
 
 const api = new Function("api", {
-  functionName: "items-api",
+  functionName: "alchemy-items-api",
   zipPath: bundle.path,
-  role: role.roleName,
+  roleArn: role.arn,
   handler: "index.handler",
   environment: {
     TABLE_NAME: table.tableName,
@@ -75,3 +76,5 @@ const api = new Function("api", {
     Environment: "production",
   },
 });
+
+await alchemize();

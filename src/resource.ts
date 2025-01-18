@@ -9,12 +9,13 @@ export const ResourceID = Symbol.for("ResourceID");
 export const ResourceProvider = Symbol.for("ResourceProvider");
 export const ResourceInput = Symbol.for("ResourceInput");
 export const ResourceOutput = Symbol.for("ResourceOutput");
-
+export const ResourceValue = Symbol.for("ResourceValue");
 export type Resource<In extends any[] = any[], Out = any> = {
   [ResourceID]: string;
   [ResourceProvider]: ResourceProvider<any, any[], any>;
   [ResourceInput]: Inputs<In>;
   [ResourceOutput]: Output<Out>;
+  [ResourceValue]?: Out;
 } & Output<Out>;
 
 export type Context<Outputs> = {
@@ -125,6 +126,7 @@ export function Resource<
     ): Promise<Awaited<Out>> {
       // const stack = resource[ResourceStack];
       const resourceID = resource[ResourceID];
+      console.log(`Update:  ${resourceID}`);
       let resourceState: State | undefined = await state.get(stage, resourceID);
       if (resourceState === undefined) {
         resourceState = {
@@ -180,6 +182,7 @@ export function Resource<
         },
         ...inputs,
       );
+      console.log(`Updated: ${resourceID}`);
       await state.set(stage, resourceID, {
         data: resourceState.data,
         status: event === "create" ? "created" : "updated",
@@ -187,6 +190,7 @@ export function Resource<
         inputs,
         deps: [...deps],
       });
+      Output.provide(resource[ResourceOutput], result);
       return result;
     }
 

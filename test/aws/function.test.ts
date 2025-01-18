@@ -82,7 +82,7 @@ describe("AWS Resources", () => {
       const func = new Function("alchemy-test-function", {
         functionName: "alchemy-test-function",
         zipPath: bundleOutput.path,
-        role: roleOutput.arn,
+        roleArn: roleOutput.arn,
         handler: "handler.handler",
         runtime: "nodejs20.x",
         tags: {
@@ -97,6 +97,11 @@ describe("AWS Resources", () => {
       );
       expect(output.state).toBe("Active");
       expect(output.lastUpdateStatus).toBe("Successful");
+
+      // Immediately apply again to test stabilization logic
+      const secondOutput = (await apply(func)).value as FunctionOutput;
+      expect(secondOutput.state).toBe("Active");
+      expect(secondOutput.lastUpdateStatus).toBe("Successful");
 
       // Invoke the function
       const testEvent = { test: "event" };

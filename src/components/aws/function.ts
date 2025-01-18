@@ -18,7 +18,7 @@ import { Resource, type Context } from "../../resource";
 export interface FunctionProps {
   functionName: string;
   zipPath: string;
-  role: string;
+  roleArn: string;
   handler?: string;
   runtime?: Runtime;
   architecture?: Architecture;
@@ -69,22 +69,6 @@ export class Function extends Resource(
   async (ctx: Context<FunctionOutput>, props: FunctionProps) => {
     const client = new LambdaClient({});
 
-    // Helper to zip the code
-    async function zipCode(filePath: string): Promise<Buffer> {
-      const fileContent = await fs.promises.readFile(filePath);
-      const fileName = path.basename(filePath);
-
-      // Create a zip buffer in memory
-      const chunks: Buffer[] = [];
-      const zip = require("jszip")();
-      zip.file(fileName, fileContent);
-      return zip.generateAsync({
-        type: "nodebuffer",
-        compression: "DEFLATE",
-        platform: "UNIX",
-      });
-    }
-
     const code = await zipCode(props.zipPath);
 
     if (ctx.event === "delete") {
@@ -124,6 +108,9 @@ export class Function extends Resource(
         );
 
         if (ctx.event === "update") {
+          // Wait for function to stabilize
+          await waitForFunctionStabilization(client, props.functionName);
+
           // Update function code
           await client.send(
             new UpdateFunctionCodeCommand({
@@ -132,13 +119,16 @@ export class Function extends Resource(
             }),
           );
 
+          // Wait for code update to stabilize
+          await waitForFunctionStabilization(client, props.functionName);
+
           // Update function configuration
           await client.send(
             new UpdateFunctionConfigurationCommand({
               FunctionName: props.functionName,
               Handler: props.handler,
               Runtime: props.runtime,
-              Role: props.role,
+              Role: props.roleArn,
               Description: props.description,
               Timeout: props.timeout,
               MemorySize: props.memorySize,
@@ -148,19 +138,8 @@ export class Function extends Resource(
             }),
           );
 
-          // Wait for update to complete
-          let isUpdating = true;
-          while (isUpdating) {
-            const config = await client.send(
-              new GetFunctionConfigurationCommand({
-                FunctionName: props.functionName,
-              }),
-            );
-            isUpdating = config.LastUpdateStatus === "InProgress";
-            if (isUpdating) {
-              await new Promise((resolve) => setTimeout(resolve, 1000));
-            }
-          }
+          // Wait for configuration update to stabilize
+          await waitForFunctionStabilization(client, props.functionName);
         }
       } catch (error: any) {
         if (error.name === "ResourceNotFoundException") {
@@ -176,7 +155,7 @@ export class Function extends Resource(
                   Code: { ZipFile: code },
                   Handler: props.handler || "index.handler",
                   Runtime: props.runtime || Runtime.nodejs20x,
-                  Role: props.role,
+                  Role: props.roleArn,
                   Description: props.description,
                   Timeout: props.timeout || 3,
                   MemorySize: props.memorySize || 128,
@@ -270,3 +249,46 @@ export class Function extends Resource(
     }
   },
 ) {}
+
+// Helper to wait for function to stabilize
+async function waitForFunctionStabilization(
+  client: LambdaClient,
+  functionName: string,
+) {
+  while (true) {
+    const config = await client.send(
+      new GetFunctionConfigurationCommand({
+        FunctionName: functionName,
+      }),
+    );
+
+    // Check if function is in a stable state
+    if (config.State === "Active" && config.LastUpdateStatus === "Successful") {
+      break;
+    }
+
+    // If there's a failure, throw an error
+    if (config.State === "Failed" || config.LastUpdateStatus === "Failed") {
+      throw new Error(
+        `Function failed to stabilize: ${config.StateReason || config.LastUpdateStatusReason}`,
+      );
+    }
+
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+  }
+}
+
+// Helper to zip the code
+async function zipCode(filePath: string): Promise<Buffer> {
+  const fileContent = await fs.promises.readFile(filePath);
+  const fileName = path.basename(filePath);
+
+  // Create a zip buffer in memory
+  const zip = new (await import("jszip")).default();
+  zip.file(fileName, fileContent);
+  return zip.generateAsync({
+    type: "nodebuffer",
+    compression: "DEFLATE",
+    platform: "UNIX",
+  });
+}
