@@ -1,33 +1,24 @@
-import { stage } from "./config";
-import type { FQN } from "./fqn";
+import { deletions, resources, stage, state } from "./global";
 import { Output, type Inputs } from "./io";
-import { currentStack, type Stack } from "./stack";
 import type { State } from "./state";
 
 export type ResourceID = string;
 export type ResourceType = string;
 
 export const ResourceID = Symbol.for("ResourceID");
-export const ResourceFQN = Symbol.for("ResourceFQN");
 export const ResourceProvider = Symbol.for("ResourceProvider");
-export const ResourceType = Symbol.for("ResourceType");
 export const ResourceInput = Symbol.for("ResourceInput");
-export const ResourceStack = Symbol.for("ResourceStack");
 export const ResourceOutput = Symbol.for("ResourceOutput");
 
 export type Resource<In extends any[] = any[], Out = any> = {
-  [ResourceFQN]: FQN;
   [ResourceID]: string;
   [ResourceProvider]: ResourceProvider<any, any[], any>;
-  [ResourceType]: ResourceType;
-  [ResourceStack]: Stack;
   [ResourceInput]: Inputs<In>;
   [ResourceOutput]: Output<Out>;
 } & Output<Out>;
 
 export type Context<Outputs> = {
   resourceID: ResourceID;
-  stack: Stack;
   get<T>(key: string): Promise<T | undefined>;
   set<T>(key: string, value: T): Promise<void>;
   delete<T>(key: string): Promise<T | undefined>;
@@ -80,11 +71,8 @@ export function Resource<
   }
 
   interface Resource {
-    [ResourceFQN]: FQN;
     [ResourceID]: ResourceID;
     [ResourceProvider]: ResourceProvider<Type, Args, Out>;
-    [ResourceType]: Type;
-    [ResourceStack]: Stack;
     [ResourceInput]: Inputs<Args>;
     [ResourceOutput]: Output<Out>;
   }
@@ -93,28 +81,23 @@ export function Resource<
     static readonly type = type;
 
     constructor(id: ResourceID, ...input: Inputs<Args>) {
-      const stack = currentStack();
-      const fqn = `${stack.id}:${id}` as const;
       const node: ResourceNode = {
         // @ts-expect-error - we know this is a ResourceProvider
         provider: Resource,
         // @ts-expect-error - we know this is a Resource
         resource: this,
       };
-      if (stack.resources.has(id)) {
+      if (resources.has(id)) {
         // TODO(sam): do we want to throw?
         // it's kind of awesome that you can re-create a resource and call apply
         // console.warn(`Resource ${id} already exists in the stack: ${stack.id}`);
       }
-      stack.resources.set(id, node);
+      resources.set(id, node);
 
       const output = Output.source<Out>(this as any);
 
-      this[ResourceFQN] = fqn;
       this[ResourceID] = id;
       this[ResourceProvider] = Resource as any;
-      this[ResourceType] = type;
-      this[ResourceStack] = stack;
       this[ResourceInput] = input;
       this[ResourceOutput] = output;
 
@@ -140,25 +123,25 @@ export function Resource<
       deps: Set<ResourceID>,
       inputs: Args,
     ): Promise<Awaited<Out>> {
-      const stack = resource[ResourceStack];
+      // const stack = resource[ResourceStack];
       const resourceID = resource[ResourceID];
-      let state: State | undefined = await stack.state.get(stage, resourceID);
-      if (state === undefined) {
-        state = {
+      let resourceState: State | undefined = await state.get(stage, resourceID);
+      if (resourceState === undefined) {
+        resourceState = {
           status: "creating",
           data: {},
           output: undefined,
           deps: [...deps],
           inputs,
         };
-        await stack.state.set(stage, resourceID, state);
+        await state.set(stage, resourceID, resourceState);
       }
-      const event = state.status === "creating" ? "create" : "update";
-      state.status = event === "create" ? "creating" : "updating";
-      state.oldInputs = state.inputs;
-      state.inputs = inputs;
+      const event = resourceState.status === "creating" ? "create" : "update";
+      resourceState.status = event === "create" ? "creating" : "updating";
+      resourceState.oldInputs = resourceState.inputs;
+      resourceState.inputs = inputs;
 
-      await stack.state.set(stage, resourceID, state);
+      await state.set(stage, resourceID, resourceState);
 
       let isReplaced = false;
 
@@ -166,8 +149,7 @@ export function Resource<
         {
           resourceID,
           event,
-          stack,
-          output: state.output,
+          output: resourceState.output,
           replace: () => {
             if (isReplaced) {
               console.warn(
@@ -176,30 +158,30 @@ export function Resource<
               return;
             }
             isReplaced = true;
-            stack.deletions.push({
+            deletions.push({
               id: resourceID,
               data: {
-                ...state!.data,
+                ...resourceState!.data,
               },
               inputs: inputs,
             });
           },
-          get: (key) => state!.data[key],
+          get: (key) => resourceState!.data[key],
           set: async (key, value) => {
-            state!.data[key] = value;
-            await stack.state.set(stage, resourceID, state!);
+            resourceState!.data[key] = value;
+            await state.set(stage, resourceID, resourceState!);
           },
           delete: async (key) => {
-            const value = state!.data[key];
-            delete state!.data[key];
-            await stack.state.set(stage, resourceID, state!);
+            const value = resourceState!.data[key];
+            delete resourceState!.data[key];
+            await state.set(stage, resourceID, resourceState!);
             return value;
           },
         },
         ...inputs,
       );
-      await stack.state.set(stage, resourceID, {
-        data: state.data,
+      await state.set(stage, resourceID, {
+        data: resourceState.data,
         status: event === "create" ? "created" : "updated",
         output: result,
         inputs,
@@ -209,13 +191,11 @@ export function Resource<
     }
 
     static async delete(resource: Resource, state: State, inputs: Args) {
-      const stack = resource[ResourceStack];
       const resourceID = resource[ResourceID];
       await func(
         {
           resourceID: resourceID,
           event: "delete",
-          stack,
           output: state.output,
           replace() {
             throw new Error("Cannot replace a resource that is being deleted");
@@ -261,7 +241,6 @@ export function getResourceProvider(
 }
 
 export interface ResourceNode {
-  stack: Stack;
   provider: ResourceProvider<any, any[], any>;
   resource: Resource<any, any>;
 }

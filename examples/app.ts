@@ -1,7 +1,11 @@
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { Function } from "../src/components/aws/function";
 import { Role } from "../src/components/aws/role";
 import { Table } from "../src/components/aws/table";
 import { Bundle } from "../src/components/esbuild";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const environment = process.env.ENVIRONMENT ?? "dev";
 
@@ -39,7 +43,8 @@ const role = new Role("api-role", {
 
 // Create Lambda function
 const bundle = new Bundle("api-bundle", {
-  entryPoint: "./api-handler.ts",
+  entryPoint: path.join(__dirname, "handler.ts"),
+  outdir: ".out",
   format: "esm",
   platform: "node",
   target: "node20",

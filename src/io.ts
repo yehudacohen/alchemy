@@ -1,5 +1,5 @@
 import {
-  ResourceFQN,
+  ResourceID,
   ResourceOutput,
   isResource,
   type Resource,
@@ -98,7 +98,7 @@ export class OutputSource<T> {
   public provide(value: T) {
     if (this.box) {
       throw new Error(
-        `OutputSource ${this.resource[ResourceFQN]} already has a value`,
+        `OutputSource ${this.resource[ResourceID]} already has a value`,
       );
     }
     this.box = { value };

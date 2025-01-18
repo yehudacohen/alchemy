@@ -5,7 +5,7 @@ let finalized = false;
  *
  * By default, this will be called when
  */
-export async function finalize(code?: number) {
+export async function alchemize() {
   if (finalized) {
     return;
   }
@@ -14,5 +14,7 @@ export async function finalize(code?: number) {
   // await deleteOrphanedResources(root);
 }
 
-// Listen for signals or events
-process.on("exit", () => finalize(0));
+if (process.env.ALCHEMY_NO_DEPLOY !== "true") {
+  // Listen for signals or events
+  process.on("exit", () => alchemize());
+}

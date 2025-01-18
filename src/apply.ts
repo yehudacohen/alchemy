@@ -1,6 +1,6 @@
 import { OutputChain, OutputSource, type Output } from "./io";
 import {
-  ResourceFQN,
+  ResourceID,
   ResourceInput,
   ResourceProvider,
   isResource,
@@ -21,7 +21,7 @@ class Evaluated<T> {
 export async function apply<T>(output: T | Output<T>): Promise<Evaluated<T>> {
   if (isResource(output)) {
     const resource = output;
-    const resourceFQN = output[ResourceFQN];
+    const resourceID = resource[ResourceID];
     const evaluated = await Promise.all(
       resource[ResourceInput].map(apply<any>),
     );
@@ -33,7 +33,7 @@ export async function apply<T>(output: T | Output<T>): Promise<Evaluated<T>> {
       deps,
       inputs as [],
     );
-    return new Evaluated(result, [resourceFQN, ...deps]);
+    return new Evaluated(result, [resourceID, ...deps]);
   } else if (output instanceof OutputSource) {
     return new Promise((resolve, reject) => {
       output.subscribe(async (value) => {
@@ -42,7 +42,7 @@ export async function apply<T>(output: T | Output<T>): Promise<Evaluated<T>> {
           resolve(
             new Evaluated<T>(evaluated.value, [
               ...evaluated.deps,
-              output.resource[ResourceFQN],
+              output.resource[ResourceID],
             ]),
           );
         } catch (error) {

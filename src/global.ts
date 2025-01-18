@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+import type { ResourceID, ResourceNode } from "./resource";
 import { defaultStore, type StateStore } from "./state";
 
 export interface Config {
@@ -47,5 +48,13 @@ export const config: Config = _config ?? {
 export const stage = config.stage;
 
 export const state = config.state;
+
+export const resources = new Map<ResourceID, ResourceNode>();
+
+export const deletions: {
+  id: string;
+  data: Record<string, any>;
+  inputs: any[];
+}[] = [];
 
 await state.init?.();
