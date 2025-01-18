@@ -69,13 +69,7 @@ describe("AWS Resources", () => {
 
       await destroy(role);
 
-      await expect(
-        iam.send(
-          new GetRoleCommand({
-            RoleName: "alchemy-test-create-role",
-          }),
-        ),
-      ).rejects.toThrow(NoSuchEntityException);
+      await assertRoleNotExists("alchemy-test-create-role");
     });
 
     test("update role", async () => {
@@ -117,6 +111,10 @@ describe("AWS Resources", () => {
         Environment: "test",
         Updated: "true",
       });
+
+      await destroy(role);
+
+      await assertRoleNotExists("alchemy-test-update-role");
     });
 
     // test("delete role", async () => {
@@ -137,3 +135,13 @@ describe("AWS Resources", () => {
     // });
   });
 });
+
+async function assertRoleNotExists(roleName: string) {
+  await expect(
+    iam.send(
+      new GetRoleCommand({
+        RoleName: "alchemy-test-create-role",
+      }),
+    ),
+  ).rejects.toThrow(NoSuchEntityException);
+}
