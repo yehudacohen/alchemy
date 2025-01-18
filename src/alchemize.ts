@@ -1,4 +1,4 @@
-import { apply } from "./apply";
+import { evaluate } from "./apply";
 
 let finalized = false;
 
@@ -18,7 +18,7 @@ export async function alchemize() {
   await Promise.all(
     Array.from(resources.values())
       .reverse()
-      .map((resource) => apply(resource.resource)),
+      .map((resource) => evaluate(resource.resource)),
   );
 
   // await deleteOrphanedResources(root);

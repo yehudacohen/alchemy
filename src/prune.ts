@@ -3,10 +3,9 @@ import { Output } from "./output";
 import { Provider, ResourceID, isResource } from "./resource";
 
 /**
- * Destroy a resource and its dependencies in reverse dependency order.
- * @param output A sub-graph that produces a resource.
+ * Prune all resources from an Output and "down", i.e. that branches from it.
  */
-export async function destroy<T>(output: T | Output<T>): Promise<void> {
+export async function prune<T>(output: T | Output<T>): Promise<void> {
   if (isResource(output)) {
     const resource = output;
     const resourceID = output[ResourceID];

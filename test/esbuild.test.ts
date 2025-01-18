@@ -3,7 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { apply } from "../src/apply";
 import { Bundle } from "../src/components/esbuild";
-import { destroy } from "../src/destroy";
+import { prune } from "../src/prune";
 
 describe("esbuild", () => {
   describe("Bundle", () => {
@@ -20,7 +20,7 @@ describe("esbuild", () => {
       });
 
       // Apply the bundle
-      const output = (await apply(bundle)).value;
+      const output = await apply(bundle);
       expect(output.path).toBe(outputFile);
       expect(output.hash).toBeTruthy();
 
@@ -30,7 +30,7 @@ describe("esbuild", () => {
       expect(contents).toContain("Hello from bundled handler");
 
       // Destroy the bundle
-      await destroy(bundle);
+      await prune(bundle);
 
       // Verify the file is deleted
       expect(fs.existsSync(outputFile)).toBe(false);

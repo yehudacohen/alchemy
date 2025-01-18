@@ -7,6 +7,15 @@ import {
   type Resource,
 } from "./resource";
 
+/**
+ * Apply a sub-graph to produce a resource.
+ * @param output A sub-graph that produces a resource.
+ * @returns The resource properties.
+ */
+export async function apply<T>(output: T | Output<T>): Promise<T> {
+  return (await evaluate(output)).value;
+}
+
 class Evaluated<T> {
   constructor(
     public readonly value: T,
@@ -14,21 +23,18 @@ class Evaluated<T> {
   ) {}
 }
 
-const applied = new WeakMap<Resource, Promise<Evaluated<any>>>();
+const cache = new WeakMap<Resource, Promise<Evaluated<any>>>();
 
-/**
- * Apply a sub-graph to produce a resource.
- * @param output A sub-graph that produces a resource.
- * @returns The resource.
- */
-export async function apply<T>(output: T | Output<T>): Promise<Evaluated<T>> {
+export async function evaluate<T>(
+  output: T | Output<T>,
+): Promise<Evaluated<T>> {
   if (isResource(output)) {
     const resource = output;
     const resourceID = resource[ResourceID];
-    const evaluated = await Promise.all(resource[Input].map(apply<any>));
+    const evaluated = await Promise.all(resource[Input].map(evaluate<any>));
 
-    if (applied.has(resource)) {
-      return await applied.get(resource)!;
+    if (cache.has(resource)) {
+      return await cache.get(resource)!;
     }
     let resolve: (value: Evaluated<any>) => void;
     let reject: (reason?: any) => void;
@@ -37,7 +43,7 @@ export async function apply<T>(output: T | Output<T>): Promise<Evaluated<T>> {
       reject = rej;
     });
     // set this eagerly to avoid double-apply (caused by recursive applies to inputs)
-    applied.set(resource, promise);
+    cache.set(resource, promise);
 
     const deps = new Set(evaluated.flatMap((input) => input.deps));
     const inputs = evaluated.map((input) => input.value);
@@ -57,16 +63,18 @@ export async function apply<T>(output: T | Output<T>): Promise<Evaluated<T>> {
       parent: Output<any>;
       fn: (value: any) => T;
     };
-    const parent = await apply(inside.parent);
+    const parent = await evaluate(inside.parent);
     const ret = inside.fn(parent.value);
     // the ret may be an Output (e.g. in the flatMap case), so we need to evaluate it and include its deps
-    const evaluated = await apply(ret);
+    const evaluated = await evaluate(ret);
     return new Evaluated<T>(evaluated.value, [
       ...parent.deps,
       ...evaluated.deps,
     ]);
   } else if (Array.isArray(output)) {
-    const evaluatedItems = await Promise.all(output.map((item) => apply(item)));
+    const evaluatedItems = await Promise.all(
+      output.map((item) => evaluate(item)),
+    );
     return new Evaluated(
       evaluatedItems.map((e) => e.value) as unknown as T,
       evaluatedItems.flatMap((e) => e.deps),
@@ -74,7 +82,9 @@ export async function apply<T>(output: T | Output<T>): Promise<Evaluated<T>> {
   } else if (output && typeof output === "object") {
     const entries = Object.entries(output);
     const evaluatedEntries = await Promise.all(
-      entries.map(async ([key, value]) => [key, await apply(value)] as const),
+      entries.map(
+        async ([key, value]) => [key, await evaluate(value)] as const,
+      ),
     );
 
     const result = Object.fromEntries(

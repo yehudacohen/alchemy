@@ -5,9 +5,9 @@ import {
 } from "@aws-sdk/client-iam";
 import { describe, expect, test } from "bun:test";
 import { apply } from "../../src/apply";
-import type { PolicyDocument } from "../../src/components/aws/policy";
+import type { PolicyDocument } from "../../src/components/aws";
 import { Role, type RoleProps } from "../../src/components/aws/role";
-import { destroy } from "../../src/destroy";
+import { prune } from "../../src/prune";
 
 // Verify role was deleted
 const iam = new IAMClient({});
@@ -58,7 +58,7 @@ describe("AWS Resources", () => {
         ],
       });
 
-      const output = (await apply(role)).value;
+      const output = await apply(role);
       expect(output.id).toBe("alchemy-test-create-role");
       expect(output.arn).toMatch(
         /^arn:aws:iam::\d+:role\/alchemy-test-create-role$/,
@@ -67,7 +67,7 @@ describe("AWS Resources", () => {
       expect(output.roleId).toBeTruthy();
       expect(output.createDate).toBeInstanceOf(Date);
 
-      await destroy(role);
+      await prune(role);
 
       await assertRoleNotExists("alchemy-test-create-role");
     });
@@ -104,7 +104,7 @@ describe("AWS Resources", () => {
       };
       let role = new Role("alchemy-test-update-role", roleProps);
 
-      let output = (await apply(role)).value;
+      let output = await apply(role);
       expect(output.id).toBe("alchemy-test-update-role");
       expect(output.description).toBe("Updated test role for IAC");
       expect(output.maxSessionDuration).toBe(7200);
@@ -125,7 +125,7 @@ describe("AWS Resources", () => {
         ],
       });
 
-      output = (await apply(role)).value;
+      output = await apply(role);
 
       expect(output.description).toBe("Updated test role for IAC");
       expect(output.policies).toEqual([
@@ -135,7 +135,7 @@ describe("AWS Resources", () => {
         },
       ]);
 
-      await destroy(role);
+      await prune(role);
 
       await assertRoleNotExists("alchemy-test-update-role");
     });

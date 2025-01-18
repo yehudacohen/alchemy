@@ -7,14 +7,11 @@ import {
 import { describe, expect, test } from "bun:test";
 import path from "node:path";
 import { apply } from "../../src/apply";
-import {
-  Function,
-  type FunctionOutput,
-} from "../../src/components/aws/function";
+import { Function } from "../../src/components/aws/function";
 import type { PolicyDocument } from "../../src/components/aws/policy";
 import { Role } from "../../src/components/aws/role";
 import { Bundle } from "../../src/components/esbuild";
-import { destroy } from "../../src/destroy";
+import { prune } from "../../src/prune";
 
 const lambda = new LambdaClient({});
 
@@ -65,7 +62,7 @@ describe("AWS Resources", () => {
         },
       });
 
-      const roleOutput = (await apply(role)).value;
+      const roleOutput = await apply(role);
 
       // Bundle the handler code
       const bundle = new Bundle("test-lambda-bundle", {
@@ -76,7 +73,7 @@ describe("AWS Resources", () => {
         target: "node18",
       });
 
-      const bundleOutput = (await apply(bundle)).value;
+      const bundleOutput = await apply(bundle);
 
       // Create the Lambda function
       const func = new Function("alchemy-test-function", {
@@ -90,7 +87,7 @@ describe("AWS Resources", () => {
         },
       });
 
-      const output = (await apply(func)).value as FunctionOutput;
+      const output = await apply(func);
       expect(output.id).toBe("alchemy-test-function");
       expect(output.arn).toMatch(
         /^arn:aws:lambda:[a-z0-9-]+:\d+:function:alchemy-test-function$/,
@@ -102,7 +99,7 @@ describe("AWS Resources", () => {
       );
 
       // Immediately apply again to test stabilization logic
-      const secondOutput = (await apply(func)).value as FunctionOutput;
+      const secondOutput = await apply(func);
       expect(secondOutput.state).toBe("Active");
       expect(secondOutput.lastUpdateStatus).toBe("Successful");
 
@@ -125,9 +122,9 @@ describe("AWS Resources", () => {
       expect(body.event).toEqual(testEvent);
 
       // Clean up
-      await destroy(func);
-      await destroy(bundle);
-      await destroy(role);
+      await prune(func);
+      await prune(bundle);
+      await prune(role);
 
       await assertFunctionNotExists("alchemy-test-function");
     });

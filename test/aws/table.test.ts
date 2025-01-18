@@ -6,7 +6,7 @@ import {
 import { describe, expect, test } from "bun:test";
 import { apply } from "../../src/apply";
 import { Table } from "../../src/components/aws/table";
-import { destroy } from "../../src/destroy";
+import { prune } from "../../src/prune";
 
 const dynamo = new DynamoDBClient({});
 
@@ -28,7 +28,7 @@ describe("AWS Resources", () => {
         },
       });
 
-      const output = (await apply(table)).value;
+      const output = await apply(table);
       expect(output.id).toBe("alchemy-test-create-table");
       expect(output.arn).toMatch(
         /^arn:aws:dynamodb:[a-z0-9-]+:\d+:table\/alchemy-test-create-table$/,
@@ -54,7 +54,7 @@ describe("AWS Resources", () => {
       );
       expect(describeResponse.Table?.TableStatus).toBe("ACTIVE");
 
-      await destroy(table);
+      await prune(table);
 
       // Verify table is fully deleted
       await assertTableNotExists("alchemy-test-create-table");
