@@ -19,11 +19,17 @@ export type Input<T> =
 export type Eval<U> = U extends Output<infer V> ? Eval<V> : U;
 
 export namespace Output {
+  /**
+   * @internal
+   */
   export function source<T>(resource: Resource<any[], T>): Output<T> {
     // @ts-expect-error - we know we are an "Output"
     return new OutputSource<T>(resource);
   }
 
+  /**
+   * @internal
+   */
   export function provide<T>(output: Output<T>, value: T) {
     if (output instanceof OutputSource) {
       output.provide(value);

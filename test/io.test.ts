@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { evaluate } from "../src/apply";
+import { apply } from "../src/apply";
 import { Output } from "../src/io";
 import { Resource } from "../src/resource";
 
@@ -7,7 +7,7 @@ class Name extends Resource("test::Name", async (ctx, name: string) => {
   return name;
 }) {}
 
-describe("evaluate", () => {
+describe("apply", () => {
   test("capture first order dependencies", async () => {
     const name = new Name("id_1", "sam");
 
@@ -15,10 +15,10 @@ describe("evaluate", () => {
 
     Output.provide(name, "sam");
 
-    const evaluated = await evaluate(message);
+    const evaluated = await apply(message);
 
     expect(evaluated.value).toBe("Hello, sam!");
-    expect(evaluated.deps).toEqual(new Set(["root:id_1"]));
+    expect(evaluated.deps).toEqual(["root:id_1"]);
   });
 
   test("carry forward chained dependencies", async () => {
@@ -32,9 +32,9 @@ describe("evaluate", () => {
     Output.provide(first, "sam");
     Output.provide(second, "bob");
 
-    const evaluated = await evaluate(message);
+    const evaluated = await apply(message);
 
     expect(evaluated.value).toBe("sam bob");
-    expect(evaluated.deps).toEqual(new Set(["root:id_2", "root:id_3"]));
+    expect(evaluated.deps).toEqual(["root:id_2", "root:id_3"]);
   });
 });

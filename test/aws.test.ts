@@ -49,7 +49,7 @@ describe("AWS Resources", () => {
         ],
       });
 
-      const output = await apply(role);
+      const output = (await apply(role)).value;
       expect(output.id).toBe("iac-test-role");
       expect(output.arn).toMatch(/^arn:aws:iam::\d+:role\/iac-test-role$/);
       expect(output.uniqueId).toBeTruthy();
@@ -88,7 +88,7 @@ describe("AWS Resources", () => {
         ],
       });
 
-      const output = await apply(role);
+      const output = (await apply(role)).value;
       expect(output.id).toBe("iac-test-role");
       expect(output.description).toBe("Updated test role for IAC");
       expect(output.maxSessionDuration).toBe(7200);

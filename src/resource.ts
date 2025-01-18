@@ -47,14 +47,14 @@ export type ResourceProvider<
 > = {
   type: Type;
   update(
-    node: Resource,
-    deps: ResourceID[],
-    ...inputs: Inputs<In>
+    resource: Resource,
+    deps: Set<ResourceID>,
+    inputs: Inputs<In>,
   ): Promise<Awaited<Out>>;
   delete(
-    node: Resource,
-    deps: ResourceID[],
-    ...inputs: Inputs<In>
+    resource: Resource,
+    deps: Set<ResourceID>,
+    inputs: Inputs<In>,
   ): Promise<void>;
 } & (new (
   id: string,
@@ -135,8 +135,8 @@ export function Resource<
 
     static async update(
       resource: Resource,
-      deps: ResourceID[],
-      ...args: Args
+      deps: Set<ResourceID>,
+      inputs: Args,
     ): Promise<Awaited<Out>> {
       const stack = resource[ResourceStack];
       const resourceID = resource[ResourceID];
@@ -169,7 +169,7 @@ export function Resource<
               data: {
                 ...state.data,
               },
-              inputs: args,
+              inputs: inputs,
             });
           },
           get: (key) => state.data[key],
@@ -184,7 +184,7 @@ export function Resource<
             return value;
           },
         },
-        ...args,
+        ...inputs,
       );
       await stack.state.set(stage, resourceID, {
         data: state.data,
@@ -196,9 +196,9 @@ export function Resource<
 
     static async delete(
       resource: Resource,
-      deps: ResourceID[],
+      deps: Set<ResourceID>,
       state: Record<string, any>,
-      ...args: Args
+      inputs: Args,
     ) {
       const stack = resource[ResourceStack];
       const resourceID = resource[ResourceID];
@@ -223,7 +223,7 @@ export function Resource<
             return value;
           },
         },
-        ...args,
+        ...inputs,
       );
     }
   }
