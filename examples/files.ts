@@ -5,6 +5,7 @@ const output = new Folder("output", ".output");
 
 const index = new File(
   "index",
+  // $(path).join(output, "index.ts"),
   output.apply((output) => path.join(output, "index.ts")),
   "console.log('Hello, world!');",
 );

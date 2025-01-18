@@ -7,10 +7,20 @@
     "@types/bun": "latest"
   },
   "peerDependencies": {
-    "typescript": "^5.0.0"
+    "typescript": "^5.0.0",
+    "@aws-sdk/client-dynamodb": "^3.0.0",
+    "@aws-sdk/client-iam": "^3.0.0",
+    "@aws-sdk/client-lambda": "^3.0.0",
+    "@aws-sdk/client-s3": "^3.0.0",
+    "esbuild": "^0.24.2"
   },
   "exports": {
     ".": "./src/index.ts",
-    "./fs": "./src/components/fs"
+    "./fs": "./src/components/fs",
+    "./aws": "./src/components/aws",
+    "./esbuild": "./src/components/esbuild"
+  },
+  "dependencies": {
+    "@aws-sdk/client-iam": "^3.731.0"
   }
 }

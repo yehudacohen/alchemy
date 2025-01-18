@@ -3,14 +3,62 @@ export type Input<T> =
   | Output<T>
   | (T extends string | number | boolean
       ? Output<T>
-      : {
-          [k in keyof T]: Input<T[k]>;
-        });
+      : T extends any[]
+        ? Inputs<T>
+        : {
+            [k in keyof T]: Input<T[k]>;
+          });
 
-type UnwrapOutput<T> = T extends Output<infer U> ? UnwrapOutput<U> : T;
+export type Eval<U> = U extends Output<infer V> ? Eval<V> : U;
+
+export namespace Output {
+  export function source<T>(id: string): Output<T> {
+    // @ts-expect-error - we know we are an "Output"
+    return new OutputSource<T>(id);
+  }
+
+  export function supply<T>(output: Output<T>, value: T) {
+    if (output instanceof OutputSource) {
+      output.supply(value);
+    } else {
+      throw new Error("Cannot supply a non-source output");
+    }
+  }
+
+  export async function evaluate<T>(
+    output: T | Output<T>,
+  ): Promise<Evaluated<T>> {
+    if (output instanceof OutputSource) {
+      return new Promise((resolve) => {
+        output.map(async (value) => {
+          const evaluated = await evaluate(value);
+          resolve(
+            new Evaluated<T>(
+              evaluated.value,
+              // TODO: immutable set that is m log(n) to merge m elements into a set size n
+              new Set([...evaluated.deps, output.id]),
+            ),
+          );
+        });
+      });
+    } else if (output instanceof OutputChain) {
+      const parent = await evaluate(output.parent);
+      const ret = output.fn(parent.value);
+      // the ret may be an Output (e.g. in the flatMap case), so we need to evaluate it and include its deps
+      const evaluated = await evaluate(ret);
+
+      return new Evaluated<T>(
+        evaluated.value,
+        new Set([...parent.deps, ...evaluated.deps]),
+      );
+    } else {
+      return new Evaluated<T>(output as T);
+    }
+  }
+}
 
 export type Output<T> = {
-  apply<U>(fn: (value: T) => U): Output<UnwrapOutput<U>>;
+  apply<U>(fn: (value: T) => U): Output<Eval<U>>;
 } & (T extends string
   ? {
       [k in keyof typeof String.prototype]: Output<
@@ -30,231 +78,69 @@ export type Output<T> = {
           >;
         }
       : T extends any[]
-        ? {
-            length: Output<T["length"]>;
-          } & {
-            [K in Exclude<keyof T, "length">]: Output<T[K]>;
-          }
-        : T extends (...args: any[]) => any
-          ? (...args: Parameters<T>) => Output<ReturnType<T>>
-          : {
-              [k in keyof T]: Output<T[k]>;
-            });
+        ? Outputs<T>
+        : {
+            [k in keyof T]: Output<T[k]>;
+          });
 
-/* ---------------------------------------
-   Global Data Store + Event-based Resolution
----------------------------------------- */
+export type Inputs<P extends readonly any[]> = P extends [
+  infer First,
+  ...infer Rest,
+]
+  ? [Input<First>, ...Inputs<Rest>]
+  : [];
 
-const dataStore = new Map<string, unknown>();
-const waitingCallbacks = new Map<string, Array<(val: unknown) => void>>();
+export type Outputs<P extends readonly any[]> = P extends [
+  infer First,
+  ...infer Rest,
+]
+  ? [Output<First>, ...Outputs<Rest>]
+  : [];
 
-/**
- * Wait for the value of a specific sourceId.
- * If already resolved, returns immediately.
- * Otherwise, enqueues a callback in waitingCallbacks until .resolve is called.
- */
-function waitForValue<T>(id: string): Promise<T> {
-  return new Promise((resolve) => {
-    if (dataStore.has(id)) {
-      // Already resolved
-      resolve(dataStore.get(id) as T);
+export class OutputSource<T> {
+  public box?: {
+    value: T;
+  } = undefined;
+
+  private subscribers: ((value: T) => void)[] = [];
+
+  constructor(public readonly id: string) {}
+
+  public supply(value: T) {
+    this.box = { value };
+    const subscribers = this.subscribers;
+    this.subscribers = [];
+    subscribers.forEach((fn) => fn(value));
+  }
+
+  public apply<U>(fn: (value: T) => U): Output<U> {
+    // @ts-expect-error - we know we are an "Output"
+    return new OutputChain<T, U>(this, fn);
+  }
+
+  public map(fn: (value: T) => Promise<void>) {
+    if (this.box) {
+      fn(this.box.value);
     } else {
-      // Not resolved yet, queue the resolver
-      let list = waitingCallbacks.get(id);
-      if (!list) {
-        list = [];
-        waitingCallbacks.set(id, list);
-      }
-      list.push((val) => {
-        resolve(val as T);
-      });
+      this.subscribers.push(fn);
     }
-  });
-}
-
-/**
- * Resolves a particular source ID with a given value, unblocking any waiters.
- */
-function resolveValue<T>(id: string, val: T) {
-  dataStore.set(id, val);
-  const list = waitingCallbacks.get(id);
-  if (list) {
-    for (const cb of list) {
-      cb(val);
-    }
-    waitingCallbacks.delete(id);
   }
 }
 
-/* ---------------------------------------
-   Internal RealOutput Class
----------------------------------------- */
-
-const INTERNAL_SYMBOL = Symbol("REAL_OUTPUT_INTERNAL");
-
-class RealOutput<T> {
+export class OutputChain<T, U> {
   constructor(
-    private computeFn: () => Promise<T>,
-    private sourceIds: Set<string>,
+    public readonly parent: Output<T>,
+    public readonly fn: (value: T) => U,
   ) {}
 
-  getValue(): Promise<T> {
-    return this.computeFn();
-  }
-
-  getSources(): Set<string> {
-    return this.sourceIds;
-  }
-
-  apply<U>(fn: (val: T) => U | any): RealOutput<U> {
-    const nextSources = new Set(this.sourceIds);
-
-    // Recursively flatten nested outputs and collect all sources
-    const flatten = async (val: any): Promise<any> => {
-      if (!isProxyOutput(val)) {
-        return val;
-      }
-      const nested = getRealOutput(val);
-
-      // First await the value to ensure nested sources are discovered
-      const innerVal = await nested.getValue();
-
-      // Then merge the sources after the value is computed
-      for (const s of nested.getSources()) {
-        nextSources.add(s);
-      }
-
-      return flatten(innerVal);
-    };
-
-    const nextCompute = async () => {
-      const val = await this.getValue();
-      try {
-        const result = fn(val);
-        if (isProxyOutput(result)) {
-          const flattened = await flatten(result);
-          return flattened;
-        }
-        return result;
-      } catch (err) {
-        if (
-          err instanceof Error &&
-          err.message.includes("Symbol.toPrimitive")
-        ) {
-          // If we hit a Symbol.toPrimitive error, try to handle the value directly
-          return fn(val);
-        }
-        throw err;
-      }
-    };
-
-    return new RealOutput<U>(nextCompute, nextSources);
+  public apply<V>(fn: (value: U) => V): OutputChain<U, V> {
+    return new OutputChain<U, V>(this as any as Output<U>, fn);
   }
 }
 
-/* ---------------------------------------
-   Proxy + Helpers
----------------------------------------- */
-
-function isProxyOutput(obj: any): boolean {
-  return !!(obj && obj[INTERNAL_SYMBOL] instanceof RealOutput);
+export class Evaluated<T> {
+  constructor(
+    public readonly value: T,
+    public readonly deps: Set<string> = new Set(),
+  ) {}
 }
-
-function getRealOutput<T>(obj: any): RealOutput<T> {
-  return obj[INTERNAL_SYMBOL] as RealOutput<T>;
-}
-
-function createProxy<T>(real: RealOutput<T>): any {
-  // Create a dummy function with Symbol.toPrimitive defined
-  const dummyFn = () => {};
-  Object.defineProperty(dummyFn, Symbol.toPrimitive, {
-    value: () => "[ProxyOutput]",
-    writable: false,
-    enumerable: false,
-    configurable: true,
-  });
-
-  return new Proxy(dummyFn, {
-    get(_target, prop, _receiver) {
-      if (prop === INTERNAL_SYMBOL) {
-        return real;
-      }
-      if (prop === "apply") {
-        return (fn: (val: T) => any) => {
-          const newReal = real.apply(fn);
-          return createProxy(newReal);
-        };
-      }
-      if (prop === "promise") {
-        return () => real.getValue();
-      }
-      if (prop === "sources") {
-        return () => real.getSources();
-      }
-      if (prop === "resolve") {
-        return (callback: (s: Set<string>, v: T) => void) => {
-          real.getValue().then((val) => callback(real.getSources(), val));
-        };
-      }
-      if (prop === Symbol.toPrimitive) {
-        return () => "[ProxyOutput]";
-      }
-
-      // For property access (like .length or .trim), create a new proxy
-      const childReal = real.apply((val) => {
-        const propVal = (val as any)[prop];
-        if (typeof propVal === "function") {
-          return propVal.bind(val);
-        }
-        return propVal;
-      });
-      return createProxy(childReal);
-    },
-
-    apply(_target, thisArg, argArray) {
-      // Handle method calls (e.g., output.trim())
-      const newReal = real.apply((val) => {
-        if (typeof val !== "function") {
-          throw new Error("Tried to call a non-function value");
-        }
-        return val.apply(thisArg, argArray);
-      });
-      return createProxy(newReal);
-    },
-  });
-}
-
-/* ---------------------------------------
-   Public API
----------------------------------------- */
-
-export const Output = {
-  /**
-   * Create a new output that depends on a single source ID.
-   */
-  proxy<T>(id: string): Output<T> {
-    const real = new RealOutput<T>(() => waitForValue<T>(id), new Set([id]));
-    return createProxy(real);
-  },
-
-  /**
-   * Provide a value for a given source ID, unblocking any waiting calls.
-   */
-  resolve<T>(id: string, val: T): void {
-    resolveValue(id, val);
-  },
-
-  /**
-   * Return a promise of the final value for a given proxy-based output.
-   */
-  promise<T>(obj: any): Promise<T> {
-    return getRealOutput<T>(obj).getValue();
-  },
-
-  /**
-   * Return the set of source IDs for a given proxy-based output.
-   */
-  sources(obj: any): Set<string> {
-    return getRealOutput(obj).getSources();
-  },
-};

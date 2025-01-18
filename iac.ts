@@ -1,4 +1,4 @@
-// import "resource providers" (so that their resources are registered)
+// import "resource providers" (so that their resources are registered even when not used (e.g. for DELETE))
 import "./src/components/fs";
 
 // export default {

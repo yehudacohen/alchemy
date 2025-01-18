@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+import { ignore } from "../error";
 import { Resource } from "../resource";
 
 export class File extends Resource(
@@ -40,21 +41,5 @@ export class Folder extends Resource(
 ) {
   public file(filePath: string, content: string) {
     return new File(path.basename(filePath), filePath, content);
-  }
-}
-
-async function ignore<T>(
-  codes: string | string[],
-  fn: () => Promise<T>,
-): Promise<T | undefined> {
-  try {
-    return await fn();
-  } catch (error: any) {
-    if (
-      Array.isArray(codes) ? codes.includes(error.code) : error.code === codes
-    ) {
-      return undefined;
-    }
-    throw error;
   }
 }

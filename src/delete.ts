@@ -13,13 +13,14 @@ import type { Stack } from "./stack";
  */
 export async function deleteOrphanedResources(stack: Stack) {
   await Promise.allSettled(
-    stack.deletions.map(({ id, data, args }) => {
+    stack.deletions.map(({ id, data, inputs }) => {
       const resource = getResource(id);
       if (!resource) {
         // TODO(sam): log orphaned resources that cannot be deleted.
         throw new Error("Not Implemented");
       }
-      return resource.delete(id, data, ...args);
+      // @ts-expect-error - not sure why ...inputs is invalid
+      return resource.delete(stack, id, data, ...inputs);
     }),
   );
 }

@@ -1,11 +1,25 @@
 import { stage } from "./config";
-import type { Input, Output } from "./io";
+import type { Inputs, Output } from "./io";
 import { currentStack, type Stack } from "./stack";
 import type { State } from "./state";
 
+export type ResourceID = string;
+export const ResourceID = Symbol.for("ResourceID");
+
+export const ResourceInputs = Symbol.for("ResourceInputs");
+export const ResourceStack = Symbol.for("ResourceStack");
+
+export type Resource<In extends readonly any[] = any[], Out = any> = {
+  [ResourceID]: string;
+  [ResourceInputs]: Inputs<In>;
+  [ResourceStack]: Stack;
+} & Output<Out>;
+
+export type ResourceType = string;
+
 export interface ResourceContext<Type extends ResourceType> {
   type: Type;
-  id: string;
+  id: ResourceID;
   event: "create" | "update" | "delete";
   stack: Stack;
   get<T>(key: string): Promise<T | undefined>;
@@ -18,32 +32,28 @@ export interface ResourceContext<Type extends ResourceType> {
   replace(): void;
 }
 
-export type ResourceType = string;
-
-export type Resource<Type extends ResourceType, Args extends any[], Out> = {
+export type ResourceProvider<
+  Type extends ResourceType,
+  In extends any[],
+  Out,
+> = {
   type: Type;
+  apply(stack: Stack, id: string, ...inputs: Inputs<In>): Promise<Awaited<Out>>;
   delete(
+    stack: Stack,
     id: string,
     state: Record<string, any>,
-    ...args: {
-      [i in keyof Args]: Input<Args[i]>;
-    }
+    ...inputs: Inputs<In>
   ): Promise<void>;
 } & (new (
   id: string,
-  ...args: {
-    [i in keyof Args]: Input<Args[i]>;
-  }
-) => Output<Out>);
+  ...inputs: Inputs<In>
+) => Resource<In, Out>);
 
-const resources = new Map<ResourceType, Resource<ResourceType, any[], any>>();
-
-export function getResource<
-  const Type extends ResourceType,
-  Args extends any[],
-  Out,
->(type: Type): Resource<Type, Args, Out> | undefined {
-  return resources.get(type) as Resource<Type, Args, Out> | undefined;
+export interface ResourceNode {
+  stack: Stack;
+  provider: ResourceProvider<any, any[], any>;
+  inputs: Inputs<any[]>;
 }
 
 export function Resource<
@@ -53,20 +63,41 @@ export function Resource<
 >(
   type: Type,
   func: (ctx: ResourceContext<string>, ...args: Args) => Out,
-): Resource<Type, Args, Awaited<Out>> {
-  if (resources.has(type)) {
+): ResourceProvider<Type, Args, Awaited<Out>> {
+  if (getResources().has(type)) {
     throw new Error(`Resource ${type} already exists`);
   }
 
   class Resource {
-    constructor(id: string, ...args: Args) {
-      return new OutputProxy(id);
+    constructor(id: ResourceID, ...input: Inputs<Args>) {
+      const stack = currentStack();
+      const resources = stack.resources;
+      if (resources.has(id)) {
+        throw new Error(
+          `Resource ${id} already exists in the stack: ${stack.id}`,
+        );
+      }
+      // @ts-expect-error - we have a module initialization circle
+      this[Symbol.for("ResourceID")] = id;
+      // @ts-expect-error
+      this[Symbol.for("ResourceStack")] = stack;
+      // @ts-expect-error
+      this[Symbol.for("ResourceInputs")] = input;
+
+      resources.set(id, {
+        // @ts-expect-error - break the rules
+        provider: Resource,
+        inputs: input,
+        stack,
+      });
     }
 
     static readonly type = type;
-    static async apply(id: string, ...args: Args): Promise<Awaited<Out>> {
-      const stack = currentStack();
-
+    static async apply(
+      stack: Stack,
+      id: string,
+      ...args: Args
+    ): Promise<Awaited<Out>> {
       const state: State = (await stack.state.get(stage, id)) ?? {
         status: "creating",
         data: {},
@@ -96,7 +127,7 @@ export function Resource<
               data: {
                 ...state.data,
               },
-              args,
+              inputs: args,
             });
           },
           get: (key) => state.data[key],
@@ -120,13 +151,19 @@ export function Resource<
       });
       return result;
     }
-    static async delete(id: string, state: Record<string, any>, ...args: Args) {
+
+    static async delete(
+      stack: Stack,
+      id: string,
+      state: Record<string, any>,
+      ...args: Args
+    ) {
       await func(
         {
           type,
           id,
           event: "delete",
-          stack: currentStack(),
+          stack,
           replace() {
             throw new Error("Cannot replace a resource that is being deleted");
           },
@@ -146,6 +183,26 @@ export function Resource<
       );
     }
   }
-  resources.set(type, Resource as any);
+  getResources().set(type, Resource as any);
   return Resource as any;
+}
+
+type ResourceTypeMap = Map<
+  ResourceType,
+  ResourceProvider<ResourceType, any[], any>
+>;
+
+export function getResources(): ResourceTypeMap {
+  const IAC = Symbol.for("IAC");
+
+  return ((global as any)[IAC] ??= new Map<
+    ResourceType,
+    ResourceProvider<ResourceType, any[], any>
+  >());
+}
+
+export function getResource(
+  type: ResourceType,
+): ResourceProvider<ResourceType, any[], any> | undefined {
+  return getResources().get(type);
 }

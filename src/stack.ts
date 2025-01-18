@@ -1,6 +1,7 @@
 import { AsyncLocalStorage } from "node:async_hooks";
 import { config } from "./config";
 import { deleteOrphanedResources } from "./delete";
+import type { ResourceID, ResourceNode } from "./resource";
 import type { StateStore } from "./state";
 
 /**
@@ -9,15 +10,17 @@ import type { StateStore } from "./state";
 export interface Stack {
   id: string;
   state: StateStore;
+  resources: Map<ResourceID, ResourceNode>;
   deletions: {
     id: string;
     data: Record<string, any>;
-    args: any[];
+    inputs: any[];
   }[];
 }
 
 export const root: Stack = {
   id: "root",
+  resources: new Map(),
   deletions: [],
   state: config.state,
 };
@@ -40,6 +43,7 @@ export async function stack<T>(
   }
   const ctx: Stack = {
     id,
+    resources: new Map(),
     deletions: [],
     state: options?.store ?? config.state,
   };
