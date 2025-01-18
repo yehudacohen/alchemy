@@ -1,23 +1,29 @@
 import { describe, expect, test } from "bun:test";
+import { evaluate } from "../src/apply";
 import { Output } from "../src/io";
+import { Resource } from "../src/resource";
 
-describe("Output", () => {
-  test("apply", async () => {
-    const name = Output.source<string>("test:name");
+class Name extends Resource("test::Name", async (ctx, name: string) => {
+  return name;
+}) {}
+
+describe("evaluate", () => {
+  test("capture first order dependencies", async () => {
+    const name = new Name("id_1", "sam");
 
     const message = name.apply((value) => `Hello, ${value}!`);
 
     Output.provide(name, "sam");
 
-    const evaluated = await Output.evaluate(message);
+    const evaluated = await evaluate(message);
 
     expect(evaluated.value).toBe("Hello, sam!");
-    expect(evaluated.deps).toEqual(new Set(["test:name"]));
+    expect(evaluated.deps).toEqual(new Set(["root:id_1"]));
   });
 
   test("carry forward chained dependencies", async () => {
-    const first = Output.source<string>("test:first");
-    const second = Output.source<string>("test:second");
+    const first = new Name("id_2", "sam");
+    const second = new Name("id_3", "bob");
 
     const message = first.apply((value) =>
       second.apply((value2) => `${value} ${value2}`),
@@ -26,9 +32,9 @@ describe("Output", () => {
     Output.provide(first, "sam");
     Output.provide(second, "bob");
 
-    const evaluated = await Output.evaluate(message);
+    const evaluated = await evaluate(message);
 
     expect(evaluated.value).toBe("sam bob");
-    expect(evaluated.deps).toEqual(new Set(["test:first", "test:second"]));
+    expect(evaluated.deps).toEqual(new Set(["root:id_2", "root:id_3"]));
   });
 });

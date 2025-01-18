@@ -46,8 +46,16 @@ export type ResourceProvider<
   Out,
 > = {
   type: Type;
-  update(node: Resource, ...inputs: Inputs<In>): Promise<Awaited<Out>>;
-  delete(node: Resource, ...inputs: Inputs<In>): Promise<void>;
+  update(
+    node: Resource,
+    deps: ResourceID[],
+    ...inputs: Inputs<In>
+  ): Promise<Awaited<Out>>;
+  delete(
+    node: Resource,
+    deps: ResourceID[],
+    ...inputs: Inputs<In>
+  ): Promise<void>;
 } & (new (
   id: string,
   ...inputs: Inputs<In>
@@ -70,6 +78,7 @@ export function Resource<
   }
 
   interface Resource {
+    [ResourceFQN]: FQN;
     [ResourceID]: ResourceID;
     [ResourceProvider]: ResourceProvider<Type, Args, Out>;
     [ResourceType]: Type;
@@ -97,8 +106,9 @@ export function Resource<
       }
       stack.resources.set(id, node);
 
-      const output = Output.source<Out>(fqn);
+      const output = Output.source<Out>(this as any);
 
+      this[ResourceFQN] = fqn;
       this[ResourceID] = id;
       this[ResourceProvider] = Resource as any;
       this[ResourceType] = type;
@@ -125,6 +135,7 @@ export function Resource<
 
     static async update(
       resource: Resource,
+      deps: ResourceID[],
       ...args: Args
     ): Promise<Awaited<Out>> {
       const stack = resource[ResourceStack];
@@ -185,6 +196,7 @@ export function Resource<
 
     static async delete(
       resource: Resource,
+      deps: ResourceID[],
       state: Record<string, any>,
       ...args: Args
     ) {

@@ -1,5 +1,9 @@
-import type { FQN } from "./fqn";
-import { ResourceFQN, type Resource } from "./resource";
+import {
+  ResourceFQN,
+  ResourceOutput,
+  isResource,
+  type Resource,
+} from "./resource";
 
 export type Input<T> =
   | T
@@ -15,47 +19,20 @@ export type Input<T> =
 export type Eval<U> = U extends Output<infer V> ? Eval<V> : U;
 
 export namespace Output {
-  export function source<T>(fqn: FQN): Output<T> {
+  export function source<T>(resource: Resource<any[], T>): Output<T> {
     // @ts-expect-error - we know we are an "Output"
-    return new OutputSource<T>(fqn);
+    return new OutputSource<T>(resource);
   }
 
   export function provide<T>(output: Output<T>, value: T) {
     if (output instanceof OutputSource) {
-      output.supply(value);
+      output.provide(value);
+    } else if (isResource(output)) {
+      provide(output[ResourceOutput], value);
     } else {
-      throw new Error("Cannot supply a non-source output");
-    }
-  }
-
-  export async function evaluate<T>(
-    output: T | Output<T>,
-  ): Promise<Evaluated<T>> {
-    if (output instanceof OutputSource) {
-      return new Promise((resolve) => {
-        output.subscribe(async (value) => {
-          const evaluated = await evaluate(value);
-          resolve(
-            new Evaluated<T>(
-              evaluated.value,
-              // TODO: immutable set that is m log(n) to merge m elements into a set size n
-              new Set([...evaluated.deps, output.resource[ResourceFQN]]),
-            ),
-          );
-        });
-      });
-    } else if (output instanceof OutputChain) {
-      const parent = await evaluate(output.parent);
-      const ret = output.fn(parent.value);
-      // the ret may be an Output (e.g. in the flatMap case), so we need to evaluate it and include its deps
-      const evaluated = await evaluate(ret);
-
-      return new Evaluated<T>(
-        evaluated.value,
-        new Set([...parent.deps, ...evaluated.deps]),
+      throw new Error(
+        "Can only provide a value to an OutputSource or Resource",
       );
-    } else {
-      return new Evaluated<T>(output as T);
     }
   }
 }
@@ -112,7 +89,7 @@ export class OutputSource<T> {
     return new OutputChain<T, U>(this, fn);
   }
 
-  public supply(value: T) {
+  public provide(value: T) {
     if (this.box) {
       throw new Error(
         `OutputSource ${this.resource[ResourceFQN]} already has a value`,
@@ -147,11 +124,4 @@ export class OutputChain<T, U> {
   public apply<V>(fn: (value: U) => V): OutputChain<U, V> {
     return new OutputChain<U, V>(this as any as Output<U>, fn);
   }
-}
-
-export class Evaluated<T> {
-  constructor(
-    public readonly value: T,
-    public readonly deps: Set<string> = new Set(),
-  ) {}
 }
