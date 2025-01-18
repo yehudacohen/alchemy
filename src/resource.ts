@@ -1,11 +1,4 @@
-import {
-  deletions,
-  getResourceProviders,
-  resources,
-  stage,
-  state,
-  type ResourceNode,
-} from "./global";
+import { deletions, providers, resources, stage, state } from "./global";
 import type { Inputs } from "./input";
 import type { Output } from "./output";
 import type { State } from "./state";
@@ -84,7 +77,7 @@ export function Resource<
   type: Type,
   func: (ctx: Context<Out>, ...args: Args) => Promise<Out> | Out,
 ): Provider<Type, Args, Awaited<Out>> {
-  if (getResourceProviders().has(type)) {
+  if (providers.has(type)) {
     throw new Error(`Resource ${type} already exists`);
   }
 
@@ -99,18 +92,16 @@ export function Resource<
     static readonly type = type;
 
     constructor(id: ResourceID, ...input: Inputs<Args>) {
-      const node: ResourceNode = {
-        // @ts-expect-error - we know this is a ResourceProvider
+      const node = {
         provider: Resource,
-        // @ts-expect-error - we know this is a Resource
         resource: this,
-      };
+      } as const;
       if (resources.has(id)) {
         // TODO(sam): do we want to throw?
         // it's kind of awesome that you can re-create a resource and call apply
         // console.warn(`Resource ${id} already exists in the stack: ${stack.id}`);
       }
-      resources.set(id, node);
+      resources.set(id, node as any);
 
       this[ResourceID] = id;
       this[Provider] = Resource as any;
@@ -268,6 +259,6 @@ export function Resource<
       );
     }
   }
-  getResourceProviders().set(type, Resource as any);
+  providers.set(type, Resource as any);
   return Resource as any;
 }
