@@ -11,8 +11,9 @@ import {
   UpdateFunctionConfigurationCommand,
 } from "@aws-sdk/client-lambda";
 import fs from "node:fs";
+import path from "node:path";
 import { ignore } from "../../error";
-import { Resource } from "../../resource";
+import { Resource, type Context } from "../../resource";
 
 export interface FunctionProps {
   functionName: string;
@@ -65,9 +66,26 @@ export interface FunctionOutput extends FunctionProps {
 
 export class Function extends Resource(
   "lambda::Function",
-  async (ctx, props: FunctionProps) => {
+  async (ctx: Context<FunctionOutput>, props: FunctionProps) => {
     const client = new LambdaClient({});
-    const code = await fs.promises.readFile(props.zipPath);
+
+    // Helper to zip the code
+    async function zipCode(filePath: string): Promise<Buffer> {
+      const fileContent = await fs.promises.readFile(filePath);
+      const fileName = path.basename(filePath);
+
+      // Create a zip buffer in memory
+      const chunks: Buffer[] = [];
+      const zip = require("jszip")();
+      zip.file(fileName, fileContent);
+      return zip.generateAsync({
+        type: "nodebuffer",
+        compression: "DEFLATE",
+        platform: "UNIX",
+      });
+    }
+
+    const code = await zipCode(props.zipPath);
 
     if (ctx.event === "delete") {
       await ignore(ResourceNotFoundException.name, () =>
@@ -77,7 +95,25 @@ export class Function extends Resource(
           }),
         ),
       );
-      return props;
+
+      // Return a minimal FunctionOutput for deleted state
+      return {
+        ...props,
+        id: props.functionName,
+        arn: `arn:aws:lambda:${client.config.region}:${process.env.AWS_ACCOUNT_ID}:function:${props.functionName}`,
+        lastModified: new Date().toISOString(),
+        version: "$LATEST",
+        qualifiedArn: `arn:aws:lambda:${client.config.region}:${process.env.AWS_ACCOUNT_ID}:function:${props.functionName}:$LATEST`,
+        invokeArn: `arn:aws:apigateway:${client.config.region}:lambda:path/2015-03-31/functions/arn:aws:lambda:${client.config.region}:${process.env.AWS_ACCOUNT_ID}:function:${props.functionName}/invocations`,
+        sourceCodeHash: "",
+        sourceCodeSize: 0,
+        architectures: props.architecture
+          ? [props.architecture]
+          : [Architecture.x86_64],
+        revisionId: "",
+        state: "Inactive",
+        packageType: "Zip",
+      };
     } else {
       try {
         // Check if function exists
@@ -111,40 +147,99 @@ export class Function extends Resource(
                 : undefined,
             }),
           );
+
+          // Wait for update to complete
+          let isUpdating = true;
+          while (isUpdating) {
+            const config = await client.send(
+              new GetFunctionConfigurationCommand({
+                FunctionName: props.functionName,
+              }),
+            );
+            isUpdating = config.LastUpdateStatus === "InProgress";
+            if (isUpdating) {
+              await new Promise((resolve) => setTimeout(resolve, 1000));
+            }
+          }
         }
       } catch (error: any) {
         if (error.name === "ResourceNotFoundException") {
           // Create function if it doesn't exist
-          await client.send(
-            new CreateFunctionCommand({
-              FunctionName: props.functionName,
-              Code: { ZipFile: code },
-              Handler: props.handler || "index.handler",
-              Runtime: props.runtime || Runtime.nodejs20x,
-              Role: props.role,
-              Description: props.description,
-              Timeout: props.timeout || 3,
-              MemorySize: props.memorySize || 128,
-              Environment: props.environment
-                ? { Variables: props.environment }
-                : undefined,
-              Architectures: props.architecture
-                ? [props.architecture]
-                : [Architecture.x86_64],
-              Tags: props.tags,
-            }),
-          );
+          const startTime = Date.now();
+          let delay = 100; // Start with 100ms delay
+
+          while (true) {
+            try {
+              await client.send(
+                new CreateFunctionCommand({
+                  FunctionName: props.functionName,
+                  Code: { ZipFile: code },
+                  Handler: props.handler || "index.handler",
+                  Runtime: props.runtime || Runtime.nodejs20x,
+                  Role: props.role,
+                  Description: props.description,
+                  Timeout: props.timeout || 3,
+                  MemorySize: props.memorySize || 128,
+                  Environment: props.environment
+                    ? { Variables: props.environment }
+                    : undefined,
+                  Architectures: props.architecture
+                    ? [props.architecture]
+                    : [Architecture.x86_64],
+                  Tags: props.tags,
+                }),
+              );
+              break; // Success - exit retry loop
+            } catch (createError: any) {
+              if (
+                createError.name !== "InvalidParameterValueException" ||
+                !createError.message?.includes("cannot be assumed by Lambda")
+              ) {
+                throw createError; // Different error - rethrow
+              }
+
+              if (Date.now() - startTime > 10000) {
+                throw new Error(
+                  "Timeout waiting for IAM role to be assumable by Lambda after 10s",
+                );
+              }
+
+              await new Promise((resolve) => setTimeout(resolve, delay));
+              delay = Math.min(delay * 2, 1000); // Exponential backoff capped at 1s
+            }
+          }
+
+          // Wait for function to be active
+          let isCreating = true;
+          while (isCreating) {
+            const config = await client.send(
+              new GetFunctionConfigurationCommand({
+                FunctionName: props.functionName,
+              }),
+            );
+            isCreating = config.State === "Pending";
+            if (isCreating) {
+              await new Promise((resolve) => setTimeout(resolve, 1000));
+            }
+          }
         } else {
           throw error;
         }
       }
 
-      // Get function details
-      const config = await client.send(
-        new GetFunctionConfigurationCommand({
-          FunctionName: props.functionName,
-        }),
-      );
+      // Get complete function details
+      const [func, config] = await Promise.all([
+        client.send(
+          new GetFunctionCommand({
+            FunctionName: props.functionName,
+          }),
+        ),
+        client.send(
+          new GetFunctionConfigurationCommand({
+            FunctionName: props.functionName,
+          }),
+        ),
+      ]);
 
       const output: FunctionOutput = {
         ...props,

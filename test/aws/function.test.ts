@@ -1,0 +1,137 @@
+import {
+  GetFunctionCommand,
+  InvokeCommand,
+  LambdaClient,
+  ResourceNotFoundException,
+} from "@aws-sdk/client-lambda";
+import { describe, expect, test } from "bun:test";
+import path from "node:path";
+import { apply } from "../../src/apply";
+import {
+  Function,
+  type FunctionOutput,
+} from "../../src/components/aws/function";
+import type { PolicyDocument } from "../../src/components/aws/policy";
+import { Role } from "../../src/components/aws/role";
+import { Bundle } from "../../src/components/esbuild";
+import { destroy } from "../../src/destroy";
+
+const lambda = new LambdaClient({});
+
+describe("AWS Resources", () => {
+  describe("Function", () => {
+    test("create function with bundled code", async () => {
+      // First create the execution role
+      const assumeRolePolicy: PolicyDocument = {
+        Version: "2012-10-17",
+        Statement: [
+          {
+            Effect: "Allow",
+            Principal: {
+              Service: "lambda.amazonaws.com",
+            },
+            Action: "sts:AssumeRole",
+          },
+        ],
+      };
+
+      const logsPolicy: PolicyDocument = {
+        Version: "2012-10-17",
+        Statement: [
+          {
+            Effect: "Allow",
+            Action: [
+              "logs:CreateLogGroup",
+              "logs:CreateLogStream",
+              "logs:PutLogEvents",
+            ],
+            Resource: "*",
+          },
+        ],
+      };
+
+      const role = new Role("alchemy-test-lambda-role", {
+        roleName: "alchemy-test-lambda-role",
+        assumeRolePolicy,
+        description: "Test role for Lambda function",
+        policies: [
+          {
+            policyName: "logs",
+            policyDocument: logsPolicy,
+          },
+        ],
+        tags: {
+          Environment: "test",
+        },
+      });
+
+      const roleOutput = (await apply(role)).value;
+
+      // Bundle the handler code
+      const bundle = new Bundle("test-lambda-bundle", {
+        entryPoint: path.join("test", "handler.ts"),
+        outdir: path.join("test", ".output"),
+        format: "cjs",
+        platform: "node",
+        target: "node18",
+      });
+
+      const bundleOutput = (await apply(bundle)).value;
+
+      // Create the Lambda function
+      const func = new Function("alchemy-test-function", {
+        functionName: "alchemy-test-function",
+        zipPath: bundleOutput.path,
+        role: roleOutput.arn,
+        handler: "handler.handler",
+        runtime: "nodejs20.x",
+        tags: {
+          Environment: "test",
+        },
+      });
+
+      const output = (await apply(func)).value as FunctionOutput;
+      expect(output.id).toBe("alchemy-test-function");
+      expect(output.arn).toMatch(
+        /^arn:aws:lambda:[a-z0-9-]+:\d+:function:alchemy-test-function$/,
+      );
+      expect(output.state).toBe("Active");
+      expect(output.lastUpdateStatus).toBe("Successful");
+
+      // Invoke the function
+      const testEvent = { test: "event" };
+      const invokeResponse = await lambda.send(
+        new InvokeCommand({
+          FunctionName: output.functionName,
+          Payload: JSON.stringify(testEvent),
+        }),
+      );
+
+      // Parse the response
+      const responsePayload = new TextDecoder().decode(invokeResponse.Payload);
+      const response = JSON.parse(responsePayload);
+      expect(response.statusCode).toBe(200);
+
+      const body = JSON.parse(response.body);
+      expect(body.message).toBe("Hello from bundled handler!");
+      expect(body.event).toEqual(testEvent);
+
+      // Clean up
+      await destroy(func);
+      await destroy(bundle);
+      await destroy(role);
+
+      await assertFunctionNotExists("alchemy-test-function");
+    });
+  });
+});
+
+async function assertFunctionNotExists(functionName: string) {
+  await expect(
+    lambda.send(
+      new GetFunctionCommand({
+        FunctionName: functionName,
+      }),
+    ),
+  ).rejects.toThrow(ResourceNotFoundException);
+}

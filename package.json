@@ -21,6 +21,7 @@
     "./esbuild": "./src/components/esbuild"
   },
   "dependencies": {
-    "@aws-sdk/client-iam": "^3.731.0"
+    "@aws-sdk/client-iam": "^3.731.0",
+    "jszip": "^3.10.1"
   }
 }
