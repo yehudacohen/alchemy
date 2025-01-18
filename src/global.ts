@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
-import type { ResourceID, ResourceNode } from "./resource";
+import type { Provider, Resource, ResourceID, ResourceType } from "./resource";
 import { defaultStore, type StateStore } from "./state";
 
 export interface Config {
@@ -51,6 +51,11 @@ export const state = config.state;
 
 export const resources = new Map<ResourceID, ResourceNode>();
 
+export const providers: ResourceTypeMap = new Map<
+  ResourceType,
+  Provider<ResourceType, any[], any>
+>();
+
 export const deletions: {
   id: string;
   data: Record<string, any>;
@@ -58,3 +63,20 @@ export const deletions: {
 }[] = [];
 
 await state.init?.();
+
+type ResourceTypeMap = Map<ResourceType, Provider<ResourceType, any[], any>>;
+
+export function getResourceProviders(): ResourceTypeMap {
+  return providers;
+}
+
+export function getResourceProvider(
+  type: ResourceType,
+): Provider<ResourceType, any[], any> | undefined {
+  return getResourceProviders().get(type);
+}
+
+export interface ResourceNode {
+  provider: Provider<any, any[], any>;
+  resource: Resource<any, any>;
+}

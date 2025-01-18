@@ -1,6 +1,6 @@
 import { stage, state } from "./global";
-import { OutputChain, OutputSource, type Output } from "./io";
-import { ResourceID, ResourceProvider, isResource } from "./resource";
+import { Output } from "./output";
+import { Provider, ResourceID, isResource } from "./resource";
 
 /**
  * Destroy a resource and its dependencies in reverse dependency order.
@@ -16,13 +16,12 @@ export async function destroy<T>(output: T | Output<T>): Promise<void> {
       // we have no record of this resource, we must assume it's already deleted
       return;
     }
-    await resource[ResourceProvider].delete(
+    await resource[Provider].delete(
       resource,
       resourceState,
       resourceState.inputs as [],
     );
     await state.delete(stage, resourceID);
-  } else if (output instanceof OutputSource) {
-  } else if (output instanceof OutputChain) {
+  } else if (output instanceof Output) {
   }
 }

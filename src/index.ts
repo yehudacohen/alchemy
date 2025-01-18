@@ -1,6 +1,6 @@
 export * from "./alchemize";
 export * from "./global";
-export * from "./io";
+export * from "./output";
 export * from "./resource";
 
 export type { StateStore } from "./state";

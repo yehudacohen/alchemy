@@ -1,21 +1,42 @@
-import { deletions, resources, stage, state } from "./global";
-import { Output, type Inputs } from "./io";
+import {
+  deletions,
+  getResourceProviders,
+  resources,
+  stage,
+  state,
+  type ResourceNode,
+} from "./global";
+import type { Inputs } from "./input";
+import type { Output } from "./output";
 import type { State } from "./state";
 
 export type ResourceID = string;
 export type ResourceType = string;
 
 export const ResourceID = Symbol.for("ResourceID");
-export const ResourceProvider = Symbol.for("ResourceProvider");
-export const ResourceInput = Symbol.for("ResourceInput");
-export const ResourceOutput = Symbol.for("ResourceOutput");
-export const ResourceValue = Symbol.for("ResourceValue");
+export const Provider = Symbol.for("Provider");
+export const Input = Symbol.for("Input");
+export const Value = Symbol.for("Value");
+export const Apply = Symbol.for("Apply");
+export const Provide = Symbol.for("Provide");
+
+// properties that pierce through the Proxy
+const OrthogonalProperties = [
+  ResourceID,
+  Provider,
+  Input,
+  Value,
+  Apply,
+  Provide,
+] as const;
+
 export type Resource<In extends any[] = any[], Out = any> = {
   [ResourceID]: string;
-  [ResourceProvider]: ResourceProvider<any, any[], any>;
-  [ResourceInput]: Inputs<In>;
-  [ResourceOutput]: Output<Out>;
-  [ResourceValue]?: Out;
+  [Provider]: Provider<any, any[], any>;
+  [Input]: Inputs<In>;
+  [Value]?: Out;
+  [Apply]: <O>(value: Out) => O;
+  [Provide]: (value: Out) => void;
 } & Output<Out>;
 
 export type Context<Outputs> = {
@@ -38,11 +59,7 @@ export type Context<Outputs> = {
     }
 );
 
-export type ResourceProvider<
-  Type extends ResourceType,
-  In extends any[],
-  Out,
-> = {
+export type Provider<Type extends ResourceType, In extends any[], Out> = {
   type: Type;
   update(
     resource: Resource,
@@ -66,16 +83,16 @@ export function Resource<
 >(
   type: Type,
   func: (ctx: Context<Out>, ...args: Args) => Promise<Out> | Out,
-): ResourceProvider<Type, Args, Awaited<Out>> {
+): Provider<Type, Args, Awaited<Out>> {
   if (getResourceProviders().has(type)) {
     throw new Error(`Resource ${type} already exists`);
   }
 
   interface Resource {
     [ResourceID]: ResourceID;
-    [ResourceProvider]: ResourceProvider<Type, Args, Out>;
-    [ResourceInput]: Inputs<Args>;
-    [ResourceOutput]: Output<Out>;
+    [Provider]: Provider<Type, Args, Out>;
+    [Input]: Inputs<Args>;
+    [Value]?: Out;
   }
 
   class Resource {
@@ -95,12 +112,13 @@ export function Resource<
       }
       resources.set(id, node);
 
-      const output = Output.source<Out>(this as any);
-
       this[ResourceID] = id;
-      this[ResourceProvider] = Resource as any;
-      this[ResourceInput] = input;
-      this[ResourceOutput] = output;
+      this[Provider] = Resource as any;
+      this[Input] = input;
+      this[Value] = undefined;
+      this[Provide] = (value: Out) => {
+        this[Value] = value;
+      };
 
       return new Proxy(this, {
         // TODO(sam): this won't work for the sub-class (class Table extends Resource)
@@ -108,15 +126,45 @@ export function Resource<
           return Resource.prototype;
         },
         get(target: any, prop) {
-          if (prop in target) {
+          if (OrthogonalProperties.includes(prop as any)) {
             return target[prop];
-          } else if (prop === "apply") {
-            return output.apply;
           } else {
-            return output.apply((value) => value[prop as keyof Out]);
+            return target[Apply]((value: Out) => value[prop as keyof Out]);
           }
         },
       });
+    }
+
+    public [Apply]<U>(fn: (value: Out) => U): Output<U> {
+      // @ts-expect-error - we know we are an "Output"
+      return new OutputChain<Out, U>(this, fn);
+    }
+
+    private box?: {
+      value: Out;
+    } = undefined;
+
+    public [Provide](value: Out) {
+      if (this.box) {
+        throw new Error(`Output ${this[ResourceID]} already has a value`);
+      }
+      this.box = { value };
+      const subscribers = this.subscribers;
+      this.subscribers = [];
+      subscribers.forEach((fn) => fn(value));
+    }
+
+    private subscribers: ((value: Out) => void)[] = [];
+
+    /**
+     * @internal
+     */
+    public subscribe(fn: (value: Out) => Promise<void>) {
+      if (this.box) {
+        fn(this.box.value);
+      } else {
+        this.subscribers.push(fn);
+      }
     }
 
     static async update(
@@ -190,7 +238,7 @@ export function Resource<
         inputs,
         deps: [...deps],
       });
-      Output.provide(resource[ResourceOutput], result);
+      resource[Provide](result);
       return result;
     }
 
@@ -222,29 +270,4 @@ export function Resource<
   }
   getResourceProviders().set(type, Resource as any);
   return Resource as any;
-}
-
-type ResourceTypeMap = Map<
-  ResourceType,
-  ResourceProvider<ResourceType, any[], any>
->;
-
-export function getResourceProviders(): ResourceTypeMap {
-  const IAC = Symbol.for("IAC::ResourceProviders");
-
-  return ((global as any)[IAC] ??= new Map<
-    ResourceType,
-    ResourceProvider<ResourceType, any[], any>
-  >());
-}
-
-export function getResourceProvider(
-  type: ResourceType,
-): ResourceProvider<ResourceType, any[], any> | undefined {
-  return getResourceProviders().get(type);
-}
-
-export interface ResourceNode {
-  provider: ResourceProvider<any, any[], any>;
-  resource: Resource<any, any>;
 }
