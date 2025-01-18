@@ -96,9 +96,9 @@ export function Resource<
         resource: this,
       };
       if (stack.resources.has(id)) {
-        throw new Error(
-          `Resource ${id} already exists in the stack: ${stack.id}`,
-        );
+        // TODO(sam): do we want to throw?
+        // it's kind of awesome that you can re-create a resource and call apply
+        // console.warn(`Resource ${id} already exists in the stack: ${stack.id}`);
       }
       stack.resources.set(id, node);
 

@@ -1,6 +1,3 @@
-import { deleteOrphanedResources } from "./delete";
-import { root } from "./stack";
-
 let finalized = false;
 
 /**
@@ -14,7 +11,7 @@ export async function finalize(code?: number) {
   }
   finalized = true;
 
-  await deleteOrphanedResources(root);
+  // await deleteOrphanedResources(root);
 }
 
 // Listen for signals or events

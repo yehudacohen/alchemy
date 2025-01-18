@@ -6,7 +6,7 @@ import {
 import { describe, expect, test } from "bun:test";
 import { apply } from "../../src/apply";
 import type { PolicyDocument } from "../../src/components/aws/policy";
-import { Role } from "../../src/components/aws/role";
+import { Role, type RoleProps } from "../../src/components/aws/role";
 import { destroy } from "../../src/destroy";
 
 // Verify role was deleted
@@ -73,7 +73,7 @@ describe("AWS Resources", () => {
     });
 
     test("update role", async () => {
-      const role = new Role("alchemy-test-update-role", {
+      const roleProps: RoleProps = {
         roleName: "alchemy-test-update-role",
         assumeRolePolicy,
         description: "Updated test role for IAC",
@@ -101,9 +101,10 @@ describe("AWS Resources", () => {
             },
           },
         ],
-      });
+      };
+      let role = new Role("alchemy-test-update-role", roleProps);
 
-      const output = (await apply(role)).value;
+      let output = (await apply(role)).value;
       expect(output.id).toBe("alchemy-test-update-role");
       expect(output.description).toBe("Updated test role for IAC");
       expect(output.maxSessionDuration).toBe(7200);
@@ -111,6 +112,14 @@ describe("AWS Resources", () => {
         Environment: "test",
         Updated: "true",
       });
+
+      role = new Role("alchemy-test-update-role", {
+        ...roleProps,
+        description: "Updated test role for IAC",
+      });
+
+      output = (await apply(role)).value;
+      expect(output.description).toBe("Updated test role for IAC");
 
       await destroy(role);
 
