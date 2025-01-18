@@ -1,6 +1,7 @@
 import {
   CreateRoleCommand,
   DeleteRoleCommand,
+  DeleteRolePolicyCommand,
   GetRoleCommand,
   IAMClient,
   NoSuchEntityException,
@@ -43,6 +44,20 @@ export class Role extends Resource(
     const client = new IAMClient({});
 
     if (ctx.event === "delete") {
+      // Delete any inline policies first
+      if (props.policies) {
+        for (const policy of props.policies) {
+          await ignore(NoSuchEntityException.name, () =>
+            client.send(
+              new DeleteRolePolicyCommand({
+                RoleName: props.roleName,
+                PolicyName: policy.policyName,
+              }),
+            ),
+          );
+        }
+      }
+
       await ignore(NoSuchEntityException.name, () =>
         client.send(
           new DeleteRoleCommand({
@@ -58,172 +73,112 @@ export class Role extends Resource(
         roleId: "",
         createDate: new Date(),
       };
-    } else {
-      const assumeRolePolicyDocument = JSON.stringify(props.assumeRolePolicy);
+    }
 
-      try {
-        // Check if role exists
-        const existingRole = await client.send(
-          new GetRoleCommand({
-            RoleName: props.roleName,
-          }),
-        );
+    const assumeRolePolicyDocument = JSON.stringify(props.assumeRolePolicy);
+    let role;
 
-        if (ctx.event === "update") {
-          // Update assume role policy if it changed
-          if (
-            existingRole.Role?.AssumeRolePolicyDocument !==
-            assumeRolePolicyDocument
-          ) {
-            await client.send(
-              new UpdateAssumeRolePolicyCommand({
-                RoleName: props.roleName,
-                PolicyDocument: assumeRolePolicyDocument,
-              }),
-            );
-          }
+    try {
+      // Try to get the existing role first
+      role = await client.send(
+        new GetRoleCommand({
+          RoleName: props.roleName,
+        }),
+      );
 
-          // Update role description and max session duration if they changed
-          if (
-            existingRole.Role?.Description !== props.description ||
-            existingRole.Role?.MaxSessionDuration !== props.maxSessionDuration
-          ) {
-            await client.send(
-              new UpdateRoleCommand({
-                RoleName: props.roleName,
-                Description: props.description,
-                MaxSessionDuration: props.maxSessionDuration,
-              }),
-            );
-          }
-
-          // Update tags if they changed
-          if (props.tags) {
-            const tags: Tag[] = Object.entries(props.tags).map(
-              ([Key, Value]) => ({
-                Key,
-                Value,
-              }),
-            );
-            await client.send(
-              new TagRoleCommand({
-                RoleName: props.roleName,
-                Tags: tags,
-              }),
-            );
-          }
-
-          // Update inline policies
-          if (props.policies) {
-            for (const policy of props.policies) {
-              await client.send(
-                new PutRolePolicyCommand({
-                  RoleName: props.roleName,
-                  PolicyName: policy.policyName,
-                  PolicyDocument: JSON.stringify(policy.policyDocument),
-                }),
-              );
-            }
-          }
-        } else {
-          // Create role if it doesn't exist
+      // If we're here, the role exists and we're updating
+      if (ctx.event === "update") {
+        // Update assume role policy if it changed
+        if (role.Role?.AssumeRolePolicyDocument !== assumeRolePolicyDocument) {
           await client.send(
-            new CreateRoleCommand({
+            new UpdateAssumeRolePolicyCommand({
               RoleName: props.roleName,
-              AssumeRolePolicyDocument: assumeRolePolicyDocument,
-              Description: props.description,
-              Path: props.path,
-              MaxSessionDuration: props.maxSessionDuration,
-              PermissionsBoundary: props.permissionsBoundary,
-              Tags: props.tags
-                ? Object.entries(props.tags).map(([Key, Value]) => ({
-                    Key,
-                    Value,
-                  }))
-                : undefined,
+              PolicyDocument: assumeRolePolicyDocument,
             }),
           );
-
-          // Attach inline policies
-          if (props.policies) {
-            for (const policy of props.policies) {
-              await client.send(
-                new PutRolePolicyCommand({
-                  RoleName: props.roleName,
-                  PolicyName: policy.policyName,
-                  PolicyDocument: JSON.stringify(policy.policyDocument),
-                }),
-              );
-            }
-          }
         }
 
-        // Get role details
-        const role = await client.send(
-          new GetRoleCommand({
-            RoleName: props.roleName,
-          }),
-        );
-
-        return {
-          ...props,
-          id: props.roleName,
-          arn: role.Role!.Arn!,
-          uniqueId: role.Role!.RoleId!,
-          roleId: role.Role!.RoleId!,
-          createDate: role.Role!.CreateDate!,
-        };
-      } catch (error: any) {
-        if (error.name === "NoSuchEntity") {
-          // Create role if it doesn't exist
+        // Update role description and max session duration if they changed
+        if (
+          role.Role?.Description !== props.description ||
+          role.Role?.MaxSessionDuration !== props.maxSessionDuration
+        ) {
           await client.send(
-            new CreateRoleCommand({
+            new UpdateRoleCommand({
               RoleName: props.roleName,
-              AssumeRolePolicyDocument: assumeRolePolicyDocument,
               Description: props.description,
-              Path: props.path,
               MaxSessionDuration: props.maxSessionDuration,
-              PermissionsBoundary: props.permissionsBoundary,
-              Tags: props.tags
-                ? Object.entries(props.tags).map(([Key, Value]) => ({
-                    Key,
-                    Value,
-                  }))
-                : undefined,
             }),
           );
-
-          // Attach inline policies
-          if (props.policies) {
-            for (const policy of props.policies) {
-              await client.send(
-                new PutRolePolicyCommand({
-                  RoleName: props.roleName,
-                  PolicyName: policy.policyName,
-                  PolicyDocument: JSON.stringify(policy.policyDocument),
-                }),
-              );
-            }
-          }
-
-          // Get role details
-          const role = await client.send(
-            new GetRoleCommand({
-              RoleName: props.roleName,
-            }),
-          );
-
-          return {
-            ...props,
-            id: props.roleName,
-            arn: role.Role!.Arn!,
-            uniqueId: role.Role!.RoleId!,
-            roleId: role.Role!.RoleId!,
-            createDate: role.Role!.CreateDate!,
-          };
         }
+
+        // Update tags if they changed
+        if (props.tags) {
+          const tags: Tag[] = Object.entries(props.tags).map(
+            ([Key, Value]) => ({
+              Key,
+              Value,
+            }),
+          );
+          await client.send(
+            new TagRoleCommand({
+              RoleName: props.roleName,
+              Tags: tags,
+            }),
+          );
+        }
+      }
+    } catch (error: any) {
+      if (error.name !== NoSuchEntityException.name) {
         throw error;
       }
+
+      // Create role if it doesn't exist
+      await client.send(
+        new CreateRoleCommand({
+          RoleName: props.roleName,
+          AssumeRolePolicyDocument: assumeRolePolicyDocument,
+          Description: props.description,
+          Path: props.path,
+          MaxSessionDuration: props.maxSessionDuration,
+          PermissionsBoundary: props.permissionsBoundary,
+          Tags: props.tags
+            ? Object.entries(props.tags).map(([Key, Value]) => ({
+                Key,
+                Value,
+              }))
+            : undefined,
+        }),
+      );
+
+      // Get the newly created role
+      role = await client.send(
+        new GetRoleCommand({
+          RoleName: props.roleName,
+        }),
+      );
     }
+
+    // Update inline policies in both create and update cases
+    if (props.policies) {
+      for (const policy of props.policies) {
+        await client.send(
+          new PutRolePolicyCommand({
+            RoleName: props.roleName,
+            PolicyName: policy.policyName,
+            PolicyDocument: JSON.stringify(policy.policyDocument),
+          }),
+        );
+      }
+    }
+
+    return {
+      ...props,
+      id: props.roleName,
+      arn: role.Role!.Arn!,
+      uniqueId: role.Role!.RoleId!,
+      roleId: role.Role!.RoleId!,
+      createDate: role.Role!.CreateDate!,
+    };
   },
 ) {}

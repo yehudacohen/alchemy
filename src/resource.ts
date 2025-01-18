@@ -51,11 +51,7 @@ export type ResourceProvider<
     deps: Set<ResourceID>,
     inputs: Inputs<In>,
   ): Promise<Awaited<Out>>;
-  delete(
-    resource: Resource,
-    deps: Set<ResourceID>,
-    inputs: Inputs<In>,
-  ): Promise<void>;
+  delete(resource: Resource, state: State, inputs: Inputs<In>): Promise<void>;
 } & (new (
   id: string,
   ...inputs: Inputs<In>
@@ -140,13 +136,23 @@ export function Resource<
     ): Promise<Awaited<Out>> {
       const stack = resource[ResourceStack];
       const resourceID = resource[ResourceID];
-      const state: State = (await stack.state.get(stage, resourceID)) ?? {
-        status: "creating",
-        data: {},
-        output: undefined,
-      };
+      let state: State | undefined = await stack.state.get(stage, resourceID);
+      if (state === undefined) {
+        state = {
+          status: "creating",
+          data: {},
+          output: undefined,
+          deps: [...deps],
+          inputs,
+        };
+        await stack.state.set(stage, resourceID, state);
+      }
       const event = state.status === "creating" ? "create" : "update";
       state.status = event === "create" ? "creating" : "updating";
+      state.oldInputs = state.inputs;
+      state.inputs = inputs;
+
+      await stack.state.set(stage, resourceID, state);
 
       let isReplaced = false;
 
@@ -167,20 +173,20 @@ export function Resource<
             stack.deletions.push({
               id: resourceID,
               data: {
-                ...state.data,
+                ...state!.data,
               },
               inputs: inputs,
             });
           },
-          get: (key) => state.data[key],
+          get: (key) => state!.data[key],
           set: async (key, value) => {
-            state.data[key] = value;
-            await stack.state.set(stage, resourceID, state);
+            state!.data[key] = value;
+            await stack.state.set(stage, resourceID, state!);
           },
           delete: async (key) => {
-            const value = state.data[key];
-            delete state.data[key];
-            await stack.state.set(stage, resourceID, state);
+            const value = state!.data[key];
+            delete state!.data[key];
+            await stack.state.set(stage, resourceID, state!);
             return value;
           },
         },
@@ -190,16 +196,13 @@ export function Resource<
         data: state.data,
         status: event === "create" ? "created" : "updated",
         output: result,
+        inputs,
+        deps: [...deps],
       });
       return result;
     }
 
-    static async delete(
-      resource: Resource,
-      deps: Set<ResourceID>,
-      state: Record<string, any>,
-      inputs: Args,
-    ) {
+    static async delete(resource: Resource, state: State, inputs: Args) {
       const stack = resource[ResourceStack];
       const resourceID = resource[ResourceID];
       await func(

@@ -10,6 +10,9 @@ export interface State {
     | `deleting`
     | `deleted`;
   data: Record<string, any>;
+  deps: string[];
+  inputs: any[];
+  oldInputs?: any[];
   output: any;
 }
 
@@ -20,7 +23,7 @@ export interface StateStore {
   delete(stage: string, key: string): Promise<void>;
 }
 
-const stateFile = path.join(process.cwd(), ".iac");
+const stateFile = path.join(process.cwd(), ".alchemy");
 
 /**
  * @internal

@@ -40,7 +40,7 @@ if (await fs.promises.exists(alchemy)) {
 }
 
 export const config: Config = _config ?? {
-  stage: process.env.IAC_STAGE ?? process.env.USER ?? "dev",
+  stage: process.env.ALCHEMY_STAGE ?? process.env.USER ?? "dev",
   state: defaultStore,
 };
 

@@ -6,6 +6,13 @@ import {
   isResource,
 } from "./resource";
 
+class Evaluated<T> {
+  constructor(
+    public readonly value: T,
+    public readonly deps: string[] = [],
+  ) {}
+}
+
 /**
  * Apply a sub-graph to produce a resource.
  * @param output A sub-graph that produces a resource.
@@ -51,11 +58,4 @@ export async function apply<T>(output: T | Output<T>): Promise<Evaluated<T>> {
   } else {
     return new Evaluated<T>(output as T);
   }
-}
-
-class Evaluated<T> {
-  constructor(
-    public readonly value: T,
-    public readonly deps: string[] = [],
-  ) {}
 }
