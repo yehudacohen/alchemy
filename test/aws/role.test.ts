@@ -116,10 +116,24 @@ describe("AWS Resources", () => {
       role = new Role("alchemy-test-update-role", {
         ...roleProps,
         description: "Updated test role for IAC",
+        policies: [
+          {
+            policyName: "logs",
+            policyDocument: inlinePolicy,
+          },
+          // 1 policy removed
+        ],
       });
 
       output = (await apply(role)).value;
+
       expect(output.description).toBe("Updated test role for IAC");
+      expect(output.policies).toEqual([
+        {
+          policyName: "logs",
+          policyDocument: inlinePolicy,
+        },
+      ]);
 
       await destroy(role);
 

@@ -25,10 +25,8 @@ export type Resource<In extends any[] = any[], Out = any> = {
   [ResourceOutput]: Output<Out>;
 } & Output<Out>;
 
-export interface ResourceContext<Type extends ResourceType> {
-  type: Type;
+export type Context<Outputs> = {
   resourceID: ResourceID;
-  event: "create" | "update" | "delete";
   stack: Stack;
   get<T>(key: string): Promise<T | undefined>;
   set<T>(key: string, value: T): Promise<void>;
@@ -38,7 +36,15 @@ export interface ResourceContext<Type extends ResourceType> {
    * This will cause the resource to be deleted at the end of the stack's CREATE phase.
    */
   replace(): void;
-}
+} & (
+  | {
+      event: "create";
+    }
+  | {
+      event: "update" | "delete";
+      output: Outputs;
+    }
+);
 
 export type ResourceProvider<
   Type extends ResourceType,
@@ -67,7 +73,7 @@ export function Resource<
   Out,
 >(
   type: Type,
-  func: (ctx: ResourceContext<string>, ...args: Args) => Out,
+  func: (ctx: Context<Out>, ...args: Args) => Promise<Out> | Out,
 ): ResourceProvider<Type, Args, Awaited<Out>> {
   if (getResourceProviders().has(type)) {
     throw new Error(`Resource ${type} already exists`);
@@ -158,10 +164,10 @@ export function Resource<
 
       const result = await func(
         {
-          type,
           resourceID,
           event,
           stack,
+          output: state.output,
           replace: () => {
             if (isReplaced) {
               console.warn(
@@ -207,10 +213,10 @@ export function Resource<
       const resourceID = resource[ResourceID];
       await func(
         {
-          type,
           resourceID: resourceID,
           event: "delete",
           stack,
+          output: state.output,
           replace() {
             throw new Error("Cannot replace a resource that is being deleted");
           },

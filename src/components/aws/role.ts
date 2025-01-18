@@ -12,7 +12,7 @@ import {
   type Tag,
 } from "@aws-sdk/client-iam";
 import { ignore } from "../../error";
-import { Resource } from "../../resource";
+import { Resource, type Context } from "../../resource";
 import type { PolicyDocument } from "./policy";
 
 export interface RoleProps {
@@ -40,7 +40,7 @@ export interface RoleOutput extends RoleProps {
 
 export class Role extends Resource(
   "iam::Role",
-  async (ctx, props: RoleProps): Promise<RoleOutput> => {
+  async (ctx: Context<RoleOutput>, props: RoleProps) => {
     const client = new IAMClient({});
 
     if (ctx.event === "delete") {
@@ -132,6 +132,46 @@ export class Role extends Resource(
             }),
           );
         }
+
+        // Handle policy changes
+        const previousPolicies = ctx.output.policies || [];
+        const currentPolicies = props.policies || [];
+
+        // Delete policies that were removed
+        for (const oldPolicy of previousPolicies) {
+          if (
+            !currentPolicies.some((p) => p.policyName === oldPolicy.policyName)
+          ) {
+            await ignore(NoSuchEntityException.name, () =>
+              client.send(
+                new DeleteRolePolicyCommand({
+                  RoleName: props.roleName,
+                  PolicyName: oldPolicy.policyName,
+                }),
+              ),
+            );
+          }
+        }
+
+        // Update or create policies
+        for (const policy of currentPolicies) {
+          const oldPolicy = previousPolicies.find(
+            (p) => p.policyName === policy.policyName,
+          );
+          if (
+            !oldPolicy ||
+            JSON.stringify(oldPolicy.policyDocument) !==
+              JSON.stringify(policy.policyDocument)
+          ) {
+            await client.send(
+              new PutRolePolicyCommand({
+                RoleName: props.roleName,
+                PolicyName: policy.policyName,
+                PolicyDocument: JSON.stringify(policy.policyDocument),
+              }),
+            );
+          }
+        }
       }
     } catch (error: any) {
       if (error.name !== NoSuchEntityException.name) {
@@ -162,18 +202,18 @@ export class Role extends Resource(
           RoleName: props.roleName,
         }),
       );
-    }
 
-    // Update inline policies in both create and update cases
-    if (props.policies) {
-      for (const policy of props.policies) {
-        await client.send(
-          new PutRolePolicyCommand({
-            RoleName: props.roleName,
-            PolicyName: policy.policyName,
-            PolicyDocument: JSON.stringify(policy.policyDocument),
-          }),
-        );
+      // Create initial policies if specified
+      if (props.policies) {
+        for (const policy of props.policies) {
+          await client.send(
+            new PutRolePolicyCommand({
+              RoleName: props.roleName,
+              PolicyName: policy.policyName,
+              PolicyDocument: JSON.stringify(policy.policyDocument),
+            }),
+          );
+        }
       }
     }
 
