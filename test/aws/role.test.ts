@@ -1,8 +1,16 @@
+import {
+  GetRoleCommand,
+  IAMClient,
+  NoSuchEntityException,
+} from "@aws-sdk/client-iam";
 import { describe, expect, test } from "bun:test";
 import { apply } from "../../src/apply";
 import type { PolicyDocument } from "../../src/components/aws/policy";
 import { Role } from "../../src/components/aws/role";
 import { destroy } from "../../src/destroy";
+
+// Verify role was deleted
+const iam = new IAMClient({});
 
 describe("AWS Resources", () => {
   describe("Role", () => {
@@ -60,48 +68,56 @@ describe("AWS Resources", () => {
       expect(output.createDate).toBeInstanceOf(Date);
 
       await destroy(role);
+
+      await expect(
+        iam.send(
+          new GetRoleCommand({
+            RoleName: "alchemy-test-create-role",
+          }),
+        ),
+      ).rejects.toThrow(NoSuchEntityException);
     });
 
-    // test("update role", async () => {
-    //   const role = new Role("alchemy-test-update-role", {
-    //     roleName: "iac-test-role",
-    //     assumeRolePolicy,
-    //     description: "Updated test role for IAC",
-    //     maxSessionDuration: 7200,
-    //     tags: {
-    //       Environment: "test",
-    //       Updated: "true",
-    //     },
-    //     policies: [
-    //       {
-    //         policyName: "logs",
-    //         policyDocument: inlinePolicy,
-    //       },
-    //       {
-    //         policyName: "extra",
-    //         policyDocument: {
-    //           Version: "2012-10-17",
-    //           Statement: [
-    //             {
-    //               Effect: "Allow",
-    //               Action: "s3:ListBucket",
-    //               Resource: "*",
-    //             },
-    //           ],
-    //         },
-    //       },
-    //     ],
-    //   });
+    test("update role", async () => {
+      const role = new Role("alchemy-test-update-role", {
+        roleName: "alchemy-test-update-role",
+        assumeRolePolicy,
+        description: "Updated test role for IAC",
+        maxSessionDuration: 7200,
+        tags: {
+          Environment: "test",
+          Updated: "true",
+        },
+        policies: [
+          {
+            policyName: "logs",
+            policyDocument: inlinePolicy,
+          },
+          {
+            policyName: "extra",
+            policyDocument: {
+              Version: "2012-10-17",
+              Statement: [
+                {
+                  Effect: "Allow",
+                  Action: "s3:ListBucket",
+                  Resource: "*",
+                },
+              ],
+            },
+          },
+        ],
+      });
 
-    //   const output = (await apply(role)).value;
-    //   expect(output.id).toBe("iac-test-role");
-    //   expect(output.description).toBe("Updated test role for IAC");
-    //   expect(output.maxSessionDuration).toBe(7200);
-    //   expect(output.tags).toEqual({
-    //     Environment: "test",
-    //     Updated: "true",
-    //   });
-    // });
+      const output = (await apply(role)).value;
+      expect(output.id).toBe("alchemy-test-update-role");
+      expect(output.description).toBe("Updated test role for IAC");
+      expect(output.maxSessionDuration).toBe(7200);
+      expect(output.tags).toEqual({
+        Environment: "test",
+        Updated: "true",
+      });
+    });
 
     // test("delete role", async () => {
     //   const role = new Role("alchemy-test-delete-role", {

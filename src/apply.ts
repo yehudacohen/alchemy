@@ -35,15 +35,19 @@ export async function apply<T>(output: T | Output<T>): Promise<Evaluated<T>> {
     );
     return new Evaluated(result, [resourceFQN, ...deps]);
   } else if (output instanceof OutputSource) {
-    return new Promise((resolve) => {
+    return new Promise((resolve, reject) => {
       output.subscribe(async (value) => {
-        const evaluated = await apply(value);
-        resolve(
-          new Evaluated<T>(evaluated.value, [
-            ...evaluated.deps,
-            output.resource[ResourceFQN],
-          ]),
-        );
+        try {
+          const evaluated = await apply(value);
+          resolve(
+            new Evaluated<T>(evaluated.value, [
+              ...evaluated.deps,
+              output.resource[ResourceFQN],
+            ]),
+          );
+        } catch (error) {
+          reject(error);
+        }
       });
     });
   } else if (output instanceof OutputChain) {

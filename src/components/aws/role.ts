@@ -86,6 +86,11 @@ export class Role extends Resource(
         }),
       );
 
+      // If we're here, the role exists
+      if (ctx.event === "create") {
+        throw new Error(`Role ${props.roleName} already exists`);
+      }
+
       // If we're here, the role exists and we're updating
       if (ctx.event === "update") {
         // Update assume role policy if it changed
