@@ -100,7 +100,7 @@ A Resource provider is just a function with a globally unique name, e.g. `dynamo
 E.g. below we show what a simple `dynamo::Table` provider might look like.
 
 > [!NOTE]
-> See [table.ts](./src/components/aws/dynamo/table.ts) for the full implementation.
+> See [table.ts](./src/components/aws/table.ts) for the full implementation.
 
 ```ts
 interface TableInputs {
