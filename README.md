@@ -185,8 +185,7 @@ const tableArn = table.attributeDefinitions[0].attributeName; // Output<string>
 // table.apply(t => t.attributeDefinitions[0].attributeName);
 ```
 
-> [!NOTE]
-> `Output<T>` is inspired by Pulumi, with a little extra added sugar.
+> [!NOTE] > `Output<T>` is inspired by Pulumi, with a little extra added sugar.
 
 ## `apply` and `destroy`
 
@@ -267,7 +266,15 @@ await alchemize({ stage: "production" });
 await apply(func, { stage: "production" });
 ```
 
-2. Set the `ALCHEMY_STAGE` environment variable (not recommended, but available as an escape hatch)
+2. Config in `./alchemy.ts` (up to you if you want to have a global config). See the [alchemy.ts section](#global-values-and-the-alchemy-ts-config-file) for more details.
+
+```ts
+export default {
+  defaultStage: "production",
+};
+```
+
+3. Set the `ALCHEMY_STAGE` environment variable (not recommended, but available as an escape hatch)
 
 ```sh
 ALCHEMY_STAGE=production bun ./my-app.ts
@@ -282,7 +289,7 @@ class Table extends Resource("dynamo::Table", async (ctx, inputs) => {
 ```
 
 > [!CAUTION]
-> It is up to you to ensure that the physical names of resources don't conflict - alchemy does not (yet) offer any help or opinions here. You must decide on physical names. But, you're free to come add name generation logic to your resources if you so desire.
+> It is up to you to ensure that the physical names of resources don't conflict - alchemy does not (yet) offer any help or opinions here. You must decide on physical names, but you're free to add name generation logic to your resources if you so desire.
 >
 > ```ts
 > class Table extends Resource("dynamo::Table", async (ctx, inputs) => {

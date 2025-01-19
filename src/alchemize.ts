@@ -46,27 +46,35 @@ export async function alchemize(options?: AlchemizeOptions) {
 
   await state.init?.();
 
+  // Track in-progress deletions to avoid duplicate work
+  const deletionPromises = new Map<string, Promise<void>>();
+
   const priorStates = await state.all(stage);
   const priorIDs = Object.keys(priorStates);
 
-  await Promise.allSettled(
-    Array.from(nodes.values())
-      .reverse()
-      .map((node) => evaluate(node.resource)),
-  );
+  if (options?.mode === "up") {
+    await Promise.allSettled(
+      Array.from(nodes.values())
+        .reverse()
+        .map((node) => evaluate(node.resource)),
+    );
 
-  if (options?.destroyOrphans === false) {
-    return;
+    if (options?.destroyOrphans === false) {
+      return;
+    }
   }
-
-  const aliveIDs = new Set(nodes.keys());
+  const aliveIDs = new Set(
+    options?.mode === "up"
+      ? nodes.keys()
+      : // There are no alive resources in destroy mode
+        [],
+  );
 
   const orphanIDs = Array.from(priorIDs).filter((id) => !aliveIDs.has(id));
 
   const orphanStates = Object.fromEntries(
     orphanIDs.map((id) => [id, priorStates[id]] as const),
   );
-
   // compute a map of resourceID -> upstream dependencies (resources that depend on it)
   const orphanGraph: Record<string, Set<string>> = {};
   for (const [orphanID, orphanState] of Object.entries(orphanStates)) {
@@ -76,10 +84,7 @@ export async function alchemize(options?: AlchemizeOptions) {
     }
   }
 
-  // Track in-progress deletions to avoid duplicate work
-  const deletionPromises = new Map<string, Promise<void>>();
-
-  // Start deletion from each orphan that has no upstream dependencies
+  // Start deletion from each orphan that has no dependents (nothing depends on it)
   await Promise.all(
     orphanIDs
       .filter((id) => orphanGraph[id].size === 0)
@@ -104,23 +109,27 @@ export async function alchemize(options?: AlchemizeOptions) {
     deletionPromises.set(orphanID, promise);
 
     try {
-      // First delete all resources that depend on this one
-      const dependents = orphanGraph[orphanID];
-      if (dependents.size > 0) {
-        await Promise.all(Array.from(dependents).map((id) => deleteOrphan(id)));
-      }
-
       const orphanState = orphanStates[orphanID];
-      const providerType = orphanStates[orphanID].provider;
+
+      // First delete this resource
+      const providerType = orphanState.provider;
       const provider = providers.get(providerType);
       if (!provider) {
         throw new Error(
           `No provider found for ${providerType}. Did you forget to import it?`,
         );
       }
-      // Then delete this resource
       await destroy(stage, orphanID, orphanState, provider);
-      delete orphanGraph[orphanID];
+
+      // After this resource is deleted, we can delete its dependencies if they're orphans
+      if (orphanState.deps.length > 0) {
+        await Promise.all(
+          orphanState.deps
+            .filter((dep) => orphanIDs.includes(dep)) // Only delete if it's an orphan
+            .map((dep) => deleteOrphan(dep)),
+        );
+      }
+
       resolve!();
     } catch (error) {
       reject!(error);
