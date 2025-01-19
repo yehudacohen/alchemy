@@ -185,7 +185,8 @@ const tableArn = table.attributeDefinitions[0].attributeName; // Output<string>
 // table.apply(t => t.attributeDefinitions[0].attributeName);
 ```
 
-> [!NOTE] > `Output<T>` is inspired by Pulumi, with a little extra added sugar.
+> [!NOTE]
+> `Output<T>` is inspired by Pulumi, with a little extra added sugar.
 
 ## `apply` and `destroy`
 
