@@ -1,8 +1,8 @@
 # Alchemy
 
-Alchemy is a TypeScript-native, embeddable Infrastructure as Code (IaC) framework designed for the AI-era where the cost of implementing CRUD operations is quickly approaching 0 thanks to generative AI.
+Alchemy is a TypeScript-native, embeddable Infrastructure as Code (IaC) framework designed for the AI-era where the cost of implementing CRUD operations is quickly approaching 0.
 
-The only requirement to use Alchemy is a JavaScript runtime. There's no mandatory CLI, service, or any strict opinions on how you structure your codebase.
+The only requirement to use Alchemy is a JavaScript runtime. There's no mandatory CLI, service, or any strict opinions on how you structure your codebase. It can even run in the browser.
 
 # Features
 
@@ -20,7 +20,7 @@ The only requirement to use Alchemy is a JavaScript runtime. There's no mandator
 > [!NOTE]
 > You can see a comprehensive example involving a DynamoDB Table, IAM Role, Bundling and AWS Lambda [here](./examples/app.ts).
 
-An alchemy "app" (if you want to call it that) is just an ordinary TypeScript script. Once you've installed the `alchemy` package, you can start using it however you want.
+An alchemy "app" (if you want to call it that) is just an ordinary TypeScript or JavaScript script. Once you've installed the `alchemy` package, you can start using it however you want.
 
 ```bash
 # I recommend bun, but you can use any JavaScript runtime.
@@ -38,96 +38,26 @@ const role = new Role("my-role", {
 });
 ```
 
-## `alchemize`
-
-And, then call `alchemize` at the end to trigger the Create/Update/Delete lifecycle.
+Then, call `alchemize` at the end to trigger the Create/Update/Delete lifecycle.
 
 ```ts
 await alchemize();
 ```
 
-`alchemize` will walk the graph, create new resources, update modified resources and then delete "orphaned" resources at the end. This is equivalent to `terraform apply`, `pulumi up`, `cdk deploy`, etc.
-
-## `apply` and `destroy`
-
-Even `alchemize` is optional. Any object in your graph (`Resource` or `Output<T>`) can be "applied" or "destroyed" individually.
-
-```ts
-const role = new Role("my-role", {
-  name: "my-role",
-  //..
-});
-
-const func = new Function("my-function", {
-  name: "my-function",
-  role: role.roleArn,
-  //..
-});
-
-import { apply, destroy } from "alchemy";
-
-// will create Role and then Function (in that order)
-const { functionArn } = await apply(func);
-
-// you can destroy it right after if you want ☠️
-await destroy(func); // will delete just the Function
-
-// destroy deletes the resource and any downstream dependencies
-// so, if you want to delete Role AND Function, you should call destroy(role)
-await destroy(role); // will delete Role and then Function
-```
-
-## Destroying the app
-
-To destroy the app, you can call `alchemize` with the `mode: "destroy"` option. This will delete all resources in the specified or default stage.
-
-```ts
-await alchemize({ mode: "destroy", stage: <optional> });
-```
-
-## "Stage" and State
-
-Alchemy supports a "stage" concept so that you can isolate different environments from each other. E.g. a "user" or "dev" or "prod" stage.
-
-Stage is designed to be as simple as possible. Its only responsibility is to isolate the state files from each other which are stored in `.alchemy/{stage}/{resourceID}.json`.
-
-By default, the stage is assumed to be your user name. This is a sensible default for developing locally. To override the stage, you have two options:
-
-1. Pass the `stage` option to `alchemize`/`apply`/`destroy` (recommended)
-
-```ts
-// alchemize the entire app
-await alchemize({ stage: "production" });
-
-// apply a single resource
-await apply(func, { stage: "production" });
-```
-
-2. Set the `ALCHEMY_STAGE` environment variable (not recommended, but available as an escape hatch)
+Finally, run your script.
 
 ```sh
-ALCHEMY_STAGE=production bun ./my-app.ts
+bun ./my-app.ts
 ```
 
-Each Resource has access to the stage it's being deployed
+## `alchemize`
 
-> [!CAUTION]
-> It is up to you to ensure that the physical names of resources don't conflict - alchemy does not (yet) offer any help or opinions here. You must decide on physical names. But, you're free to come add name generation logic to your resources if you so desire.
+`alchemize` will create new resources, update modified resources and then delete "orphaned" resources at the end. This is equivalent to `terraform apply`, `pulumi up`, `cdk deploy`, etc.
 
-## Philosophy and comparison with existing IaC frameworks
-
-Today's IaC frameworks are extremely complex, heavy and slow. You can't integrate them into your workflow without bringing in a large toolchain. You also can't easily build your own resources (although it is possible).
-
-Alchemy is in direct contrast to Terraform, Pulumi, SST and the AWS CDK, which all provide similar capabilities, but come with high cost in terms of performance, portability, extensibility and ease of use:
-
-- Terraform requires you to learn a custom language and adopt a custom toolchain
-- Pulumi wraps Terraform and relies on complicated "providers" implemented in Go running in a separate process.
-- SST wraps Pulumi 😅 and is primarily designed for deploying a single web app.
-- The CDK generates CloudFormation templates and can only do what the CloudFormation JSON DSL allows.
-
-Most importantly, none (!) of these frameworks are TypeScript/JavaScript-native. You can't run them in the browser and you can't easily extend them without either dipping down to Go or deploying Custom Resources to AWS Lambda and waiting an eternity.
-
-Alchemy, on the other hand, is a small TypeScript code-base that can run anywhere. Instead of relying on large catalogs of "Resource Providers", Alchemy actively encourages you to implement your own. All resources are "custom resources", so to speak.
+```sh
+# now r
+bun ./my-app.ts
+```
 
 ## Creating a Resource Provider
 
@@ -167,3 +97,167 @@ const table = new Table("items", {
 
 table.tableArn; // Output<string>
 ```
+
+## Lazy Outputs
+
+A Resource is evaluated lazily, so you can't immediately access a property like `tableArn` or `functionArn`. Instead you reference the properties using the `Output<T>` interface.
+
+> [!NOTE]
+> This is inspired by Pulumi's `Output<T>` type.
+
+```ts
+const table = new Table("my-table", { .. });
+
+const tableArn = table.tableArn; // Output<string>
+```
+
+Outputs can be used either explicitly or implicitly.
+
+1. _Explicitly_ chained with `.apply`
+
+```ts
+const tableArn = table.tableArn.apply((arn) =>
+  arn.replace("table", "arn:aws:dynamodb:")
+);
+```
+
+2. _Implicitly_ chained
+
+```ts
+const tableArn = table.attributeDefinitions[0].attributeName; // Output<string>
+// equivalent to:
+// table.apply(t => t.attributeDefinitions[0].attributeName);
+```
+
+## `apply` and `destroy`
+
+Calling `alchemize` is optional. Any object in your graph (`Resource` or `Output<T>`) can be "applied" or "destroyed" individually and programmatically.
+
+Say, you've got some two resources, a Role and a Function.
+
+```ts
+const role = new Role("my-role", {
+  name: "my-role",
+  //..
+});
+
+const func = new Function("my-function", {
+  name: "my-function",
+  role: role.roleArn,
+  //..
+});
+```
+
+Each of these Resources is known as a "sub-graph", in this case we have `Role → Function`
+
+Each sub-graph can be "applied" or "destroyed" individually using the `apply` and `destroy` functions:
+
+```ts
+import { apply, destroy } from "alchemy";
+
+// will create Role and then Function (in that order)
+const { functionArn } = await apply(func);
+
+// you can destroy it right after if you want ☠️
+await destroy(func); // will delete just the Function
+
+// destroy deletes the resource and any downstream dependencies
+// so, if you want to delete Role AND Function, you should call destroy(role)
+await destroy(role); // will delete Role and then Function
+```
+
+## Destroying the app
+
+To destroy the whole app, you can call `alchemize` with the `mode: "destroy"` option. This will delete all resources in the specified or default stage.
+
+```ts
+await alchemize({ mode: "destroy", stage: <optional> });
+```
+
+> [!TIP]
+> Alchemy is designed to have the minimum number of opinions as possible. This "embeddable" design is so that you can implement your own tools around Alchemy, e.g. a CLI or UI, instead of being stuck with a specific tool.
+
+```ts
+await alchemize({
+  // decide the mode/stage however you want, e.g. a CLI parser
+  mode: process.argv[2] === "destroy" ? "destroy" : "up",
+  stage: process.argv[3],
+});
+```
+
+## "Stage" and State
+
+Alchemy supports a "stage" concept to help isolate different environments from each other. E.g. a `"user"` or `"dev"` or `"prod"` stage.
+
+Stage is designed to be as simple as possible. Its only responsibility is to isolate the state files from each other which are stored in `.alchemy/{stage}/{resourceID}.json`.
+
+By default, the stage is assumed to be your user name (a sensible default for local development).
+
+To override the stage, you have two options:
+
+1. Pass the `stage` option to `alchemize`/`apply`/`destroy` (recommended)
+
+```ts
+// alchemize the entire app
+await alchemize({ stage: "production" });
+
+// apply a single resource
+await apply(func, { stage: "production" });
+```
+
+2. Set the `ALCHEMY_STAGE` environment variable (not recommended, but available as an escape hatch)
+
+```sh
+ALCHEMY_STAGE=production bun ./my-app.ts
+```
+
+Each Resource "provider" can access the stage it's being deployed to via the `ctx.stage` property.
+
+```ts
+class Table extends Resource("dynamo::Table", async (ctx, inputs) => {
+  ctx.stage; // "production"
+});
+```
+
+> [!CAUTION]
+> It is up to you to ensure that the physical names of resources don't conflict - alchemy does not (yet) offer any help or opinions here. You must decide on physical names. But, you're free to come add name generation logic to your resources if you so desire.
+>
+> ```ts
+> class Table extends Resource("dynamo::Table", async (ctx, inputs) => {
+>   const tableName = `${ctx.stage}-${inputs.tableName}`;
+>
+>   // ..
+> });
+> ```
+
+## Philosophy and comparison with existing IaC frameworks
+
+I built alchemy after years of working with every other option. IaC is non-negotiable in my opinion, and has been one of my favorite technologies as a developer.
+
+I started with CloudFormation (since I worked at Amazon) and hated that. Fuck deploying JSON to a slow service, am I right?. The CDK was a huge upgrade on that (yay for TypeScript) but it is limited by the CloudFormation service (which is slow to change and slow to use) and has very strong opinions on how and where it should be used.
+
+For example, the CDK is written in a "meta" language called JSII. Which is a subset of TypeScript designed to be compiled to Java, Python, etc. This means you're not free to use all TypeScript features (which are ideal for configuration as code). It's also coupled to synchronous I/O - it is damn near impossible to do anything async, making it slow and clunky. Finally, the CDK is still tied to CJS and doesn't support ESM. Taking a dependency on the CDK will 10x the size of your bundle and destroy your DX.
+
+Later, I moved on to Pulumi, which was a nice change of pace since it runs locally and is much faster. You can cancel a deployment by hitting Ctrl+C (hallelujah!). It also supported more than just AWS, which is useful for managing all your resources, such as Stripe, GitHub or another provider like Cloudflare.
+
+However, Pulumi is largely a wrapper around Terraform and relies on complicated "providers" implemented with Go, running in a separate process. It can't run anywhere (like the browser). Different languages work better/worse than others and always have "sharp edge" limitations and gotchas. Custom Resources are possible but more of an afterthought and a PITA to implement.
+
+I've used Terraform when I've been forced into it, e.g by the Coder service. It's ... ok ... but I don't love it. It's a custom DSL and a heavy toolchain for what, calling a few CRUD APIs? Way overkill. Every time I think about implementing a custom resource for Terraform, I just can't bring myself to do it. Let me just write a function please!
+
+Now, I've been using SST because I've been doing a ton of web development. At first, I really liked SST, especially because of its local development experience. `sst dev` gives you live deploy, a TUI multiplexer and a proxy from the cloud to your local code. This is great for building web apps in AWS.
+
+But, as my app grew, SST's bugs ate away at me. I got blocked by broken resources that have race conditions and it was impossible to workaround. I also wanted to deploy a nested app (another `sst.config.ts`) which didn't gel well with the generated `sst-env.d.ts` files.
+
+Again, I was let down by the complexity and opinions of my chosen IaC framework. And for what? To help me call a few CRUD APIs? Honestly, it just seems insane how far we've drifted away from simplicity in this area.
+
+This started to become even more apparent as I started using Cursor more and more to write code.
+
+You see, lately I've found myself doing more frontend than I've ever done before. And, I'm not a good frontend developer. So, I relied on Cursor to write most of the code for me. And, as many others have experienced, Cursor totaly blew my mind 🤯. Cursor is just really, really, really good at TypeScript, React and Tailwind. I've built a functioning and (if i don't say so myself) good looking SPA. It's been a blast.
+
+But, this got me thinking ... you know what else Cursor is really great at? Perhaps even better at? Interacting with CRUD APIs. While there's a ton of frontend training data for LLMs, there's just as much (if not more) training data for CRUD lifecycle operations. There's also all of Terraform, Pulumi, SST and the AWS CDK's training data. All. Of. It.
+
+Long story short, I discovered that Cursor can pretty much one-shot the implementation of Resources. All of the resources in [./src/components](./src/components) are entirely generated on-demand (1 minute time investment, tops). When I run into a bug, I just explained it to Cursor who fixed it immediately.
+
+This is a game changer. It means we don't need tools like Terraform to build suites of "provider" libraries for us. We just need the engine - the bit that tracks state and decides what to create/update/delete. The rest can be generated at near zero cost.
+
+This story is ultimately why I built Alchemy - I just wanted total control and freedom over how I deploy my resources. And, I wanted it to be in TypeScript, so I can use its amazing type system. And I wanted it to be embeddable, so I can use it anywhere, maybe even in a React app. "Reactive IaC", anyone?

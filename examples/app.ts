@@ -6,17 +6,12 @@ import { Bundle } from "../src/components/esbuild";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-const environment = process.env.ENVIRONMENT ?? "dev";
-
 // Create DynamoDB table
 const table = new Table("alchemy-items-table", {
   tableName: "alchemy-items",
   partitionKey: {
     name: "id",
     type: "S",
-  },
-  tags: {
-    Environment: environment,
   },
 });
 
@@ -34,9 +29,6 @@ const role = new Role("alchemy-api-role", {
         Action: "sts:AssumeRole",
       },
     ],
-  },
-  tags: {
-    Environment: environment,
   },
 });
 
@@ -70,9 +62,10 @@ const api = new Function("api", {
       allowHeaders: ["content-type"],
     },
   },
-  tags: {
-    Environment: "production",
-  },
 });
 
-await alchemize();
+await alchemize({
+  // decide the mode/stage however you want
+  mode: process.argv[2] === "destroy" ? "destroy" : "up",
+  stage: process.argv[3],
+});
