@@ -1,10 +1,16 @@
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { alchemize } from "../src/alchemize";
-import { Function, Role, Table } from "../src/components/aws";
+import { Function, Queue, Role, Table } from "../src/components/aws";
 import { Bundle } from "../src/components/esbuild";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+const queue = new Queue("alchemy-items-queue", {
+  queueName: "alchemy-items-queue",
+  visibilityTimeout: 30,
+  messageRetentionPeriod: 345600, // 4 days
+});
 
 // Create DynamoDB table
 const table = new Table("alchemy-items-table", {
