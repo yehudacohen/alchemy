@@ -1,4 +1,4 @@
-import { deletions, nodes, providers, state } from "./global";
+import { deletions, nodes, providers, stateStore } from "./global";
 import type { Inputs } from "./input";
 import { Output } from "./output";
 import type { State } from "./state";
@@ -177,7 +177,10 @@ export function Resource<
       // const stack = resource[ResourceStack];
       const resourceID = resource[ResourceID];
 
-      let resourceState: State | undefined = await state.get(stage, resourceID);
+      let resourceState: State | undefined = await stateStore.get(
+        stage,
+        resourceID,
+      );
       if (resourceState === undefined) {
         resourceState = {
           provider: type,
@@ -187,7 +190,7 @@ export function Resource<
           deps: [...deps],
           inputs,
         };
-        await state.set(stage, resourceID, resourceState);
+        await stateStore.set(stage, resourceID, resourceState);
       }
       const event = resourceState.status === "creating" ? "create" : "update";
       resourceState.status = event === "create" ? "creating" : "updating";
@@ -198,7 +201,7 @@ export function Resource<
         `${event === "create" ? "Create" : "Update"}:  ${resourceID}`,
       );
 
-      await state.set(stage, resourceID, resourceState);
+      await stateStore.set(stage, resourceID, resourceState);
 
       let isReplaced = false;
 
@@ -227,12 +230,12 @@ export function Resource<
           get: (key) => resourceState!.data[key],
           set: async (key, value) => {
             resourceState!.data[key] = value;
-            await state.set(stage, resourceID, resourceState!);
+            await stateStore.set(stage, resourceID, resourceState!);
           },
           delete: async (key) => {
             const value = resourceState!.data[key];
             delete resourceState!.data[key];
-            await state.set(stage, resourceID, resourceState!);
+            await stateStore.set(stage, resourceID, resourceState!);
             return value;
           },
         },
@@ -241,7 +244,7 @@ export function Resource<
       console.log(
         `${event === "create" ? "Created" : "Updated"}: ${resourceID}`,
       );
-      await state.set(stage, resourceID, {
+      await stateStore.set(stage, resourceID, {
         provider: type,
         data: resourceState.data,
         status: event === "create" ? "created" : "updated",

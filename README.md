@@ -1,17 +1,19 @@
 # Alchemy
 
-Alchemy is a TypeScript-native, embeddable Infrastructure as Code (IaC) framework designed for the AI-era where the cost of implementing CRUD operations is quickly approaching 0.
+Alchemy is a JS-native, embeddable Infrastructure as Code (IaC) framework designed to run in any JavaScript runtime, including the browser.
 
-The only requirement to use Alchemy is a JavaScript runtime. There's no mandatory CLI, service, or any strict opinions on how you structure your codebase. It can even run in the browser.
+Alchemy fully embraces AI code generation at its core, even going so far as to encourage you to fork this repo and include it in your project as a Git submodule (instead of installing as a dependency) so that you can modify the core resources to fit your needs. Contribute 'em back if you want, or not - that's fine too!
+
+AI is so damn good at CRUD, so good that we no longer need to shackle ourselves to heavy toolchains like Pulumi and Terraform. All of the pre-built components in [./src/components](./src/components) were generated in less than a few minutes. Use them if you want, or create your own. It's that easy.
 
 # Features
 
-- **JS-native** - no second languages, toolchains, dependencies, processes, services, etc. to lug around.
-- **ESM-native** - built exclusively on ESM, with a preference for modern JS runtimes like Bun.
+- **JS-native** - no second language, toolchains, dependencies, processes, services, etc. to lug around.
+- **ESM-native** - built exclusively on ESM, with a slight preference for modern JS runtimes like Bun.
 - **Embeddable** - runs in any JavaScript/TypeScript environment, including the browser!
 - **Extensible** - implement your own resources with a simple function.
-- **AI-first** - Since Cursor (and other AI IDEs) are exceptional at CRUD, Alchemy actively encourages you create/copy/fork/modify resources to fit your needs. No more waiting around for a provider to be implemented.
-- **No dependencies** - All you need is a JavaScript runtime and the `alchemy` core package.
+- **AI-first** - since Cursor (and other AI IDEs) are exceptional at CRUD, Alchemy actively encourages you create/copy/fork/modify resources to fit your needs. No more waiting around for a provider to be implemented - just do it yourself.
+- **No dependencies** - All you need is a JavaScript runtime and the `alchemy` core package (which has 0 required dependencies).
 - **No service** - It's just a library that runs JavaScript. State files are stored locally in your project and can be easily inspected, modified, checked into your repo, etc.
 - **No strong opinions** - Structure your codebase however you want, store state anywhere - we don't care!
 
@@ -50,18 +52,55 @@ Finally, run your script.
 bun ./my-app.ts
 ```
 
+You'll notice some files show up in your repo:
+
+```
+.alchemy/
+  - sam/
+    - my-role.json
+```
+
+Go ahead, click on one and take a look. Here's how my role looks:
+
+```json
+{
+  "provider": "iam::Role",
+  "data": {},
+  "deps": [],
+  "status": "updated",
+  "output": {
+    "roleName": "alchemy-api-lambda-role"
+    // ..
+  },
+  "inputs": [
+    {
+      "roleName": "alchemy-api-lambda-role",
+      "assumeRolePolicy": {
+        "Version": "2012-10-17"
+        // ..
+      }
+    }
+  ]
+}
+```
+
+> [!TIP]
+> Alchemy goes to great effort to be fully transparent. State is just a JSON file, nothing more. You can inspect it, modify it, commit it to your repo, etc.
+
 ## `alchemize`
 
-`alchemize` will create new resources, update modified resources and then delete "orphaned" resources at the end. This is equivalent to `terraform apply`, `pulumi up`, `cdk deploy`, etc.
-
-```sh
-# now r
-bun ./my-app.ts
-```
+Calling `alchemize` will create new resources, update modified resources and then delete "orphaned" resources at the end. This is equivalent to `terraform apply`, `pulumi up`, `cdk deploy`, etc. except really fast and in your control.
 
 ## Creating a Resource Provider
 
-To implement your own resources, you just need one function that implements the Create, Update, Delete lifecycle operations.
+Adding new resources is the whole point of Alchemy, and is therefore very simple.
+
+A Resource provider is just a function with a globally unique name, e.g. `dynamo::Table`, and an implementation of the Create, Update, Delete lifecycle operations.
+
+E.g. below we show what a simple `dynamo::Table` provider might look like.
+
+> [!NOTE]
+> See [table.ts](./src/components/aws/dynamo/table.ts) for the full implementation.
 
 ```ts
 interface TableInputs {
@@ -89,6 +128,9 @@ class Table extends Resource(
 
 That's it! Now you can instantiate tables in your app.
 
+> [!TIP]
+> Use Cursor or an LLM like Claude/OpenAI to generate the implementation of your resource. I think you'll be pleasantly surprised at how well it works, especially if you provide the API reference docs in your context.
+
 ```ts
 const table = new Table("items", {
   name: "items",
@@ -98,12 +140,25 @@ const table = new Table("items", {
 table.tableArn; // Output<string>
 ```
 
+You may have noticed the odd pattern of extending the result of a function call, `extends Resource(..)`. This is called the "mix-in" pattern and is optional. You are free to just use a `const` instead:
+
+```ts
+const Table = Resource("dynamo::Table", async (ctx, inputs) => {
+  //..
+});
+
+const table = new Table("items", {
+  name: "items",
+  //..
+});
+```
+
+> [!TIP]
+> I recommend using a class so each resource has a type, e.g. `Table`, and a place to add helper/utility methods. Totally optional, though. Knock yourself out.
+
 ## Lazy Outputs
 
-A Resource is evaluated lazily, so you can't immediately access a property like `tableArn` or `functionArn`. Instead you reference the properties using the `Output<T>` interface.
-
-> [!NOTE]
-> This is inspired by Pulumi's `Output<T>` type.
+A Resource is evaluated lazily (not when you call `new`), so you can't immediately access the value of a property like `tableArn` or `functionArn`. Instead you reference properties using the `Output<T>` interface.
 
 ```ts
 const table = new Table("my-table", { .. });
@@ -111,12 +166,13 @@ const table = new Table("my-table", { .. });
 const tableArn = table.tableArn; // Output<string>
 ```
 
-Outputs can be used either explicitly or implicitly.
+Outputs can be chained explicitly and implicitly:
 
-1. _Explicitly_ chained with `.apply`
+1. _Explicitly_ with `.apply`
 
 ```ts
-const tableArn = table.tableArn.apply((arn) =>
+const tableArn: Output<string> = table.tableArn.apply((arn: string) =>
+  // do something with the arn string value
   arn.replace("table", "arn:aws:dynamodb:")
 );
 ```
@@ -129,11 +185,13 @@ const tableArn = table.attributeDefinitions[0].attributeName; // Output<string>
 // table.apply(t => t.attributeDefinitions[0].attributeName);
 ```
 
+> [!NOTE] > `Output<T>` is inspired by Pulumi, with a little extra added sugar.
+
 ## `apply` and `destroy`
 
 Calling `alchemize` is optional. Any object in your graph (`Resource` or `Output<T>`) can be "applied" or "destroyed" individually and programmatically.
 
-Say, you've got some two resources, a Role and a Function.
+Say, you've got some two resources, a `Role` and a `Function`.
 
 ```ts
 const role = new Role("my-role", {
@@ -148,7 +206,9 @@ const func = new Function("my-function", {
 });
 ```
 
-Each of these Resources is known as a "sub-graph", in this case we have `Role → Function`
+Each of these Resources is known as a "sub-graph".
+
+In this case we have `Role` (a 1-node graph, `Role`), and `Function` (a 2-node graph, `Role → Function`).
 
 Each sub-graph can be "applied" or "destroyed" individually using the `apply` and `destroy` functions:
 
@@ -168,7 +228,7 @@ await destroy(role); // will delete Role and then Function
 
 ## Destroying the app
 
-To destroy the whole app, you can call `alchemize` with the `mode: "destroy"` option. This will delete all resources in the specified or default stage.
+To destroy the whole app (aka. the whole graph), you can call `alchemize` with the `mode: "destroy"` option. This will delete all resources in the specified or default stage.
 
 ```ts
 await alchemize({ mode: "destroy", stage: <optional> });
@@ -176,22 +236,23 @@ await alchemize({ mode: "destroy", stage: <optional> });
 
 > [!TIP]
 > Alchemy is designed to have the minimum number of opinions as possible. This "embeddable" design is so that you can implement your own tools around Alchemy, e.g. a CLI or UI, instead of being stuck with a specific tool.
-
-```ts
-await alchemize({
-  // decide the mode/stage however you want, e.g. a CLI parser
-  mode: process.argv[2] === "destroy" ? "destroy" : "up",
-  stage: process.argv[3],
-});
-```
+>
+> ```ts
+> await alchemize({
+>   // decide the mode/stage however you want, e.g. a CLI parser
+>   mode: process.argv[2] === "destroy" ? "destroy" : "up",
+>   stage: process.argv[3],
+> });
+> ```
 
 ## "Stage" and State
 
 Alchemy supports a "stage" concept to help isolate different environments from each other. E.g. a `"user"` or `"dev"` or `"prod"` stage.
 
-Stage is designed to be as simple as possible. Its only responsibility is to isolate the state files from each other which are stored in `.alchemy/{stage}/{resourceID}.json`.
-
 By default, the stage is assumed to be your user name (a sensible default for local development).
+
+> [!NOTE]
+> Stage is inspired by [SST](https://sst.dev)'s stage concept.
 
 To override the stage, you have two options:
 
@@ -229,6 +290,24 @@ class Table extends Resource("dynamo::Table", async (ctx, inputs) => {
 >   // ..
 > });
 > ```
+
+## Global values and the `alchemy.ts` config file.
+
+Alchemy looks for a `${cwd}/alchemy.ts` file and imports it if it finds it. This can be useful for emulating SST's `sst.config.ts` file as a convention for global configuration.
+
+It supports overriding the `defaultStage` (instead of defaulting to your username) and providing a custom `stateStore` (instead of writing to the local file system).
+
+```ts
+import type { Config } from "alchemy";
+
+export default {
+  defaultStage: "dev",
+  stateStore: myCustomStateStore,
+} satisfies Config;
+```
+
+> [!NOTE]
+> See [global.ts](./src/global.ts).
 
 ## Philosophy and comparison with existing IaC frameworks
 

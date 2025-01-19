@@ -1,13 +1,13 @@
-import { defaultStage, nodes, providers, state } from "./global";
-
 import { evaluate } from "./apply";
 import { destroy } from "./destroy";
+import { defaultStage, nodes, providers, stateStore } from "./global";
+import type { StateStore } from "./state";
 
 let finalized = false;
 
 export interface AlchemizeOptions {
   /**
-   * Determines whether the resources will be created/updated or delted.
+   * Determines whether the resources will be created/updated or deleted.
    *
    * @default "up"
    */
@@ -24,6 +24,10 @@ export interface AlchemizeOptions {
    * @default true
    */
   destroyOrphans?: boolean;
+  /**
+   * A custom state store to use instead of the default file system store.
+   */
+  stateStore?: StateStore;
 }
 
 /**
@@ -38,6 +42,9 @@ export async function alchemize(options?: AlchemizeOptions) {
   finalized = true;
 
   const stage = options?.stage ?? defaultStage;
+  const state = options?.stateStore ?? stateStore;
+
+  await state.init?.();
 
   const priorStates = await state.all(stage);
   const priorIDs = Object.keys(priorStates);

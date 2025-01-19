@@ -1,14 +1,18 @@
-import { defaultStage, state } from "./global";
+import { defaultStage, stateStore } from "./global";
 import type { Output } from "./output";
 import { Provider, ResourceID, isResource } from "./resource";
 import type { State } from "./state";
+
+interface DestroyOptions {
+  stage?: string;
+}
 
 /**
  * Prune all resources from an Output and "down", i.e. that branches from it.
  */
 export async function destroy<T>(
   output: Output<T>,
-  stage?: string,
+  options?: DestroyOptions,
 ): Promise<void>;
 
 /**
@@ -22,7 +26,7 @@ export async function destroy<T>(
 ): Promise<void>;
 
 export async function destroy<T>(
-  ...args: [Output<T>, string?] | [string, ResourceID, State, Provider]
+  ...args: [Output<T>, DestroyOptions?] | [string, ResourceID, State, Provider]
 ): Promise<void> {
   let resourceID: ResourceID;
   let resourceState: State;
@@ -36,10 +40,10 @@ export async function destroy<T>(
     resourceProvider = args[3];
   } else if (isResource(args[0])) {
     const resource = args[0];
-    stage = args[1] ?? defaultStage;
+    stage = args[1]?.stage ?? defaultStage;
     resourceID = resource[ResourceID];
     // First destroy all dependencies
-    const _resourceState = await state.get(stage, resourceID);
+    const _resourceState = await stateStore.get(stage, resourceID);
     if (_resourceState === undefined) {
       // we have no record of this resource, we must assume it's already deleted
       return;
@@ -55,5 +59,5 @@ export async function destroy<T>(
     resourceState,
     resourceState.inputs as [],
   );
-  await state.delete(stage, resourceID);
+  await stateStore.delete(stage, resourceID);
 }

@@ -4,8 +4,8 @@ import type { Provider, Resource, ResourceID, ResourceType } from "./resource";
 import { defaultStore, type StateStore } from "./state";
 
 export interface Config {
-  stage: string;
-  state: StateStore;
+  defaultStage?: string;
+  stateStore?: StateStore;
 }
 
 const alchemy = path.resolve(process.cwd(), "alchemy.ts");
@@ -31,7 +31,7 @@ if (await exists(alchemy)) {
       if (typeof config !== "object") {
         throw new Error("Config is not an object");
       }
-      if (typeof config.stage !== "string") {
+      if (typeof config.defaultStage !== "string") {
         throw new Error("Config.stage is not a string");
       }
       _config = config;
@@ -39,14 +39,16 @@ if (await exists(alchemy)) {
   }
 }
 
+const _stage = process.env.ALCHEMY_STAGE ?? process.env.USER ?? "dev";
+
 export const config: Config = _config ?? {
-  stage: process.env.ALCHEMY_STAGE ?? process.env.USER ?? "dev",
-  state: defaultStore,
+  defaultStage: _stage,
+  stateStore: defaultStore,
 };
 
-export const defaultStage = config.stage;
+export const defaultStage = config.defaultStage ?? _stage;
 
-export const state = config.state;
+export const stateStore = config.stateStore ?? defaultStore;
 
 export const nodes = new Map<
   ResourceID,
@@ -67,4 +69,4 @@ export const deletions: {
   inputs: any[];
 }[] = [];
 
-await state.init?.();
+await stateStore.init?.();
