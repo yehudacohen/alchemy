@@ -44,7 +44,7 @@ export const config: Config = _config ?? {
   state: defaultStore,
 };
 
-export const stage = config.stage;
+export const defaultStage = config.stage;
 
 export const state = config.state;
 

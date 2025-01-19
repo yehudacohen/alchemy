@@ -1,4 +1,4 @@
-import { nodes, providers, stage, state } from "./global";
+import { defaultStage, nodes, providers, state } from "./global";
 
 import { evaluate } from "./apply";
 import { destroy } from "./destroy";
@@ -7,11 +7,23 @@ let finalized = false;
 
 export interface AlchemizeOptions {
   /**
+   * Determines whether the resources will be created/updated or delted.
+   *
+   * @default "up"
+   */
+  mode?: "up" | "destroy";
+  /**
+   * Name to scope the resource state under (e.g. `.alchemy/{stage}/..`).
+   *
+   * @default - your POSIX username
+   */
+  stage?: string;
+  /**
    * If true, will not prune resources that were dropped from the root stack.
    *
    * @default true
    */
-  destroy?: boolean;
+  destroyOrphans?: boolean;
 }
 
 /**
@@ -25,6 +37,8 @@ export async function alchemize(options?: AlchemizeOptions) {
   }
   finalized = true;
 
+  const stage = options?.stage ?? defaultStage;
+
   const priorStates = await state.all(stage);
   const priorIDs = Object.keys(priorStates);
 
@@ -34,7 +48,7 @@ export async function alchemize(options?: AlchemizeOptions) {
       .map((node) => evaluate(node.resource)),
   );
 
-  if (options?.destroy === false) {
+  if (options?.destroyOrphans === false) {
     return;
   }
 
@@ -98,7 +112,7 @@ export async function alchemize(options?: AlchemizeOptions) {
         );
       }
       // Then delete this resource
-      await destroy(orphanID, orphanState, provider);
+      await destroy(stage, orphanID, orphanState, provider);
       delete orphanGraph[orphanID];
       resolve!();
     } catch (error) {

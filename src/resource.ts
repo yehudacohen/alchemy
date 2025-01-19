@@ -1,4 +1,4 @@
-import { deletions, nodes, providers, stage, state } from "./global";
+import { deletions, nodes, providers, state } from "./global";
 import type { Inputs } from "./input";
 import { Output } from "./output";
 import type { State } from "./state";
@@ -33,6 +33,7 @@ export type Resource<In extends any[] = any[], Out = any> = {
 } & Output<Out>;
 
 export type Context<Outputs> = {
+  stage: string;
   resourceID: ResourceID;
   get<T>(key: string): Promise<T | undefined>;
   set<T>(key: string, value: T): Promise<void>;
@@ -59,11 +60,13 @@ export type Provider<
 > = {
   type: Type;
   update(
+    stage: string,
     resource: Resource,
     deps: Set<ResourceID>,
     inputs: Inputs<In>,
   ): Promise<Awaited<Out>>;
   delete(
+    stage: string,
     resourceID: ResourceID,
     state: State,
     inputs: Inputs<In>,
@@ -166,6 +169,7 @@ export function Resource<
     }
 
     static async update(
+      stage: string,
       resource: Resource,
       deps: Set<ResourceID>,
       inputs: Args,
@@ -200,6 +204,7 @@ export function Resource<
 
       const result = await func(
         {
+          stage,
           resourceID,
           event,
           output: resourceState.output,
@@ -248,10 +253,16 @@ export function Resource<
       return result;
     }
 
-    static async delete(resourceID: ResourceID, state: State, inputs: Args) {
+    static async delete(
+      stage: string,
+      resourceID: ResourceID,
+      state: State,
+      inputs: Args,
+    ) {
       console.log(`Delete:  ${resourceID}`);
       await func(
         {
+          stage,
           resourceID: resourceID,
           event: "delete",
           output: state.output,

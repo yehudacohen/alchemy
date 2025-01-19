@@ -1,3 +1,4 @@
+import { defaultStage } from "./global";
 import { Output } from "./output";
 import {
   Input,
@@ -27,11 +28,14 @@ const cache = new WeakMap<Resource, Promise<Evaluated<any>>>();
 
 export async function evaluate<T>(
   output: T | Output<T>,
+  stage: string = defaultStage,
 ): Promise<Evaluated<T>> {
   if (isResource(output)) {
     const resource = output;
     const resourceID = resource[ResourceID];
-    const evaluated = await Promise.all(resource[Input].map(evaluate<any>));
+    const evaluated = await Promise.all(
+      resource[Input].map((r) => evaluate<any>(r, stage)),
+    );
 
     if (cache.has(resource)) {
       return await cache.get(resource)!;
@@ -49,6 +53,7 @@ export async function evaluate<T>(
     const inputs = evaluated.map((input) => input.value);
     try {
       const result: T = await resource[Provider].update(
+        stage,
         resource,
         deps,
         inputs as [],
@@ -63,17 +68,17 @@ export async function evaluate<T>(
       parent: Output<any>;
       fn: (value: any) => T;
     };
-    const parent = await evaluate(inside.parent);
+    const parent = await evaluate(inside.parent, stage);
     const ret = inside.fn(parent.value);
     // the ret may be an Output (e.g. in the flatMap case), so we need to evaluate it and include its deps
-    const evaluated = await evaluate(ret);
+    const evaluated = await evaluate(ret, stage);
     return new Evaluated<T>(evaluated.value, [
       ...parent.deps,
       ...evaluated.deps,
     ]);
   } else if (Array.isArray(output)) {
     const evaluatedItems = await Promise.all(
-      output.map((item) => evaluate(item)),
+      output.map((item) => evaluate(item, stage)),
     );
     return new Evaluated(
       evaluatedItems.map((e) => e.value) as unknown as T,
@@ -83,7 +88,7 @@ export async function evaluate<T>(
     const entries = Object.entries(output);
     const evaluatedEntries = await Promise.all(
       entries.map(
-        async ([key, value]) => [key, await evaluate(value)] as const,
+        async ([key, value]) => [key, await evaluate(value, stage)] as const,
       ),
     );
 
