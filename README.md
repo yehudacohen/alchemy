@@ -64,7 +64,7 @@ You'll notice some files show up in your repo:
 
 Go ahead, click on one and take a look. Here's how my role looks:
 
-```json
+```jsonc
 {
   "provider": "iam::Role",
   "data": {},
@@ -187,7 +187,8 @@ const tableArn = table.attributeDefinitions[0].attributeName; // Output<string>
 // table.apply(t => t.attributeDefinitions[0].attributeName);
 ```
 
-> [!NOTE] > `Output<T>` is inspired by Pulumi, with a little extra added sugar.
+> [!NOTE]
+> Output is inspired by Pulumi, with a little extra added sugar.
 
 ## `apply` and `destroy`
 
@@ -323,7 +324,7 @@ export default {
 
 I built alchemy after years of working with every other option. IaC is non-negotiable in my opinion, and has been one of my favorite technologies as a developer.
 
-I started with CloudFormation (since I worked at Amazon) and hated that. Fuck deploying JSON to a slow service, am I right?. The CDK was a huge upgrade on that (yay for TypeScript) but it is limited by the CloudFormation service (which is slow to change and slow to use) and has very strong opinions on how and where it should be used.
+I started with CloudFormation (since I worked at Amazon) and hated that. Fuck deploying JSON to a slow service, am I right? The CDK was a huge upgrade on that (yay for TypeScript) but it is limited by the CloudFormation service (which is slow to change and slow to use) and has very strong opinions on how and where it should be used.
 
 For example, the CDK is written in a "meta" language called JSII. Which is a subset of TypeScript designed to be compiled to Java, Python, etc. This means you're not free to use all TypeScript features (which are ideal for configuration as code). It's also coupled to synchronous I/O - it is damn near impossible to do anything async, making it slow and clunky. Finally, the CDK is still tied to CJS and doesn't support ESM. Taking a dependency on the CDK will 10x the size of your bundle and destroy your DX.
 
