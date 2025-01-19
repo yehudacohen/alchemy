@@ -11,7 +11,7 @@ import { Function } from "../../src/components/aws/function";
 import type { PolicyDocument } from "../../src/components/aws/policy";
 import { Role } from "../../src/components/aws/role";
 import { Bundle } from "../../src/components/esbuild";
-import { prune } from "../../src/prune";
+import { destroy } from "../../src/destroy";
 
 const lambda = new LambdaClient({});
 
@@ -122,9 +122,9 @@ describe("AWS Resources", () => {
       expect(body.event).toEqual(testEvent);
 
       // Clean up
-      await prune(func);
-      await prune(bundle);
-      await prune(role);
+      await destroy(func);
+      await destroy(bundle);
+      await destroy(role);
 
       await assertFunctionNotExists("alchemy-test-function");
     });

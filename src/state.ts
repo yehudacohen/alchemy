@@ -9,6 +9,7 @@ export interface State {
     | `updated`
     | `deleting`
     | `deleted`;
+  provider: string;
   data: Record<string, any>;
   deps: string[];
   inputs: any[];
@@ -18,7 +19,11 @@ export interface State {
 
 export interface StateStore {
   init?(): Promise<void>;
+  /** List all resources in the given stage. */
+  list(stage: string): Promise<string[]>;
   get(stage: string, key: string): Promise<State | undefined>;
+  getBatch(stage: string, ids: string[]): Promise<Record<string, State>>;
+  all(stage: string): Promise<Record<string, State>>;
   set(stage: string, key: string, value: State): Promise<void>;
   delete(stage: string, key: string): Promise<void>;
 }
@@ -31,6 +36,11 @@ const stateFile = path.join(process.cwd(), ".alchemy");
 export const defaultStore: StateStore = {
   async init() {
     await fs.promises.mkdir(stateFile, { recursive: true });
+  },
+  async list(stage) {
+    return (await fs.promises.readdir(path.join(stateFile, stage))).map(
+      (file) => file.replace(/\.json$/, ""),
+    );
   },
   async get(stage, key) {
     try {
@@ -54,6 +64,24 @@ export const defaultStore: StateStore = {
   },
   async delete(stage, key) {
     return fs.promises.unlink(await getPath(stage, key));
+  },
+  async all(stage: string): Promise<Record<string, State>> {
+    return this.getBatch(stage, await this.list(stage));
+  },
+  async getBatch(stage: string, ids: string[]): Promise<Record<string, State>> {
+    return Object.fromEntries(
+      (
+        await Promise.all(
+          Array.from(ids).flatMap(async (id) => {
+            const s = await this.get(stage, id);
+            if (s === undefined) {
+              return [] as const;
+            }
+            return [[id, s]] as const;
+          }),
+        )
+      ).flat(),
+    );
   },
 };
 

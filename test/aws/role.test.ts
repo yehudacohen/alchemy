@@ -7,7 +7,7 @@ import { describe, expect, test } from "bun:test";
 import { apply } from "../../src/apply";
 import type { PolicyDocument } from "../../src/components/aws";
 import { Role, type RoleProps } from "../../src/components/aws/role";
-import { prune } from "../../src/prune";
+import { destroy } from "../../src/destroy";
 
 // Verify role was deleted
 const iam = new IAMClient({});
@@ -67,7 +67,7 @@ describe("AWS Resources", () => {
       expect(output.roleId).toBeTruthy();
       expect(output.createDate).toBeInstanceOf(Date);
 
-      await prune(role);
+      await destroy(role);
 
       await assertRoleNotExists("alchemy-test-create-role");
     });
@@ -135,7 +135,7 @@ describe("AWS Resources", () => {
         },
       ]);
 
-      await prune(role);
+      await destroy(role);
 
       await assertRoleNotExists("alchemy-test-update-role");
     });

@@ -12,9 +12,9 @@ const alchemy = path.resolve(process.cwd(), "alchemy.ts");
 
 let _config: Config | undefined;
 
-// Add exists() to fs.promises for older Node versions
-if (!fs.promises.exists) {
-  fs.promises.exists = async function exists(path: string): Promise<boolean> {
+const exists =
+  fs.promises.exists ??
+  async function exists(path: string): Promise<boolean> {
     try {
       await fs.promises.access(path);
       return true;
@@ -22,9 +22,8 @@ if (!fs.promises.exists) {
       return false;
     }
   };
-}
 
-if (await fs.promises.exists(alchemy)) {
+if (await exists(alchemy)) {
   const mod = await import(alchemy);
   if (mod) {
     const config = mod.default as Config | undefined;
@@ -49,7 +48,7 @@ export const stage = config.stage;
 
 export const state = config.state;
 
-export const resources = new Map<
+export const nodes = new Map<
   ResourceID,
   {
     provider: Provider<any, any[], any>;

@@ -1,9 +1,7 @@
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { alchemize } from "../src/alchemize";
-import { Function } from "../src/components/aws/function";
-import { Role } from "../src/components/aws/role";
-import { Table } from "../src/components/aws/table";
+import { Function, Role, Table } from "../src/components/aws";
 import { Bundle } from "../src/components/esbuild";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));

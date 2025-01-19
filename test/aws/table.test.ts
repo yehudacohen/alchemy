@@ -6,7 +6,7 @@ import {
 import { describe, expect, test } from "bun:test";
 import { apply } from "../../src/apply";
 import { Table } from "../../src/components/aws/table";
-import { prune } from "../../src/prune";
+import { destroy } from "../../src/destroy";
 
 const dynamo = new DynamoDBClient({});
 
@@ -54,7 +54,7 @@ describe("AWS Resources", () => {
       );
       expect(describeResponse.Table?.TableStatus).toBe("ACTIVE");
 
-      await prune(table);
+      await destroy(table);
 
       // Verify table is fully deleted
       await assertTableNotExists("alchemy-test-create-table");
