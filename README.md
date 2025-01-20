@@ -4,7 +4,7 @@ Alchemy is a JS-native, embeddable Infrastructure as Code (IaC) library designed
 
 Alchemy fully embraces AI code generation at its core, even going so far as to encourage you to fork this repo and include it in your project as a Git submodule (instead of installing as a dependency) so that you can modify the core resources to fit your needs. Contribute 'em back if you want, or not - that's fine too!
 
-AI is so damn good at CRUD, so good that we no longer need to shackle ourselves to heavy toolchains like Pulumi and Terraform. All of the pre-built components in [src/components](./src/components) were generated in less than a few minutes. Use them if you want, or create your own. It's that easy.
+AI is so damn good at CRUD, so good that we no longer need to shackle ourselves to heavy toolchains like Pulumi and Terraform. All of the pre-built components in [src/components](./alchemy/src/components) were generated in less than a few minutes. Use them if you want, or create your own. It's that easy.
 
 [![Demo](./alchemy.gif)](./alchemy.gif)
 
@@ -104,7 +104,7 @@ A Resource provider is just a function with a globally unique name, e.g. `dynamo
 E.g. below we show what a simple `dynamo::Table` provider might look like.
 
 > [!NOTE]
-> See [table.ts](./src/components/aws/table.ts) for the full implementation.
+> See [table.ts](./alchemy/src/components/aws/table.ts) for the full implementation.
 
 ```ts
 interface TableInputs {
@@ -320,7 +320,7 @@ export default {
 ```
 
 > [!NOTE]
-> See [global.ts](./src/global.ts).
+> See [global.ts](./alchemy/src/global.ts).
 
 ## Philosophy and comparison with existing IaC frameworks
 
@@ -346,7 +346,7 @@ You see, I've found myself doing more frontend than I've ever done before, and I
 
 But, this got me thinking ... you know what else Cursor is really great at? Perhaps even better at? Interacting with CRUD APIs, that's what! While there's a ton of frontend training data for LLMs, there's just as much (if not more) training data for CRUD lifecycle operations. There's also all of Terraform, Pulumi, SST and the AWS CDK's training data. All. Of. It.
 
-Long story short, I discovered that Cursor can pretty much one-shot the implementation of Resources. All of the resources in [src/components](./src/components) are entirely generated on-demand (1 minute time investment, tops). When I run into a bug, I just explained it to Cursor who fixed it immediately.
+Long story short, I discovered that Cursor can pretty much one-shot the implementation of Resources. All of the resources in [src/components](./alchemy/src/components) are entirely generated on-demand (1 minute time investment, tops). When I run into a bug, I just explained it to Cursor who fixed it immediately.
 
 This is a game changer. It means we don't need tools like Terraform to build suites of "provider" libraries for us. We just need the engine - the bit that tracks state and decides what to create/update/delete. The rest can be generated at near zero cost.
 
