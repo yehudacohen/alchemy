@@ -13,6 +13,8 @@ import { Role } from "../../src/components/aws/role";
 import { Bundle } from "../../src/components/esbuild";
 import { destroy } from "../../src/destroy";
 
+const __dirname = path.dirname(new URL(import.meta.url).pathname);
+
 const lambda = new LambdaClient({});
 
 describe("AWS Resources", () => {
@@ -66,7 +68,7 @@ describe("AWS Resources", () => {
 
       // Bundle the handler code
       const bundle = new Bundle("test-lambda-bundle", {
-        entryPoint: path.join("test", "handler.ts"),
+        entryPoint: path.join(__dirname, "..", "handler.ts"),
         outdir: path.join("test", ".output"),
         format: "cjs",
         platform: "node",

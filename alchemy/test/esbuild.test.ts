@@ -5,14 +5,16 @@ import { apply } from "../src/apply";
 import { Bundle } from "../src/components/esbuild";
 import { destroy } from "../src/destroy";
 
+const __dirname = path.dirname(new URL(import.meta.url).pathname);
+
 describe("esbuild", () => {
   describe("Bundle", () => {
-    const outputDir = ".output";
+    const outputDir = path.join(__dirname, ".output");
     const outputFile = path.join(outputDir, "handler.js");
 
     test("bundle and cleanup", async () => {
       const bundle = new Bundle("test-bundle", {
-        entryPoint: path.join("test", "handler.ts"),
+        entryPoint: path.join(__dirname, "handler.ts"),
         outdir: outputDir,
         format: "esm",
         platform: "node",
