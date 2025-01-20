@@ -9,7 +9,7 @@ const __dirname = path.dirname(new URL(import.meta.url).pathname);
 
 describe("esbuild", () => {
   describe("Bundle", () => {
-    const outputDir = path.join(__dirname, ".output");
+    const outputDir = ".output";
     const outputFile = path.join(outputDir, "handler.js");
 
     test("bundle and cleanup", async () => {

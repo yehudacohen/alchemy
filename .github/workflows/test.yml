@@ -1,10 +1,13 @@
 name: Tests
 
+# Workflow disabled
 on:
-  push:
-    branches: [ main ]
-  pull_request:
-    branches: [ main ]
+  # TODO(sam): re-enable this once we have AWS OIDC set up
+  # push:
+  #   branches: [ main ]
+  # pull_request:
+  #   branches: [ main ]
+  workflow_dispatch: # Only manual triggers allowed
 
 jobs:
   test:
