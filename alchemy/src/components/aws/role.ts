@@ -2,6 +2,7 @@ import {
   CreateRoleCommand,
   DeleteRoleCommand,
   DeleteRolePolicyCommand,
+  EntityAlreadyExistsException,
   GetRoleCommand,
   IAMClient,
   NoSuchEntityException,
@@ -79,151 +80,166 @@ export class Role extends Resource(
     let role;
 
     try {
-      // Try to get the existing role first
-      role = await client.send(
-        new GetRoleCommand({
-          RoleName: props.roleName,
-        }),
-      );
-
-      // If we're here, the role exists
       if (ctx.event === "create") {
-        throw new Error(`Role ${props.roleName} already exists`);
-      }
-
-      // If we're here, the role exists and we're updating
-      if (ctx.event === "update") {
-        // Update assume role policy if it changed
-        if (role.Role?.AssumeRolePolicyDocument !== assumeRolePolicyDocument) {
-          await client.send(
-            new UpdateAssumeRolePolicyCommand({
-              RoleName: props.roleName,
-              PolicyDocument: assumeRolePolicyDocument,
-            }),
-          );
-        }
-
-        // Update role description and max session duration if they changed
-        if (
-          role.Role?.Description !== props.description ||
-          role.Role?.MaxSessionDuration !== props.maxSessionDuration
-        ) {
-          await client.send(
-            new UpdateRoleCommand({
-              RoleName: props.roleName,
-              Description: props.description,
-              MaxSessionDuration: props.maxSessionDuration,
-            }),
-          );
-        }
-
-        // Update tags if they changed
-        if (props.tags) {
-          const tags: Tag[] = Object.entries(props.tags).map(
-            ([Key, Value]) => ({
-              Key,
-              Value,
-            }),
-          );
-          await client.send(
-            new TagRoleCommand({
-              RoleName: props.roleName,
-              Tags: tags,
-            }),
-          );
-        }
-
-        // Handle policy changes
-        const previousPolicies = ctx.output.policies || [];
-        const currentPolicies = props.policies || [];
-
-        // Delete policies that were removed
-        for (const oldPolicy of previousPolicies) {
-          if (
-            !currentPolicies.some((p) => p.policyName === oldPolicy.policyName)
-          ) {
-            await ignore(NoSuchEntityException.name, () =>
-              client.send(
-                new DeleteRolePolicyCommand({
-                  RoleName: props.roleName,
-                  PolicyName: oldPolicy.policyName,
-                }),
-              ),
-            );
-          }
-        }
-
-        // Update or create policies
-        for (const policy of currentPolicies) {
-          const oldPolicy = previousPolicies.find(
-            (p) => p.policyName === policy.policyName,
-          );
-          if (
-            !oldPolicy ||
-            JSON.stringify(oldPolicy.policyDocument) !==
-              JSON.stringify(policy.policyDocument)
-          ) {
-            await client.send(
-              new PutRolePolicyCommand({
-                RoleName: props.roleName,
-                PolicyName: policy.policyName,
-                PolicyDocument: JSON.stringify(policy.policyDocument),
-              }),
-            );
-          }
-        }
-      }
-    } catch (error: any) {
-      if (error.name !== NoSuchEntityException.name) {
-        throw error;
-      }
-
-      // Create role if it doesn't exist
-      await client.send(
-        new CreateRoleCommand({
-          RoleName: props.roleName,
-          AssumeRolePolicyDocument: assumeRolePolicyDocument,
-          Description: props.description,
-          Path: props.path,
-          MaxSessionDuration: props.maxSessionDuration,
-          PermissionsBoundary: props.permissionsBoundary,
-          Tags: props.tags
-            ? Object.entries(props.tags).map(([Key, Value]) => ({
+        // Try to create the role
+        await client.send(
+          new CreateRoleCommand({
+            RoleName: props.roleName,
+            AssumeRolePolicyDocument: assumeRolePolicyDocument,
+            Description: props.description,
+            Path: props.path,
+            MaxSessionDuration: props.maxSessionDuration,
+            PermissionsBoundary: props.permissionsBoundary,
+            Tags: [
+              ...Object.entries(props.tags || {}).map(([Key, Value]) => ({
                 Key,
                 Value,
-              }))
-            : undefined,
-        }),
-      );
-
-      // Get the newly created role
-      role = await client.send(
-        new GetRoleCommand({
-          RoleName: props.roleName,
-        }),
-      );
-
-      // Create initial policies if specified
-      if (props.policies) {
-        for (const policy of props.policies) {
-          await client.send(
-            new PutRolePolicyCommand({
-              RoleName: props.roleName,
-              PolicyName: policy.policyName,
-              PolicyDocument: JSON.stringify(policy.policyDocument),
-            }),
-          );
-        }
+              })),
+              {
+                Key: "alchemy_stage",
+                Value: ctx.stage,
+              },
+              {
+                Key: "alchemy_resource",
+                Value: ctx.resourceID,
+              },
+            ],
+          }),
+        );
       }
+    } catch (error: any) {
+      if (
+        error instanceof EntityAlreadyExistsException &&
+        ctx.event === "create"
+      ) {
+        // Check if we were the ones who created it
+        const existingRole = await client.send(
+          new GetRoleCommand({
+            RoleName: props.roleName,
+          }),
+        );
+        const roleTags =
+          existingRole.Role?.Tags?.reduce(
+            (acc, tag) => {
+              acc[tag.Key!] = tag.Value!;
+              return acc;
+            },
+            {} as Record<string, string>,
+          ) || {};
+
+        if (
+          roleTags.alchemy_stage !== ctx.stage ||
+          roleTags.alchemy_resource !== ctx.resourceID
+        ) {
+          throw error;
+        }
+      } else if (error.name !== NoSuchEntityException.name) {
+        throw error;
+      }
+    }
+
+    // Get or update the role
+    role = await client.send(
+      new GetRoleCommand({
+        RoleName: props.roleName,
+      }),
+    );
+
+    // Update assume role policy if it changed
+    if (role.Role?.AssumeRolePolicyDocument !== assumeRolePolicyDocument) {
+      await client.send(
+        new UpdateAssumeRolePolicyCommand({
+          RoleName: props.roleName,
+          PolicyDocument: assumeRolePolicyDocument,
+        }),
+      );
+    }
+
+    // Update role description and max session duration if they changed
+    if (
+      role.Role?.Description !== props.description ||
+      role.Role?.MaxSessionDuration !== props.maxSessionDuration
+    ) {
+      await client.send(
+        new UpdateRoleCommand({
+          RoleName: props.roleName,
+          Description: props.description,
+          MaxSessionDuration: props.maxSessionDuration,
+        }),
+      );
+    }
+
+    // Update tags
+    const newTags = {
+      ...props.tags,
+      alchemy_stage: ctx.stage,
+      alchemy_resource: ctx.resourceID,
+    };
+    const tags: Tag[] = Object.entries(newTags).map(([Key, Value]) => ({
+      Key,
+      Value,
+    }));
+    await client.send(
+      new TagRoleCommand({
+        RoleName: props.roleName,
+        Tags: tags,
+      }),
+    );
+
+    // Handle policy changes
+    const previousPolicies =
+      ctx.event === "update" ? ctx.output.policies || [] : [];
+    const currentPolicies = props.policies || [];
+
+    // Delete policies that were removed
+    for (const oldPolicy of previousPolicies) {
+      if (
+        !currentPolicies.some(
+          (p: { policyName: string }) => p.policyName === oldPolicy.policyName,
+        )
+      ) {
+        await ignore(NoSuchEntityException.name, () =>
+          client.send(
+            new DeleteRolePolicyCommand({
+              RoleName: props.roleName,
+              PolicyName: oldPolicy.policyName,
+            }),
+          ),
+        );
+      }
+    }
+
+    // Update or create policies
+    for (const policy of currentPolicies) {
+      const oldPolicy = previousPolicies.find(
+        (p) => p.policyName === policy.policyName,
+      );
+      if (
+        !oldPolicy ||
+        JSON.stringify(oldPolicy.policyDocument) !==
+          JSON.stringify(policy.policyDocument)
+      ) {
+        await client.send(
+          new PutRolePolicyCommand({
+            RoleName: props.roleName,
+            PolicyName: policy.policyName,
+            PolicyDocument: JSON.stringify(policy.policyDocument),
+          }),
+        );
+      }
+    }
+
+    if (!role?.Role) {
+      throw new Error(`Failed to create or update role ${props.roleName}`);
     }
 
     return {
       ...props,
       id: props.roleName,
-      arn: role.Role!.Arn!,
-      uniqueId: role.Role!.RoleId!,
-      roleId: role.Role!.RoleId!,
-      createDate: role.Role!.CreateDate!,
+      arn: role.Role.Arn!,
+      uniqueId: role.Role.RoleId!,
+      roleId: role.Role.RoleId!,
+      createDate: role.Role.CreateDate!,
     };
   },
 ) {}
