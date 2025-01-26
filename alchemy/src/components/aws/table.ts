@@ -3,12 +3,12 @@ import {
   DeleteTableCommand,
   DescribeTableCommand,
   DynamoDBClient,
+  type KeySchemaElement,
   ResourceInUseException,
   ResourceNotFoundException,
-  type KeySchemaElement,
 } from "@aws-sdk/client-dynamodb";
 import { ignore } from "../../error";
-import { Resource, type Context } from "../../resource";
+import { type Context, Resource } from "../../resource";
 
 export interface TableProps {
   tableName: string;
@@ -35,7 +35,10 @@ export interface TableOutput extends TableProps {
 
 export class Table extends Resource(
   "dynamo::Table",
-  async (ctx: Context<TableOutput>, props: TableProps) => {
+  async (
+    ctx: Context<TableOutput>,
+    props: TableProps,
+  ): Promise<TableOutput> => {
     const client = new DynamoDBClient({});
 
     if (ctx.event === "delete") {

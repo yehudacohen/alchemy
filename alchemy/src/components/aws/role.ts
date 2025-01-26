@@ -7,13 +7,13 @@ import {
   IAMClient,
   NoSuchEntityException,
   PutRolePolicyCommand,
+  type Tag,
   TagRoleCommand,
   UpdateAssumeRolePolicyCommand,
   UpdateRoleCommand,
-  type Tag,
 } from "@aws-sdk/client-iam";
 import { ignore } from "../../error";
-import { Resource, type Context } from "../../resource";
+import { type Context, Resource } from "../../resource";
 import type { PolicyDocument } from "./policy";
 
 export interface RoleProps {
@@ -41,7 +41,7 @@ export interface RoleOutput extends RoleProps {
 
 export class Role extends Resource(
   "iam::Role",
-  async (ctx: Context<RoleOutput>, props: RoleProps) => {
+  async (ctx: Context<RoleOutput>, props: RoleProps): Promise<RoleOutput> => {
     const client = new IAMClient({});
 
     if (ctx.event === "delete") {
