@@ -31,14 +31,14 @@ export const RequirementsInput = z.object({
   /**
    * File path where the requirements document should be written
    */
-  filePath: z.string(),
+  path: z.string(),
 });
 
 export const RequirementsOutput = z.object({
   /**
    * Generated markdown document containing organized and analyzed requirements
    */
-  requirements: z.string(),
+  content: z.string(),
 });
 
 export type RequirementsInput = z.infer<typeof RequirementsInput>;
@@ -54,7 +54,7 @@ export class Requirements extends Agent(
   },
   async (ctx, input) => {
     if (ctx.event === "delete") {
-      await unlink(input.filePath);
+      await unlink(input.path);
       return;
     }
 
@@ -73,28 +73,34 @@ export class Requirements extends Agent(
         },
         {
           role: "user",
-          content: `Please analyze the following system requirements and create a comprehensive markdown document that covers all aspects:
+          content: `Please analyze the following system requirements and create a comprehensive, unambiguous markdown document that covers all aspects:
 
 Title: ${input.title}
 
 Requirements:
 ${input.requirements.map((req) => `- ${req}`).join("\n")}
 
-Please organize the requirements into logical sections and provide detailed explanations where needed.
-Include any technical considerations, dependencies, or potential challenges.
-Format the output in markdown with appropriate headers, lists, and sections, starting with the title as an H1 header.`,
+Guidelines:
+1. Make explicit decisions for any ambiguous requirements - do not leave open questions
+2. Document the reasoning behind key decisions
+3. Be specific about technical choices and implementation details
+4. Avoid phrases like "could be", "might need", or "possibly requires" - be definitive
+5. Organize requirements into logical sections with clear dependencies and relationships
+
+Format the output in markdown with appropriate headers, lists, and sections, starting with the title as an H1 header.
+Include technical considerations and implementation details, ensuring every requirement has a clear, actionable specification.`,
         },
       ],
     });
 
     // Ensure the directory exists
-    await mkdir(dirname(input.filePath), { recursive: true });
+    await mkdir(dirname(input.path), { recursive: true });
 
     // Write the requirements to the file
-    await writeFile(input.filePath, text);
+    await writeFile(input.path, text);
 
     return {
-      requirements: text,
+      content: text,
     };
   },
 ) {}

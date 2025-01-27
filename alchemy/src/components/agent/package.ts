@@ -1,4 +1,6 @@
 import { generateObject } from "ai";
+import { mkdir, unlink, writeFile } from "fs/promises";
+import { dirname } from "path";
 import { z } from "zod";
 import { Agent } from "./agent";
 import type { AnthropicModelId } from "./anthropic";
@@ -7,35 +9,7 @@ import type { OpenAIChatModelId } from "./openai";
 
 export type ModelId = OpenAIChatModelId | AnthropicModelId;
 
-export type PackageProps = z.infer<typeof PackageProps>;
-
-export const PackageProps = z.object({
-  /**
-   * The ID of the model to use for generating package configuration
-   * @default "gpt-4o"
-   */
-  modelId: z.string().optional(),
-
-  /**
-   * List of requirements for the package
-   * Can include dependencies, dev dependencies, scripts, etc.
-   */
-  requirements: z.array(z.string()),
-
-  /**
-   * Name of the package
-   */
-  name: z.string(),
-
-  /**
-   * Temperature setting for model generation
-   * @default 0.3
-   */
-  temperature: z.number().optional(),
-});
-
-export type PackageJson = z.infer<typeof PackageJson>;
-export const PackageJson = z.object({
+export const PackageJsonSchema = z.object({
   name: z.string(),
   version: z.string(),
   description: z.string().optional(),
@@ -61,27 +35,61 @@ export const PackageJson = z.object({
   files: z.array(z.string()).optional(),
 });
 
-export class Package extends Agent(
+export const PackageInput = z.object({
+  /**
+   * List of requirements for the package
+   * Can include dependencies, dev dependencies, scripts, etc.
+   */
+  requirements: z.array(z.string()),
+
+  /**
+   * Name of the package
+   */
+  name: z.string(),
+
+  /**
+   * The ID of the model to use for generating package configuration
+   * @default "gpt-4o"
+   */
+  model: z.string().optional(),
+
+  /**
+   * Temperature setting for model generation
+   * @default 0.3
+   */
+  temperature: z.number().optional(),
+
+  /**
+   * Path to the package.json file to generate
+   */
+  path: z.string(),
+});
+
+export type PackageInput = z.infer<typeof PackageInput>;
+export type PackageOutput = z.infer<typeof PackageJsonSchema>;
+
+export class PackageJson extends Agent(
   "code::Package",
   {
     description:
       "This Agent is responsible for generating package.json configuration based on requirements.",
-    input: PackageProps,
-    output: PackageJson,
+    input: PackageInput,
+    output: PackageJsonSchema,
   },
-  async (ctx, props) => {
+  async (ctx, input) => {
     if (ctx.event === "delete") {
+      await unlink(input.path);
       return;
     }
 
     // Get the appropriate model
-    const { model } = await resolveModel(props.modelId ?? "gpt-4o");
+    const { model } = await resolveModel(input.model ?? "gpt-4o");
 
     // Generate the package configuration using generateObject for type safety
     const result = await generateObject({
       model,
-      schema: PackageJson,
-      temperature: props.temperature ?? 0.3,
+      schema: PackageJsonSchema,
+      temperature: input.temperature ?? 0.3,
       messages: [
         {
           role: "system",
@@ -92,10 +100,10 @@ export class Package extends Agent(
           role: "user",
           content: `Please generate a package.json configuration based on these requirements:
 
-Package name: ${props.name}
+Package name: ${input.name}
 
 Requirements:
-${props.requirements.map((req) => `- ${req}`).join("\n")}
+${input.requirements.map((req) => `- ${req}`).join("\n")}
 
 Rules:
 1. All dependencies must be peer dependencies
@@ -106,6 +114,12 @@ Rules:
         },
       ],
     });
+
+    // Ensure the directory exists
+    await mkdir(dirname(input.path), { recursive: true });
+
+    // Write the package.json file
+    await writeFile(input.path, JSON.stringify(result.object, null, 2));
 
     return result.object;
   },

@@ -1,4 +1,6 @@
 import { generateObject } from "ai";
+import { mkdir, unlink, writeFile } from "fs/promises";
+import { dirname } from "path";
 import { z } from "zod";
 import { Agent } from "./agent";
 import { resolveModel } from "./model";
@@ -19,16 +21,15 @@ export const TsConfigProps = z.object({
   requirements: z.array(z.string()),
 
   /**
-   * Whether this is a library project (affects module settings)
-   * @default false
-   */
-  isLibrary: z.boolean().optional(),
-
-  /**
    * Temperature setting for model generation
    * @default 0.3
    */
   temperature: z.number().optional(),
+
+  /**
+   * Path to the tsconfig.json file to generate
+   */
+  path: z.string(),
 });
 
 export type TsConfigJson = z.infer<typeof TsConfigSchema>;
@@ -102,6 +103,7 @@ export class TypeScriptConfig extends Agent(
   },
   async (ctx, props) => {
     if (ctx.event === "delete") {
+      await unlink(props.path);
       return;
     }
 
@@ -123,21 +125,25 @@ export class TypeScriptConfig extends Agent(
           role: "user",
           content: `Please generate a tsconfig.json configuration based on these requirements:
 
-Project type: ${props.isLibrary ? "Library" : "Application"}
-
 Requirements:
 ${props.requirements.map((req) => `- ${req}`).join("\n")}
 
 Rules:
 1. Use modern TypeScript features
 2. Enable strict type checking
-3. Use ESM modules
+3. Use ESM modules by default
 4. Include source maps for better debugging
-5. ${props.isLibrary ? "Generate declaration files and declaration maps" : "Optimize for application development"}
+5. Infer appropriate settings for declarations, module resolution, and other options based on the requirements
 6. Use appropriate paths for source and output directories`,
         },
       ],
     });
+
+    // Ensure the directory exists
+    await mkdir(dirname(props.path), { recursive: true });
+
+    // Write the tsconfig.json file
+    await writeFile(props.path, JSON.stringify(result.object, null, 2));
 
     return result.object;
   },
