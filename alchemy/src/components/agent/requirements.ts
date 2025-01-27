@@ -4,6 +4,7 @@ import { dirname } from "path";
 import { z } from "zod";
 import { Agent } from "./agent";
 import { resolveModel } from "./model";
+import { scrapeWebPage } from "./scrape";
 
 export const RequirementsInput = z.object({
   /**
@@ -65,11 +66,15 @@ export class Requirements extends Agent(
     const { text } = await generateText({
       model,
       temperature: input.temperature ?? 0.7,
+      maxSteps: 3, // Allow multiple steps for potential tool usage
+      tools: {
+        scrapeWebPage,
+      },
       messages: [
         {
           role: "system",
           content:
-            "You are a helpful assistant that creates markdown documents from requirements.",
+            "You are a helpful assistant that creates markdown documents from requirements. You can use the scrapeWebPage tool to get additional requirements from relevant URLs if needed.",
         },
         {
           role: "user",

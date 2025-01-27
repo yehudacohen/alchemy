@@ -1,5 +1,7 @@
 import type { CoreMessage } from "ai";
 import { generateText } from "ai";
+import { mkdir, unlink, writeFile } from "fs/promises";
+import { dirname } from "path";
 import { z } from "zod";
 import { Agent } from "./agent";
 import { resolveModel } from "./model";
@@ -32,7 +34,7 @@ const CodeProps = z.object({
   /**
    * List of other code files that it depends on
    */
-  dependencies: z.array(File),
+  dependencies: z.array(File).optional(),
 
   /**
    * Temperature setting for model generation (higher = more creative, lower = more focused)
@@ -54,6 +56,7 @@ export class TypeScriptFile extends Agent(
   },
   async (ctx, props) => {
     if (ctx.event === "delete") {
+      await unlink(props.path);
       return;
     }
 
@@ -62,6 +65,12 @@ export class TypeScriptFile extends Agent(
 
     // Generate the TypeScript code with retries
     const content = await generateCodeWithRetries(model, props);
+
+    // Ensure the directory exists
+    await mkdir(dirname(props.path), { recursive: true });
+
+    // Write the TypeScript file
+    await writeFile(props.path, content);
 
     return {
       path: props.path,
@@ -95,8 +104,12 @@ async function generateCodeWithRetries(
 Requirements:
 ${props.requirements}
 
-Context (other code files):
-${props.dependencies.join("\n\n")}
+${
+  props.dependencies?.length
+    ? `Context (other code files):
+${props.dependencies.map((dep) => dep.content).join("\n\n")}`
+    : ""
+}
 
 The code should:
 1. Be well-documented with JSDoc comments
