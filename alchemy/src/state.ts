@@ -1,6 +1,5 @@
 import fs from "node:fs";
 import path from "node:path";
-import type { Scope } from "./scope";
 
 export interface State {
   status:
@@ -31,23 +30,27 @@ export interface StateStore {
 
 const stateFile = path.join(process.cwd(), ".alchemy");
 
-export type StateStoreType = new (stage: string, scope: Scope) => StateStore;
+export type StateStoreType = new (dir: string) => StateStore;
 
 export class FileSystemStateStore implements StateStore {
-  constructor(
-    public readonly stage: string,
-    public readonly scope: Scope,
-  ) {}
+  public readonly path: string;
+  constructor(dir: string) {
+    this.path = path.join(stateFile, dir);
+  }
 
   async init(): Promise<void> {
     await fs.promises.mkdir(stateFile, { recursive: true });
+    await fs.promises.mkdir(this.path, { recursive: true });
   }
 
   async list(): Promise<string[]> {
     try {
-      return (await fs.promises.readdir(path.join(stateFile, this.stage))).map(
-        (file) => file.replace(/\.json$/, ""),
-      );
+      const files = await fs.promises.readdir(this.path, {
+        withFileTypes: true,
+      });
+      return files
+        .filter((dirent) => dirent.isFile() && dirent.name.endsWith(".json"))
+        .map((dirent) => dirent.name.replace(/\.json$/, ""));
     } catch (error: any) {
       if (error.code === "ENOENT") {
         return [];
@@ -103,7 +106,7 @@ export class FileSystemStateStore implements StateStore {
   }
 
   private async getPath(key: string): Promise<string> {
-    const file = path.join(stateFile, this.stage, `${key}.json`);
+    const file = path.join(this.path, `${key}.json`);
     const dir = path.dirname(file);
     await fs.promises.mkdir(dir, { recursive: true });
     return file;

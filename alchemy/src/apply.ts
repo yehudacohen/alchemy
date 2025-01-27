@@ -27,7 +27,9 @@ export async function apply<T>(
 ): Promise<T> {
   const stage = options?.stage ?? defaultStage;
   const scope = options?.scope ?? getScope();
-  const stateStore = options?.stateStore ?? new defaultStateStore(stage, scope);
+  const statePath = scope.getScopePath(stage);
+  const stateStore = options?.stateStore ?? new defaultStateStore(statePath);
+
   return (await evaluate(output, { stage, scope, stateStore })).value;
 }
 
@@ -45,7 +47,6 @@ export async function evaluate<T>(
   options: ApplyOptions,
 ): Promise<Evaluated<T>> {
   const stage = options.stage;
-  const scope = options.scope;
   const stateStore = options.stateStore;
   if (isResource(output)) {
     const resource = output;
@@ -102,6 +103,8 @@ export async function evaluate<T>(
       evaluatedItems.map((e) => e.value) as unknown as T,
       evaluatedItems.flatMap((e) => e.deps),
     );
+  } else if (output instanceof Date) {
+    return new Evaluated(output as T);
   } else if (output && typeof output === "object") {
     const entries = Object.entries(output);
     const evaluatedEntries = await Promise.all(

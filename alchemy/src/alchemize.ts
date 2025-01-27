@@ -4,8 +4,6 @@ import { defaultStage, defaultStateStore, providers } from "./global";
 import { type Scope, getScope } from "./scope";
 import type { StateStoreType } from "./state";
 
-let finalized = false;
-
 export interface AlchemizeOptions {
   /**
    * Determines whether the resources will be created/updated or deleted.
@@ -41,20 +39,16 @@ export interface AlchemizeOptions {
  * By default, this will be called when
  */
 export async function alchemize(options?: AlchemizeOptions) {
-  if (finalized) {
-    return;
-  }
-  finalized = true;
-
-  const scope = getScope();
+  const scope = options?.scope ?? getScope();
   const nodes = scope.nodes;
   const stage = options?.stage ?? defaultStage;
   const stateStore = new (options?.stateStore ?? defaultStateStore)(
-    stage,
-    scope,
+    scope.getScopePath(stage),
   );
 
-  await stateStore.init?.();
+  if (nodes.size > 0) {
+    await stateStore.init?.();
+  }
 
   // Track in-progress deletions to avoid duplicate work
   const deletionPromises = new Map<string, Promise<void>>();
@@ -111,6 +105,7 @@ export async function alchemize(options?: AlchemizeOptions) {
 
   // Recursively delete orphans in dependency order
   async function deleteOrphan(orphanID: string): Promise<void> {
+    console.log("orphanID", orphanID);
     // Return existing deletion promise if this orphan is already being deleted
     const existing = deletionPromises.get(orphanID);
     if (existing) {
@@ -137,7 +132,7 @@ export async function alchemize(options?: AlchemizeOptions) {
           `No provider found for ${providerType}. Did you forget to import it?`,
         );
       }
-      await destroy(stage, orphanID, orphanState, provider, stateStore);
+      await destroy(stage, scope, orphanID, orphanState, provider, stateStore);
 
       // After this resource is deleted, we can delete its dependencies if they're orphans
       if (orphanState.deps.length > 0) {

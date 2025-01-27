@@ -93,13 +93,18 @@ export const TsConfigSchema = z.object({
     .optional(),
 });
 
+export const TsConfigOutput = z.object({
+  content: z.string(),
+  tsconfig: TsConfigSchema,
+});
+
 export class TypeScriptConfig extends Agent(
   "code::tsconfig",
   {
     description:
       "This Agent is responsible for generating tsconfig.json configuration based on requirements.",
     input: TsConfigProps,
-    output: TsConfigSchema,
+    output: TsConfigOutput,
   },
   async (ctx, props) => {
     if (ctx.event === "delete") {
@@ -142,9 +147,14 @@ Rules:
     // Ensure the directory exists
     await mkdir(dirname(props.path), { recursive: true });
 
-    // Write the tsconfig.json file
-    await writeFile(props.path, JSON.stringify(result.object, null, 2));
+    const content = JSON.stringify(result.object, null, 2);
 
-    return result.object;
+    // Write the tsconfig.json file
+    await writeFile(props.path, content);
+
+    return {
+      content,
+      tsconfig: result.object,
+    };
   },
 ) {}

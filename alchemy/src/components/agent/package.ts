@@ -66,7 +66,12 @@ export const PackageInput = z.object({
 });
 
 export type PackageInput = z.infer<typeof PackageInput>;
+
 export type PackageOutput = z.infer<typeof PackageJsonSchema>;
+export const PackageOutput = z.object({
+  content: z.string(),
+  packageJson: PackageJsonSchema,
+});
 
 export class PackageJson extends Agent(
   "code::Package",
@@ -74,7 +79,7 @@ export class PackageJson extends Agent(
     description:
       "This Agent is responsible for generating package.json configuration based on requirements.",
     input: PackageInput,
-    output: PackageJsonSchema,
+    output: PackageOutput,
   },
   async (ctx, input) => {
     if (ctx.event === "delete") {
@@ -118,9 +123,14 @@ Rules:
     // Ensure the directory exists
     await mkdir(dirname(input.path), { recursive: true });
 
-    // Write the package.json file
-    await writeFile(input.path, JSON.stringify(result.object, null, 2));
+    const content = JSON.stringify(result.object, null, 2);
 
-    return result.object;
+    // Write the package.json file
+    await writeFile(input.path, content);
+
+    return {
+      content,
+      packageJson: result.object,
+    };
   },
 ) {}

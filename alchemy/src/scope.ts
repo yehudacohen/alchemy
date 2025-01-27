@@ -16,8 +16,6 @@ export class Scope {
     }
   >();
 
-  public readonly scopeFQN: string | null = null;
-
   constructor(
     public readonly scopeName: string | null = null,
     public readonly parent: Scope | undefined = undefined,
@@ -39,14 +37,20 @@ export function withScope<T>(
   scope: Scope,
   fn: () => T | Promise<T>,
 ): Promise<T> {
-  return scopeStorage.run(scope, async () => await fn());
+  return scopeStorage.run(scope, async () => {
+    try {
+      return await fn();
+    } catch (error) {
+      throw new Error(`Error in scope ${scope.scopeName}: ${error}`);
+    }
+  });
 }
 
 export function pushScope<T>(
+  parent: Scope,
   scopeName: string,
   fn: () => T | Promise<T>,
 ): Promise<T> {
-  const scope = getScope();
-  const newScope = new Scope(scopeName, scope);
+  const newScope = new Scope(scopeName, parent);
   return withScope(newScope, fn);
 }

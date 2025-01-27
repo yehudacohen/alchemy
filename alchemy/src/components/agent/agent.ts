@@ -1,4 +1,7 @@
 import type { ZodType } from "zod";
+import { apply } from "../../apply";
+import type { Input } from "../../input";
+import type { Output } from "../../output";
 import { type Context, type Provider, Resource } from "../../resource";
 
 export function Agent<Type extends string, TInput, TOutput>(
@@ -12,7 +15,10 @@ export function Agent<Type extends string, TInput, TOutput>(
     input: ZodType<TInput>;
     output: ZodType<TOutput>;
   },
-  handler: (ctx: Context<TOutput>, props: TInput) => Promise<TOutput | void>,
+  handler: (
+    ctx: Context<TOutput>,
+    props: TInput,
+  ) => Promise<Input<TOutput> | void>,
 ): Provider<Type, [TInput], Awaited<TOutput>> & {
   description: string;
   input: ZodType<TInput>;
@@ -28,12 +34,19 @@ export function Agent<Type extends string, TInput, TOutput>(
       // Call handler with validated input
       const result = await handler(ctx, validatedInput);
 
-      if (ctx.event === "delete") {
+      if (result === undefined) {
+        return;
+      } else if (ctx.event === "delete") {
         return;
       }
 
+      const evaluated = await apply(result as Output<TOutput>, {
+        stage: ctx.stage,
+        scope: ctx.scope,
+      });
+
       // Validate output
-      const validatedOutput = output.parse(result);
+      const validatedOutput = output.parse(evaluated);
 
       return validatedOutput;
     },

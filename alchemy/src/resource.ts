@@ -1,7 +1,9 @@
-import { deletions, providers } from "./global";
+import { alchemize } from "./alchemize";
+import { apply } from "./apply";
+import { defaultStateStore, deletions, providers } from "./global";
 import type { Inputs } from "./input";
 import { Output } from "./output";
-import { getScope } from "./scope";
+import { Scope as IScope, getScope, pushScope } from "./scope";
 import type { State, StateStore } from "./state";
 
 export type ResourceID = string;
@@ -13,6 +15,7 @@ export const Input = Symbol.for("Input");
 export const Value = Symbol.for("Value");
 export const Apply = Symbol.for("Apply");
 export const Provide = Symbol.for("Provide");
+export const Scope = Symbol.for("Scope");
 
 // properties that pierce through the Proxy
 const OrthogonalProperties = [
@@ -36,6 +39,7 @@ export type Resource<In extends any[] = any[], Out = any> = {
 export type Context<Outputs> = {
   stage: string;
   resourceID: ResourceID;
+  scope: IScope;
   get<T>(key: string): Promise<T | undefined>;
   set<T>(key: string, value: T): Promise<void>;
   delete<T>(key: string): Promise<T | undefined>;
@@ -69,6 +73,7 @@ export type Provider<
   ): Promise<Awaited<Out>>;
   delete(
     stage: string,
+    scope: IScope | undefined,
     resourceID: ResourceID,
     state: State,
     inputs: Inputs<In>,
@@ -99,6 +104,7 @@ export function Resource<
     [Provider]: Provider<Type, Args, Out>;
     [Input]: Inputs<Args>;
     [Value]?: Out;
+    [Scope]: IScope;
   }
 
   class Resource {
@@ -125,6 +131,7 @@ export function Resource<
       this[Provide] = (value: Out) => {
         this[Value] = value;
       };
+      this[Scope] = scope;
 
       return new Proxy(this, {
         // TODO(sam): this won't work for the sub-class (class Table extends Resource)
@@ -221,41 +228,59 @@ export function Resource<
 
       let isReplaced = false;
 
-      const result = await func(
-        {
-          stage,
-          resourceID,
-          event,
-          output: resourceState.output,
-          replace: () => {
-            if (isReplaced) {
-              console.warn(
-                `Resource ${type} ${resourceID} is already marked as REPLACE`,
-              );
-              return;
-            }
-            isReplaced = true;
-            deletions.push({
-              id: resourceID,
-              data: {
-                ...resourceState!.data,
+      const evaluated = await pushScope(
+        resource[Scope],
+        resourceID,
+        async () => {
+          const result = await func(
+            {
+              stage,
+              resourceID,
+              event,
+              scope: getScope(),
+              output: resourceState.output,
+              replace: () => {
+                if (isReplaced) {
+                  console.warn(
+                    `Resource ${type} ${resourceID} is already marked as REPLACE`,
+                  );
+                  return;
+                }
+                isReplaced = true;
+                deletions.push({
+                  id: resourceID,
+                  data: {
+                    ...resourceState!.data,
+                  },
+                  inputs: inputs,
+                });
               },
-              inputs: inputs,
-            });
-          },
-          get: (key) => resourceState!.data[key],
-          set: async (key, value) => {
-            resourceState!.data[key] = value;
-            await stateStore.set(resourceID, resourceState!);
-          },
-          delete: async (key) => {
-            const value = resourceState!.data[key];
-            delete resourceState!.data[key];
-            await stateStore.set(resourceID, resourceState!);
-            return value;
-          },
+              get: (key) => resourceState!.data[key],
+              set: async (key, value) => {
+                resourceState!.data[key] = value;
+                await stateStore.set(resourceID, resourceState!);
+              },
+              delete: async (key) => {
+                const value = resourceState!.data[key];
+                delete resourceState!.data[key];
+                await stateStore.set(resourceID, resourceState!);
+                return value;
+              },
+            },
+            ...inputs,
+          );
+
+          if (result === undefined) {
+            return undefined;
+          }
+
+          const evaluated = await apply(result as Out, {
+            stage,
+            scope: getScope(),
+          });
+
+          return evaluated;
         },
-        ...inputs,
       );
 
       console.log(
@@ -265,26 +290,40 @@ export function Resource<
         provider: type,
         data: resourceState.data,
         status: event === "create" ? "created" : "updated",
-        output: result,
+        output: evaluated,
         inputs,
         deps: [...deps],
       });
-      if (result !== undefined) {
-        resource[Provide](result);
+      if (evaluated !== undefined) {
+        resource[Provide](evaluated);
       }
-      return result;
+      return evaluated;
     }
 
     static async delete(
       stage: string,
+      scope: IScope,
       resourceID: ResourceID,
       state: State,
       inputs: Args,
     ) {
-      console.log(`Delete:  ${resourceID}`);
+      const nestedScope = new IScope(resourceID, scope);
+      console.log(nestedScope.getScopePath(stage));
+
+      await alchemize({
+        mode: "destroy",
+        stage,
+        scope: nestedScope,
+        // TODO(sam): should use the appropriate state store
+        stateStore: defaultStateStore,
+      });
+
+      console.log(`Delete:  ${scope.getScopePath(stage)}/${resourceID}`);
+
       await func(
         {
           stage,
+          scope,
           resourceID: resourceID,
           event: "delete",
           output: state.output,
@@ -305,6 +344,7 @@ export function Resource<
         },
         ...inputs,
       );
+
       console.log(`Deleted: ${resourceID}`);
     }
   }

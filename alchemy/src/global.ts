@@ -6,7 +6,7 @@ import { FileSystemStateStore } from "./state";
 
 export interface Config {
   defaultStage?: string;
-  stateStore?: new (stage: string, scope: Scope) => FileSystemStateStore;
+  stateStore?: new (dir: string) => FileSystemStateStore;
 }
 
 const alchemy = path.resolve(process.cwd(), "alchemy.ts");
