@@ -1,7 +1,8 @@
 import { evaluate } from "./apply";
 import { destroy } from "./destroy";
-import { defaultStage, nodes, providers, stateStore } from "./global";
-import type { StateStore } from "./state";
+import { defaultStage, defaultStateStore, providers } from "./global";
+import { type Scope, getScope } from "./scope";
+import type { StateStoreType } from "./state";
 
 let finalized = false;
 
@@ -27,7 +28,11 @@ export interface AlchemizeOptions {
   /**
    * A custom state store to use instead of the default file system store.
    */
-  stateStore?: StateStore;
+  stateStore?: StateStoreType;
+  /**
+   * A custom scope to use instead of the default root scope.
+   */
+  scope?: Scope;
 }
 
 /**
@@ -41,15 +46,20 @@ export async function alchemize(options?: AlchemizeOptions) {
   }
   finalized = true;
 
+  const scope = getScope();
+  const nodes = scope.nodes;
   const stage = options?.stage ?? defaultStage;
-  const state = options?.stateStore ?? stateStore;
+  const stateStore = new (options?.stateStore ?? defaultStateStore)(
+    stage,
+    scope,
+  );
 
-  await state.init?.();
+  await stateStore.init?.();
 
   // Track in-progress deletions to avoid duplicate work
   const deletionPromises = new Map<string, Promise<void>>();
 
-  const priorStates = await state.all(stage);
+  const priorStates = await stateStore.all();
   const priorIDs = Object.keys(priorStates);
 
   const mode = options?.mode ?? "up";
@@ -61,6 +71,8 @@ export async function alchemize(options?: AlchemizeOptions) {
         .map((node) =>
           evaluate(node.resource, {
             stage,
+            scope,
+            stateStore,
           }),
         ),
     );
@@ -125,7 +137,7 @@ export async function alchemize(options?: AlchemizeOptions) {
           `No provider found for ${providerType}. Did you forget to import it?`,
         );
       }
-      await destroy(stage, orphanID, orphanState, provider);
+      await destroy(stage, orphanID, orphanState, provider, stateStore);
 
       // After this resource is deleted, we can delete its dependencies if they're orphans
       if (orphanState.deps.length > 0) {

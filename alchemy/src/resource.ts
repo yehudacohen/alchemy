@@ -1,6 +1,7 @@
-import { deletions, nodes, providers } from "./global";
+import { deletions, providers } from "./global";
 import type { Inputs } from "./input";
 import { Output } from "./output";
+import { getScope } from "./scope";
 import type { State, StateStore } from "./state";
 
 export type ResourceID = string;
@@ -104,16 +105,18 @@ export function Resource<
     static readonly type = type;
 
     constructor(id: ResourceID, ...input: Inputs<Args>) {
+      const scope = getScope();
       const node = {
         provider: Resource,
         resource: this,
       } as const;
-      if (nodes.has(id)) {
+
+      if (scope.nodes.has(id)) {
         // TODO(sam): do we want to throw?
         // it's kind of awesome that you can re-create a resource and call apply
         // console.warn(`Resource ${id} already exists in the stack: ${stack.id}`);
       }
-      nodes.set(id, node as any);
+      scope.nodes.set(id, node as any);
 
       this[ResourceID] = id;
       this[Provider] = Resource as any;
@@ -179,10 +182,7 @@ export function Resource<
       // const stack = resource[ResourceStack];
       const resourceID = resource[ResourceID];
 
-      let resourceState: State | undefined = await stateStore.get(
-        stage,
-        resourceID,
-      );
+      let resourceState: State | undefined = await stateStore.get(resourceID);
       if (resourceState === undefined) {
         resourceState = {
           provider: type,
@@ -192,7 +192,7 @@ export function Resource<
           deps: [...deps],
           inputs,
         };
-        await stateStore.set(stage, resourceID, resourceState);
+        await stateStore.set(resourceID, resourceState);
       }
 
       // Skip update if inputs haven't changed and resource is in a stable state
@@ -217,7 +217,7 @@ export function Resource<
         `${event === "create" ? "Create" : "Update"}:  ${resourceID}`,
       );
 
-      await stateStore.set(stage, resourceID, resourceState);
+      await stateStore.set(resourceID, resourceState);
 
       let isReplaced = false;
 
@@ -246,12 +246,12 @@ export function Resource<
           get: (key) => resourceState!.data[key],
           set: async (key, value) => {
             resourceState!.data[key] = value;
-            await stateStore.set(stage, resourceID, resourceState!);
+            await stateStore.set(resourceID, resourceState!);
           },
           delete: async (key) => {
             const value = resourceState!.data[key];
             delete resourceState!.data[key];
-            await stateStore.set(stage, resourceID, resourceState!);
+            await stateStore.set(resourceID, resourceState!);
             return value;
           },
         },
@@ -261,7 +261,7 @@ export function Resource<
       console.log(
         `${event === "create" ? "Created" : "Updated"}: ${resourceID}`,
       );
-      await stateStore.set(stage, resourceID, {
+      await stateStore.set(resourceID, {
         provider: type,
         data: resourceState.data,
         status: event === "create" ? "created" : "updated",

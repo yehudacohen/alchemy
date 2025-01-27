@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+import type { Scope } from "./scope";
 
 export interface State {
   status:
@@ -20,26 +21,31 @@ export interface State {
 export interface StateStore {
   init?(): Promise<void>;
   /** List all resources in the given stage. */
-  list(stage: string): Promise<string[]>;
-  get(stage: string, key: string): Promise<State | undefined>;
-  getBatch(stage: string, ids: string[]): Promise<Record<string, State>>;
-  all(stage: string): Promise<Record<string, State>>;
-  set(stage: string, key: string, value: State): Promise<void>;
-  delete(stage: string, key: string): Promise<void>;
+  list(): Promise<string[]>;
+  get(key: string): Promise<State | undefined>;
+  getBatch(ids: string[]): Promise<Record<string, State>>;
+  all(): Promise<Record<string, State>>;
+  set(key: string, value: State): Promise<void>;
+  delete(key: string): Promise<void>;
 }
 
 const stateFile = path.join(process.cwd(), ".alchemy");
 
-/**
- * @internal
- */
-export const defaultStore: StateStore = {
-  async init() {
+export type StateStoreType = new (stage: string, scope: Scope) => StateStore;
+
+export class FileSystemStateStore implements StateStore {
+  constructor(
+    public readonly stage: string,
+    public readonly scope: Scope,
+  ) {}
+
+  async init(): Promise<void> {
     await fs.promises.mkdir(stateFile, { recursive: true });
-  },
-  async list(stage) {
+  }
+
+  async list(): Promise<string[]> {
     try {
-      return (await fs.promises.readdir(path.join(stateFile, stage))).map(
+      return (await fs.promises.readdir(path.join(stateFile, this.stage))).map(
         (file) => file.replace(/\.json$/, ""),
       );
     } catch (error: any) {
@@ -48,11 +54,12 @@ export const defaultStore: StateStore = {
       }
       throw error;
     }
-  },
-  async get(stage, key) {
+  }
+
+  async get(key: string): Promise<State | undefined> {
     try {
       const content = await fs.promises.readFile(
-        await getPath(stage, key),
+        await this.getPath(key),
         "utf8",
       );
       return JSON.parse(content) as State;
@@ -62,25 +69,29 @@ export const defaultStore: StateStore = {
       }
       throw error;
     }
-  },
-  async set(stage, key, value) {
+  }
+
+  async set(key: string, value: State): Promise<void> {
     return fs.promises.writeFile(
-      await getPath(stage, key),
+      await this.getPath(key),
       JSON.stringify(value, null, 2),
     );
-  },
-  async delete(stage, key) {
-    return fs.promises.unlink(await getPath(stage, key));
-  },
-  async all(stage: string): Promise<Record<string, State>> {
-    return this.getBatch(stage, await this.list(stage));
-  },
-  async getBatch(stage: string, ids: string[]): Promise<Record<string, State>> {
+  }
+
+  async delete(key: string): Promise<void> {
+    return fs.promises.unlink(await this.getPath(key));
+  }
+
+  async all(): Promise<Record<string, State>> {
+    return this.getBatch(await this.list());
+  }
+
+  async getBatch(ids: string[]): Promise<Record<string, State>> {
     return Object.fromEntries(
       (
         await Promise.all(
           Array.from(ids).flatMap(async (id) => {
-            const s = await this.get(stage, id);
+            const s = await this.get(id);
             if (s === undefined) {
               return [] as const;
             }
@@ -89,12 +100,12 @@ export const defaultStore: StateStore = {
         )
       ).flat(),
     );
-  },
-};
+  }
 
-async function getPath(stage: string, key: string) {
-  const file = path.join(stateFile, stage, `${key}.json`);
-  const dir = path.dirname(file);
-  await fs.promises.mkdir(dir, { recursive: true });
-  return file;
+  private async getPath(key: string): Promise<string> {
+    const file = path.join(stateFile, this.stage, `${key}.json`);
+    const dir = path.dirname(file);
+    await fs.promises.mkdir(dir, { recursive: true });
+    return file;
+  }
 }

@@ -1,11 +1,12 @@
 import fs from "node:fs";
 import path from "node:path";
-import type { Provider, Resource, ResourceID, ResourceType } from "./resource";
-import { defaultStore, type StateStore } from "./state";
+import type { Provider, ResourceType } from "./resource";
+import { Scope } from "./scope";
+import { FileSystemStateStore } from "./state";
 
 export interface Config {
   defaultStage?: string;
-  stateStore?: StateStore;
+  stateStore?: new (stage: string, scope: Scope) => FileSystemStateStore;
 }
 
 const alchemy = path.resolve(process.cwd(), "alchemy.ts");
@@ -43,20 +44,14 @@ const _stage = process.env.ALCHEMY_STAGE ?? process.env.USER ?? "dev";
 
 export const config: Config = _config ?? {
   defaultStage: _stage,
-  stateStore: defaultStore,
+  stateStore: FileSystemStateStore,
 };
 
 export const defaultStage = config.defaultStage ?? _stage;
 
-export const stateStore = config.stateStore ?? defaultStore;
+export const defaultStateStore = config.stateStore ?? FileSystemStateStore;
 
-export const nodes = new Map<
-  ResourceID,
-  {
-    provider: Provider<any, any[], any>;
-    resource: Resource<any, any>;
-  }
->();
+export const rootScope = new Scope(null);
 
 export const providers = new Map<
   ResourceType,
@@ -68,5 +63,3 @@ export const deletions: {
   data: Record<string, any>;
   inputs: any[];
 }[] = [];
-
-await stateStore.init?.();

@@ -1,10 +1,13 @@
-import { defaultStage, stateStore } from "./global";
+import { defaultStage, defaultStateStore } from "./global";
 import type { Output } from "./output";
 import { Provider, ResourceID, isResource } from "./resource";
-import type { State } from "./state";
+import { type Scope, getScope } from "./scope";
+import type { State, StateStore } from "./state";
 
 interface DestroyOptions {
   stage?: string;
+  stateStore?: StateStore;
+  scope?: Scope;
 }
 
 /**
@@ -23,27 +26,34 @@ export async function destroy<T>(
   resourceID: ResourceID,
   resourceState: State,
   resourceProvider: Provider,
+  stateStore: StateStore,
 ): Promise<void>;
 
 export async function destroy<T>(
-  ...args: [Output<T>, DestroyOptions?] | [string, ResourceID, State, Provider]
+  ...args:
+    | [Output<T>, DestroyOptions?]
+    | [string, ResourceID, State, Provider, StateStore]
 ): Promise<void> {
   let resourceID: ResourceID;
   let resourceState: State;
   let resourceProvider: Provider;
   let stage: string;
-
-  if (args.length === 4) {
+  let stateStore: StateStore;
+  if (args.length === 5) {
     stage = args[0];
     resourceID = args[1];
     resourceState = args[2];
     resourceProvider = args[3];
+    stateStore = args[4];
   } else if (isResource(args[0])) {
     const resource = args[0];
-    stage = args[1]?.stage ?? defaultStage;
+    // stage = args[1]?.stage ?? defaultStage;
     resourceID = resource[ResourceID];
+    stage = args[1]?.stage ?? defaultStage;
+    const scope = args[1]?.scope ?? getScope();
+    stateStore = args[1]?.stateStore ?? new defaultStateStore(stage, scope);
     // First destroy all dependencies
-    const _resourceState = await stateStore.get(stage, resourceID);
+    const _resourceState = await stateStore.get(resourceID);
     if (_resourceState === undefined) {
       // we have no record of this resource, we must assume it's already deleted
       return;
@@ -59,5 +69,5 @@ export async function destroy<T>(
     resourceState,
     resourceState.inputs as [],
   );
-  await stateStore.delete(stage, resourceID);
+  await stateStore.delete(resourceID);
 }

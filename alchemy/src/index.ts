@@ -3,4 +3,4 @@ export * from "./global";
 export * from "./output";
 export * from "./resource";
 
-export type { StateStore } from "./state";
+export type { FileSystemStateStore as StateStore } from "./state";

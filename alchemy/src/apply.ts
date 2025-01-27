@@ -1,4 +1,4 @@
-import { defaultStage, stateStore } from "./global";
+import { defaultStage, defaultStateStore } from "./global";
 import { Output } from "./output";
 import {
   Input,
@@ -7,11 +7,13 @@ import {
   ResourceID,
   isResource,
 } from "./resource";
+import { type Scope, getScope } from "./scope";
 import type { StateStore } from "./state";
 
 interface ApplyOptions {
-  stage?: string;
-  stateStore?: StateStore;
+  stage: string;
+  scope: Scope;
+  stateStore: StateStore;
 }
 
 /**
@@ -21,9 +23,12 @@ interface ApplyOptions {
  */
 export async function apply<T>(
   output: T | Output<T>,
-  options?: ApplyOptions,
+  options?: Partial<ApplyOptions>,
 ): Promise<T> {
-  return (await evaluate(output, options)).value;
+  const stage = options?.stage ?? defaultStage;
+  const scope = options?.scope ?? getScope();
+  const stateStore = options?.stateStore ?? new defaultStateStore(stage, scope);
+  return (await evaluate(output, { stage, scope, stateStore })).value;
 }
 
 class Evaluated<T> {
@@ -37,9 +42,11 @@ const cache = new WeakMap<Resource, Promise<Evaluated<any>>>();
 
 export async function evaluate<T>(
   output: T | Output<T>,
-  options: ApplyOptions = {},
+  options: ApplyOptions,
 ): Promise<Evaluated<T>> {
-  const state = options.stateStore ?? stateStore;
+  const stage = options.stage;
+  const scope = options.scope;
+  const stateStore = options.stateStore;
   if (isResource(output)) {
     const resource = output;
     const resourceID = resource[ResourceID];
@@ -63,11 +70,11 @@ export async function evaluate<T>(
     const inputs = evaluated.map((input) => input.value);
     try {
       const result: T = await resource[Provider].update(
-        options.stage ?? defaultStage,
+        stage,
         resource,
         deps,
         inputs as [],
-        state,
+        stateStore,
       );
       resolve!(new Evaluated(result, [resourceID, ...deps]));
     } catch (error) {
