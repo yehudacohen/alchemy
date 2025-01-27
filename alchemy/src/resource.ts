@@ -1,7 +1,7 @@
 import { alchemize } from "./alchemize";
 import { apply } from "./apply";
 import { defaultStateStore, deletions, providers } from "./global";
-import type { Inputs } from "./input";
+import type { Inputs, Input as input } from "./input";
 import { Output } from "./output";
 import { Scope as IScope, getScope, pushScope } from "./scope";
 import type { State, StateStore } from "./state";
@@ -93,7 +93,10 @@ export function Resource<
   Out,
 >(
   type: Type,
-  func: (ctx: Context<Out>, ...args: Args) => Promise<Out | void> | Out | void,
+  func: (
+    ctx: Context<Out>,
+    ...args: Args
+  ) => Promise<input<Out> | void> | input<Out> | void,
 ): Provider<Type, Args, Awaited<Out>> {
   if (providers.has(type)) {
     throw new Error(`Resource ${type} already exists`);
