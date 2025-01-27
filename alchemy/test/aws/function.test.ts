@@ -69,7 +69,7 @@ describe("AWS Resources", () => {
       // Bundle the handler code
       const bundle = new Bundle("test-lambda-bundle", {
         entryPoint: path.join(__dirname, "..", "handler.ts"),
-        outdir: ".output",
+        outdir: ".out",
         format: "cjs",
         platform: "node",
         target: "node18",
