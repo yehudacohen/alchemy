@@ -194,6 +194,20 @@ export function Resource<
         };
         await stateStore.set(stage, resourceID, resourceState);
       }
+
+      // Skip update if inputs haven't changed and resource is in a stable state
+      if (
+        (resourceState.status === "created" ||
+          resourceState.status === "updated") &&
+        JSON.stringify(resourceState.inputs) === JSON.stringify(inputs)
+      ) {
+        console.log(`Skip:    ${resourceID} (no changes)`);
+        if (resourceState.output !== undefined) {
+          resource[Provide](resourceState.output);
+        }
+        return resourceState.output;
+      }
+
       const event = resourceState.status === "creating" ? "create" : "update";
       resourceState.status = event === "create" ? "creating" : "updating";
       resourceState.oldInputs = resourceState.inputs;
@@ -243,6 +257,7 @@ export function Resource<
         },
         ...inputs,
       );
+
       console.log(
         `${event === "create" ? "Created" : "Updated"}: ${resourceID}`,
       );
