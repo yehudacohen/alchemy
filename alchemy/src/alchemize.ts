@@ -52,11 +52,17 @@ export async function alchemize(options?: AlchemizeOptions) {
   const priorStates = await state.all(stage);
   const priorIDs = Object.keys(priorStates);
 
-  if (options?.mode === "up") {
+  const mode = options?.mode ?? "up";
+
+  if (mode === "up") {
     await Promise.allSettled(
       Array.from(nodes.values())
         .reverse()
-        .map((node) => evaluate(node.resource)),
+        .map((node) =>
+          evaluate(node.resource, {
+            stage,
+          }),
+        ),
     );
 
     if (options?.destroyOrphans === false) {
@@ -64,7 +70,7 @@ export async function alchemize(options?: AlchemizeOptions) {
     }
   }
   const aliveIDs = new Set(
-    options?.mode === "up"
+    mode === "up"
       ? nodes.keys()
       : // There are no alive resources in destroy mode
         [],

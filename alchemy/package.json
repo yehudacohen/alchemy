@@ -4,20 +4,25 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
-    "./fs": "./src/components/fs",
-    "./aws": "./src/components/aws",
-    "./esbuild": "./src/components/esbuild"
+    "./agent": "./src/components/agent/index.ts",
+    "./fs": "./src/components/fs/index.ts",
+    "./aws": "./src/components/aws/index.ts",
+    "./esbuild": "./src/components/esbuild.ts"
   },
   "devDependencies": {
     "@types/bun": "latest"
   },
   "peerDependencies": {
+    "@ai-sdk/openai": "^1.0.0",
     "@aws-sdk/client-dynamodb": "^3.0.0",
     "@aws-sdk/client-iam": "^3.0.0",
     "@aws-sdk/client-lambda": "^3.0.0",
     "@aws-sdk/client-s3": "^3.0.0",
     "@aws-sdk/client-sqs": "^3.0.1",
+    "ai": "^4.0.0",
     "jszip": "^3.0.0",
-    "esbuild": "^0.24.2"
+    "esbuild": "^0.24.2",
+    "valibot": "^1.0.0-beta.14",
+    "zod": "^3.24.1"
   }
 }

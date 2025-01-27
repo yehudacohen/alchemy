@@ -1,8 +1,8 @@
+import { alchemize } from "alchemy";
+import { Function, Queue, Role, Table } from "alchemy/aws";
+import { Bundle } from "alchemy/esbuild";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { alchemize } from "../alchemy/src/alchemize";
-import { Function, Queue, Role, Table } from "../alchemy/src/components/aws";
-import { Bundle } from "../alchemy/src/components/esbuild";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 

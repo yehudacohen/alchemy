@@ -1,0 +1,9 @@
+{
+  "name": "alchemy-examples",
+  "type": "module",
+  "module": "index.ts",
+  "dependencies": {
+    "alchemy": "workspace:*",
+    "dotenv": "^16.4.7"
+  }
+}

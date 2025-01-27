@@ -1,15 +1,17 @@
-import { defaultStage } from "./global";
+import { defaultStage, stateStore } from "./global";
 import { Output } from "./output";
 import {
   Input,
   Provider,
+  type Resource,
   ResourceID,
   isResource,
-  type Resource,
 } from "./resource";
+import type { StateStore } from "./state";
 
 interface ApplyOptions {
   stage?: string;
+  stateStore?: StateStore;
 }
 
 /**
@@ -37,6 +39,7 @@ export async function evaluate<T>(
   output: T | Output<T>,
   options: ApplyOptions = {},
 ): Promise<Evaluated<T>> {
+  const state = options.stateStore ?? stateStore;
   if (isResource(output)) {
     const resource = output;
     const resourceID = resource[ResourceID];
@@ -64,6 +67,7 @@ export async function evaluate<T>(
         resource,
         deps,
         inputs as [],
+        state,
       );
       resolve!(new Evaluated(result, [resourceID, ...deps]));
     } catch (error) {

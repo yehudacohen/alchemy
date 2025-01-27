@@ -1,7 +1,7 @@
-import { deletions, nodes, providers, stateStore } from "./global";
+import { deletions, nodes, providers } from "./global";
 import type { Inputs } from "./input";
 import { Output } from "./output";
-import type { State } from "./state";
+import type { State, StateStore } from "./state";
 
 export type ResourceID = string;
 export type ResourceType = string;
@@ -64,6 +64,7 @@ export type Provider<
     resource: Resource,
     deps: Set<ResourceID>,
     inputs: Inputs<In>,
+    stateStore: StateStore,
   ): Promise<Awaited<Out>>;
   delete(
     stage: string,
@@ -86,7 +87,7 @@ export function Resource<
   Out,
 >(
   type: Type,
-  func: (ctx: Context<Out>, ...args: Args) => Promise<Out> | Out,
+  func: (ctx: Context<Out>, ...args: Args) => Promise<Out | void> | Out | void,
 ): Provider<Type, Args, Awaited<Out>> {
   if (providers.has(type)) {
     throw new Error(`Resource ${type} already exists`);
@@ -173,7 +174,8 @@ export function Resource<
       resource: Resource,
       deps: Set<ResourceID>,
       inputs: Args,
-    ): Promise<Awaited<Out>> {
+      stateStore: StateStore,
+    ): Promise<Awaited<Out | void>> {
       // const stack = resource[ResourceStack];
       const resourceID = resource[ResourceID];
 
@@ -252,7 +254,9 @@ export function Resource<
         inputs,
         deps: [...deps],
       });
-      resource[Provide](result);
+      if (result !== undefined) {
+        resource[Provide](result);
+      }
       return result;
     }
 

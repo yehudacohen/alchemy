@@ -1,12 +1,14 @@
 {
-  "name": "alchemy",
+  "name": "alchemy-monorepo",
   "module": "index.ts",
   "type": "module",
-  "workspaces": ["alchemy", "alchemy-ui"],
+  "workspaces": ["alchemy", "alchemy-ui", "examples"],
   "devDependencies": {
+    "@ai-sdk/anthropic": "^1.1.4",
+    "@ai-sdk/openai": "^1.1.4",
     "@biomejs/biome": "^1.9.4",
     "@types/bun": "latest",
-    "vite": "^6.0.7",
-    "typescript": "^5.0.0"
+    "typescript": "^5.0.0",
+    "vite": "^6.0.7"
   }
 }

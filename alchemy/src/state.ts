@@ -38,9 +38,16 @@ export const defaultStore: StateStore = {
     await fs.promises.mkdir(stateFile, { recursive: true });
   },
   async list(stage) {
-    return (await fs.promises.readdir(path.join(stateFile, stage))).map(
-      (file) => file.replace(/\.json$/, ""),
-    );
+    try {
+      return (await fs.promises.readdir(path.join(stateFile, stage))).map(
+        (file) => file.replace(/\.json$/, ""),
+      );
+    } catch (error: any) {
+      if (error.code === "ENOENT") {
+        return [];
+      }
+      throw error;
+    }
   },
   async get(stage, key) {
     try {
