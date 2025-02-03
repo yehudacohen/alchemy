@@ -22,10 +22,10 @@ export class Scope {
   ) {}
 
   public getScopePath(root: string): string {
-    if (this.scopeName) {
-      return path.join(root, this.scopeName);
-    }
-    return root;
+    // First, compute the parent's scope path
+    const parentPath = this.parent ? this.parent.getScopePath(root) : root;
+    // Then join the current scope name (if any) onto the parent's path
+    return this.scopeName ? path.join(parentPath, this.scopeName) : parentPath;
   }
 }
 
