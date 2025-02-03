@@ -200,7 +200,28 @@ ${fewShotExamples.join("\n")}
 
 One slight difference from the example is that the \`ignore\` and \`Resource\` functions should be imported from alchemy
 
-import { Resource, ignore } from "alchemy";`,
+import { Resource, ignore } from "alchemy";
+
+For reference, here is what the Context object looks like:
+export type Context<Outputs> = {
+  stage: string;
+  resourceID: ResourceID;
+  scope: IScope;
+  /**
+   * Indicate that this resource is being replaced.
+   * This will cause the resource to be deleted at the end of the stack's CREATE phase.
+   */
+  replace(): void;
+} & (
+  | {
+      event: "create";
+    }
+  | {
+      event: "update" | "delete";
+      output: Outputs;
+    }
+);
+`,
       ),
     });
 

@@ -122,7 +122,75 @@ The code should:
     // Try generating and validating code up to maxAttempts times
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
       try {
-        // Generate the TypeScript code
+        // After 2 failed attempts, consult o3-mini for analysis
+        if (attempt === 3) {
+          const { model: o3Model } = await resolveModel("o3-mini");
+          const consultationMessages: CoreMessage[] = [
+            ...messages,
+            {
+              role: "user" as const,
+              content:
+                "We're encountering persistent TypeScript errors in our code generation. Please help by:\n\n" +
+                "1. Diagnosing the root cause of these errors\n" +
+                "2. Identifying specific sections of code that need to change\n" +
+                "3. Providing step-by-step guidance on how to fix them\n\n" +
+                "Please don't write the complete solution - just highlight what needs to change and why.",
+            },
+          ];
+
+          const { text: analysis } = await generateText({
+            model: o3Model,
+            temperature: 0.1,
+            providerOptions: {
+              openai: {
+                reasoningEffort: "high",
+              },
+            },
+            messages: consultationMessages,
+          });
+
+          // Add the analysis to our conversation for the next attempt
+          messages.push({
+            role: "user" as const,
+            content: `A detailed analysis of our TypeScript errors has revealed specific issues and suggested fixes:\n\n${analysis}\n\nPlease implement these changes following the guidance above.`,
+          });
+
+          // Generate one more attempt with the analysis
+          const { text: finalAttempt } = await generateText({
+            model,
+            temperature: 0.1,
+            messages,
+          });
+
+          const content = extractTypeScriptCode(finalAttempt);
+          if (!content) {
+            throw new Error(
+              "Failed to generate valid TypeScript code after consultation",
+            );
+          }
+
+          await writeFile(props.path, content);
+
+          // Validate the final attempt
+          const errorMessage = await validateTypeScript(props.path, {
+            dependencies: props.dependencies,
+            tsconfigPath: props.tsconfigPath,
+            projectRoot: props.projectRoot,
+          });
+
+          if (errorMessage) {
+            throw new Error(
+              `Failed to generate type-safe code even after expert consultation. Errors:\n${errorMessage}`,
+            );
+          }
+
+          return {
+            path: props.path,
+            content,
+          };
+        }
+
+        // Generate the TypeScript code with original model
         const { text } = await generateText({
           model,
           temperature: Math.max(
@@ -157,31 +225,16 @@ The code should:
 
         // If type checking is enabled, validate the written file
         if (props.typeCheck) {
-          const diagnostics = await validateTypeScript(props.path, {
+          const errorMessage = await validateTypeScript(props.path, {
             dependencies: props.dependencies,
             tsconfigPath: props.tsconfigPath,
             projectRoot: props.projectRoot,
           });
 
-          if (diagnostics.length > 0) {
-            // Format the type errors
-            const formatHost: ts.FormatDiagnosticsHost = {
-              getCanonicalFileName: (path) => path,
-              getCurrentDirectory: () =>
-                props.projectRoot ?? dirname(props.path),
-              getNewLine: () => ts.sys.newLine,
-            };
-
-            const errorMessages = ts.formatDiagnosticsWithColorAndContext(
-              diagnostics,
-              formatHost,
-            );
-            console.log(errorMessages);
-
+          if (errorMessage) {
             if (attempt === maxAttempts) {
               throw new Error(
-                "Failed to generate type-safe code after maximum attempts. Last type errors:\n" +
-                  errorMessages,
+                `Failed to generate type-safe code after maximum attempts. Errors:\n${errorMessage}`,
               );
             }
 
@@ -193,7 +246,7 @@ The code should:
               },
               {
                 role: "user",
-                content: `The code has TypeScript errors that need to be fixed. Here are the errors:\n\n${errorMessages}\n\nPlease generate a new version that fixes these issues.`,
+                content: `The code has TypeScript errors that need to be fixed. Here are the errors:\n\n${errorMessage}\n\nPlease generate a new version that fixes these issues.`,
               },
             );
             continue;
@@ -203,7 +256,7 @@ The code should:
         // If we get here, the code is valid (or type checking is disabled)
         return {
           path: props.path,
-          content: content,
+          content,
         };
       } catch (error) {
         // On the last attempt, rethrow the error
@@ -233,7 +286,8 @@ The code should:
 ) {}
 
 /**
- * Validates TypeScript code using the compiler API and returns any type errors
+ * Validates TypeScript code and returns formatted error messages if there are any type errors
+ * @returns Formatted error message if there are errors, undefined if valid
  */
 async function validateTypeScript(
   filePath: string,
@@ -242,7 +296,7 @@ async function validateTypeScript(
     tsconfigPath?: string;
     projectRoot?: string;
   },
-): Promise<ts.Diagnostic[]> {
+): Promise<string | undefined> {
   const projectRoot = options.projectRoot ?? dirname(filePath);
   const tsconfigPath =
     options.tsconfigPath ?? resolve(projectRoot, "tsconfig.json");
@@ -290,93 +344,15 @@ async function validateTypeScript(
     ...program.getSyntacticDiagnostics(),
   ];
 
-  return diagnostics;
-}
-
-/**
- * Attempts to generate valid TypeScript code with retries
- */
-async function generateCodeWithRetries(
-  model: any,
-  props: CodeProps,
-  maxAttempts = 3,
-): Promise<string> {
-  const messages: CoreMessage[] = [
-    {
-      role: "system",
-      content:
-        "You are an expert TypeScript developer that generates clean, well-documented code following best practices. " +
-        "Your response must follow this exact format:\n" +
-        "1. A single sentence describing what the code will do\n" +
-        "2. A single TypeScript code block surrounded by ```ts and ``` tags\n" +
-        "Do not include any other explanations or multiple code blocks.",
-    },
-    {
-      role: "user",
-      content: `Please generate TypeScript code based on the following specifications:
-
-Requirements:
-${props.requirements}
-
-${
-  props.dependencies?.length
-    ? `Context (other code files):
-${props.dependencies.map((dep) => dep.content).join("\n\n")}`
-    : ""
-}
-
-The code should:
-1. Be well-documented with JSDoc comments
-2. Follow TypeScript best practices
-3. Include proper type definitions
-4. Be ready to use with the provided context files
-
-Your response MUST follow this format:
-- One sentence summary of what the code will do
-- Single TypeScript code block surrounded by \`\`\`ts and \`\`\` tags
-- No other explanations or multiple code blocks`,
-    },
-  ];
-
-  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-    const { text } = await generateText({
-      model,
-      temperature: Math.max(
-        0.1,
-        (props.temperature ?? 0.7) * (1 - attempt * 0.2),
-      ), // Reduce temperature with each attempt
-      messages,
+  if (diagnostics.length > 0) {
+    return ts.formatDiagnosticsWithColorAndContext(diagnostics, {
+      getCanonicalFileName: (path) => path,
+      getCurrentDirectory: () => projectRoot,
+      getNewLine: () => ts.sys.newLine,
     });
-
-    const code = extractTypeScriptCode(text);
-    if (!code) {
-      if (attempt === maxAttempts) {
-        throw new Error(
-          "Failed to generate valid TypeScript code after maximum attempts",
-        );
-      }
-
-      // Add feedback about the format
-      messages.push(
-        {
-          role: "assistant",
-          content: text,
-        },
-        {
-          role: "user",
-          content:
-            "Your response did not match the required format. Please provide your response with exactly one sentence summary" +
-            " followed by a single TypeScript code block surrounded by ```ts and ``` tags. No other text or explanations.",
-        },
-      );
-      continue;
-    }
-
-    return code;
   }
 
-  // This should never be reached due to the throws above
-  throw new Error("Unexpected code generation failure");
+  return undefined;
 }
 
 /**
