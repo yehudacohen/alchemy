@@ -1,9 +1,10 @@
+import { z } from "zod";
+
 /**
  * @see https://docs.anthropic.com/en/docs/about-claude/models#model-comparison-table
  */
 export const AnthropicModels = [
   // Claude 3.5 Sonnet models
-  "claude-3-5-sonnet",
   "claude-3-5-sonnet-20241022",
   "claude-3-5-sonnet-20240620",
 
@@ -19,6 +20,8 @@ export const AnthropicModels = [
   "claude-3-haiku",
   "claude-3-haiku-20240307",
 ] as const;
+
+export const AnthropicModel = z.enum(AnthropicModels);
 
 export type AnthropicModelId = (typeof AnthropicModels)[number] | (string & {});
 

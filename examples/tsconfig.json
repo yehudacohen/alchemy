@@ -1,7 +1,8 @@
 {
   "extends": "../tsconfig.base.json",
-  "include": ["./**/*.ts"],
+  "include": ["./**/*.ts", "../alchemy-aws/aws-gen.ts"],
   "compilerOptions": {
-    "composite": true
+    "composite": true,
+    "resolveJsonModule": true
   }
 }

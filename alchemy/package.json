@@ -9,7 +9,7 @@
   "exports": {
     ".": "./src/index.ts",
     "./agent": "./src/components/agent/index.ts",
-    "./fs": "./src/components/fs/index.ts",
+    "./fs": "./src/components/fs.ts",
     "./aws": "./src/components/aws/index.ts",
     "./esbuild": "./src/components/esbuild.ts"
   },

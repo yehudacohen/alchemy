@@ -1,9 +1,9 @@
-import { generateText } from "ai";
 import { mkdir, unlink, writeFile } from "fs/promises";
 import { dirname } from "path";
 import { z } from "zod";
 import { Agent } from "./agent";
-import { resolveModel } from "./model";
+import { generateText } from "./ai";
+import { ModelId, resolveModel } from "./model";
 import { scrapeWebPage } from "./scrape";
 
 export const RequirementsInput = z.object({
@@ -11,7 +11,7 @@ export const RequirementsInput = z.object({
    * The ID of the model to use for generating requirements documentation
    * @default "gpt-4o"
    */
-  modelId: z.string().optional(),
+  modelId: ModelId.optional(),
 
   /**
    * List of requirements to document and analyze
@@ -54,6 +54,7 @@ export class Requirements extends Agent(
     output: RequirementsOutput,
   },
   async (ctx, input) => {
+    console.log("Requirements input", ctx.event);
     if (ctx.event === "delete") {
       await unlink(input.path);
       return;

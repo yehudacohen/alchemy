@@ -1,7 +1,14 @@
-import { type AnthropicModelId, isAnthropicModel } from "./anthropic";
-import { type OpenAIChatModelId, isOpenAIModel } from "./openai";
+import { z } from "zod";
+import {
+  AnthropicModel,
+  type AnthropicModelId,
+  isAnthropicModel,
+} from "./anthropic";
+import { type OpenAIChatModelId, OpenAIModel, isOpenAIModel } from "./openai";
 
 export type ModelId = OpenAIChatModelId | AnthropicModelId;
+
+export const ModelId = z.union([OpenAIModel, AnthropicModel]);
 
 export async function resolveModel(modelId: ModelId) {
   if (isOpenAIModel(modelId)) {

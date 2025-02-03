@@ -1,3 +1,4 @@
+export * from "./agent";
 export * from "./package";
 export * from "./requirements";
 export * from "./tsconfig";

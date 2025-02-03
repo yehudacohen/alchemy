@@ -1,10 +1,11 @@
 import type { CoreMessage } from "ai";
 import { generateText } from "ai";
-import { mkdir, unlink, writeFile } from "fs/promises";
+import { mkdir, writeFile } from "fs/promises";
 import { dirname } from "path";
 import { z } from "zod";
+import { rm } from "../fs";
 import { Agent } from "./agent";
-import { resolveModel } from "./model";
+import { ModelId, resolveModel } from "./model";
 
 export type CodeProps = z.infer<typeof CodeProps>;
 
@@ -19,7 +20,7 @@ const CodeProps = z.object({
    * The ID of the model to use for generating TypeScript code
    * @default "gpt-4o"
    */
-  modelId: z.string().optional(),
+  modelId: ModelId.optional(),
 
   /**
    * The name of the file to write the code to
@@ -56,7 +57,7 @@ export class TypeScriptFile extends Agent(
   },
   async (ctx, props) => {
     if (ctx.event === "delete") {
-      await unlink(props.path);
+      await rm(props.path);
       return;
     }
 
@@ -64,18 +65,22 @@ export class TypeScriptFile extends Agent(
     const { model } = await resolveModel(props.modelId ?? "gpt-4o");
 
     // Generate the TypeScript code with retries
-    const content = await generateCodeWithRetries(model, props);
+    try {
+      const content = await generateCodeWithRetries(model, props);
+      // Ensure the directory exists
+      await mkdir(dirname(props.path), { recursive: true });
 
-    // Ensure the directory exists
-    await mkdir(dirname(props.path), { recursive: true });
+      // Write the TypeScript file
+      await writeFile(props.path, content);
 
-    // Write the TypeScript file
-    await writeFile(props.path, content);
-
-    return {
-      path: props.path,
-      content: content,
-    };
+      return {
+        path: props.path,
+        content: content,
+      };
+    } catch (error) {
+      console.log(error);
+      throw error;
+    }
   },
 ) {}
 

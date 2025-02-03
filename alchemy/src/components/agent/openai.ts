@@ -1,4 +1,9 @@
+import { z } from "zod";
 export const OpenAIModels = [
+  "o3-mini-low",
+  "o3-mini-medium",
+  "o3-mini-high",
+
   // O1 models
   "o1",
   "o1-2024-12-17",
@@ -32,6 +37,8 @@ export const OpenAIModels = [
   "gpt-3.5-turbo",
   "gpt-3.5-turbo-1106",
 ] as const;
+
+export const OpenAIModel = z.enum(OpenAIModels);
 
 export type OpenAIChatModelId = (typeof OpenAIModels)[number] | (string & {});
 

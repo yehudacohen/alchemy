@@ -12,8 +12,8 @@ export function Agent<Type extends string, TInput, TOutput>(
     output,
   }: {
     description: string;
-    input: ZodType<TInput>;
-    output: ZodType<TOutput>;
+    input?: ZodType<TInput>;
+    output?: ZodType<TOutput>;
   },
   handler: (
     ctx: Context<TOutput>,
@@ -29,7 +29,7 @@ export function Agent<Type extends string, TInput, TOutput>(
     type,
     async (ctx: Context<TOutput>, props: TInput): Promise<TOutput | void> => {
       // Validate input
-      const validatedInput = input.parse(props);
+      const validatedInput = input ? input.parse(props) : props;
 
       // Call handler with validated input
       const result = await handler(ctx, validatedInput);
@@ -46,7 +46,7 @@ export function Agent<Type extends string, TInput, TOutput>(
       });
 
       // Validate output
-      const validatedOutput = output.parse(evaluated);
+      const validatedOutput = output ? output.parse(evaluated) : evaluated;
 
       return validatedOutput;
     },
