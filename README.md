@@ -321,35 +321,3 @@ export default {
 
 > [!NOTE]
 > See [global.ts](./alchemy/src/global.ts).
-
-## Philosophy and comparison with existing IaC frameworks
-
-I built alchemy after years of working with every other option. IaC is non-negotiable in my opinion, and has been one of my favorite technologies as a developer.
-
-I started with CloudFormation (since I worked at Amazon) and hated that. Fuck deploying JSON to a slow service, am I right? The CDK was a huge upgrade on that (yay for TypeScript) but it is limited by the CloudFormation service, which is slow to _change_ and slow to _use_, and has very strong opinions on how and where it should be used.
-
-For example, the CDK is written in a "meta" language called JSII. Which is a subset of TypeScript designed to be compiled to Java, Python, etc. This means you're not free to use all TypeScript features (which are ideal for configuration as code). It's also coupled to synchronous I/O. It is damn near impossible to do anything async, making it slow and clunky. Finally, the CDK is still CJS and doesn't emit ESM. Taking a dependency on the CDK will 10x the size of your bundle and destroy your DX.
-
-Later, I moved on to Pulumi, which was a nice change of pace since it runs locally and is much faster. You can cancel a deployment by hitting Ctrl+C (hallelujah!). It also supported more than just AWS, which is useful for managing all your resources, such as Stripe, GitHub or another provider like Cloudflare.
-
-However, Pulumi is largely a wrapper around Terraform and relies on complicated "providers" implemented with Go, running in a separate process. It can't run anywhere (like the browser). Different languages work better/worse than others and always have "sharp edge" limitations and gotchas. Custom Resources are possible but more of an afterthought and a PITA to implement.
-
-I've used Terraform when I've been forced into it. It's ... ok ... but I don't love it. It's a custom DSL and a heavy toolchain for what, calling a few CRUD APIs? Way overkill. Every time I think about implementing a custom resource for Terraform, I just can't bring myself to do it. Let me just write a function, please!
-
-Lately, I've been using SST because I've been doing a ton of web development. At first, I really liked SST, especially because of its local development experience. `sst dev` gives you live deploy, a TUI multiplexer and a proxy from the cloud to your local code. This is great for building web apps in AWS.
-
-But, as my app grew, SST's bugs ate away at me. I got blocked by broken resources that have race conditions and it was impossible to workaround. I also wanted to deploy a nested app (another `sst.config.ts`) which didn't gel well with the generated `sst-env.d.ts` files.
-
-Again, I was let down by the complexity and opinions of my chosen IaC framework. And for what? To help me call a few CRUD APIs? Honestly, it just seems insane how far we've drifted away from simplicity in this area. This became even more apparent as I started using Cursor more and more to write code.
-
-You see, I've found myself doing more frontend than I've ever done before, and I'm not a good frontend developer. So, I relied on Cursor to write most of the code for me and (as many others have experienced) it totally blew my mind 🤯. Cursor is just really, really, really good at TypeScript, React and Tailwind. I've built a functioning and (if i don't say so myself) good looking SPA. It's been a blast.
-
-But, this got me thinking ... you know what else Cursor is really great at? Perhaps even better at? Interacting with CRUD APIs, that's what! While there's a ton of frontend training data for LLMs, there's just as much (if not more) training data for CRUD lifecycle operations. There's also all of Terraform, Pulumi, SST and the AWS CDK's training data. All. Of. It.
-
-Long story short, I discovered that Cursor can pretty much one-shot the implementation of Resources. All of the resources in [src/components](./alchemy/src/components) are entirely generated on-demand (1 minute time investment, tops). When I run into a bug, I just explained it to Cursor who fixed it immediately.
-
-This is a game changer. It means we don't need tools like Terraform to build suites of "provider" libraries for us. We just need the engine - the bit that tracks state and decides what to create/update/delete. The rest can be generated at near zero cost.
-
-This story is ultimately why I built Alchemy - I just wanted total control and freedom over how I deploy my resources. And, I wanted it to be in TypeScript, so I can use its amazing type system. Annnnd, I wanted it to be embeddable, so I can use it anywhere, maybe even in a React app.
-
-"Reactive IaC", anyone?
