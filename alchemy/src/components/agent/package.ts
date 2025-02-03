@@ -4,11 +4,7 @@ import { dirname } from "path";
 import { z } from "zod";
 import { rm } from "../fs";
 import { Agent } from "./agent";
-import type { AnthropicModelId } from "./anthropic";
 import { resolveModel } from "./model";
-import type { OpenAIChatModelId } from "./openai";
-
-export type ModelId = OpenAIChatModelId | AnthropicModelId;
 
 export const PackageJsonSchema = z.object({
   name: z.string(),
