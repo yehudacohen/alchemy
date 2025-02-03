@@ -17,13 +17,13 @@
     "@types/bun": "latest"
   },
   "peerDependencies": {
-    "@ai-sdk/openai": "^1.0.0",
+    "@ai-sdk/openai": "^1.1.9",
     "@aws-sdk/client-dynamodb": "^3.0.0",
     "@aws-sdk/client-iam": "^3.0.0",
     "@aws-sdk/client-lambda": "^3.0.0",
     "@aws-sdk/client-s3": "^3.0.0",
     "@aws-sdk/client-sqs": "^3.0.1",
-    "ai": "^4.0.0",
+    "ai": "^4.1.16",
     "jszip": "^3.0.0",
     "esbuild": "^0.24.2",
     "turndown": "^7.2.0",

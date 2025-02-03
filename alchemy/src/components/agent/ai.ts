@@ -1,9 +1,11 @@
 import {
   type GenerateObjectResult,
+  type LanguageModelV1,
   generateObject as _generateObject,
   generateText as _generateText,
 } from "ai";
 import type { z } from "zod";
+import { isOpenAIModel } from "./openai";
 
 // OpenAI error types
 interface OpenAIError extends Error {
@@ -101,18 +103,18 @@ export interface RateLimitConfig {
 const defaultConfig: Required<RateLimitConfig> = {
   maxConcurrent: 3,
   baseDelay: 1000,
-  maxRetries: 3,
+  maxRetries: 10,
   maxDelay: 30000,
   jitter: 0.1,
 };
 
 // WeakMap to store semaphores per client
-const clientSemaphores = new WeakMap<object, AsyncSemaphore>();
+const clientSemaphores = new Map<"openai" | "anthropic", AsyncSemaphore>();
 
 /**
  * Gets or creates a semaphore for a specific client
  */
-function getSemaphore(client: object): AsyncSemaphore {
+function getSemaphore(client: "openai" | "anthropic"): AsyncSemaphore {
   let semaphore = clientSemaphores.get(client);
   if (!semaphore) {
     semaphore = new AsyncSemaphore(defaultConfig.maxConcurrent);
@@ -136,8 +138,10 @@ function calculateBackoffDelay(
 /**
  * Checks if an error is a rate limit related error
  */
-function isRateLimitError(error: unknown): boolean {
-  if (!(error instanceof Error)) return false;
+function isRateLimitError(error: any): boolean {
+  if (error.url === "https://api.anthropic.com/v1/messages") {
+    return error.status === 429;
+  }
 
   const openAIError = error as OpenAIError;
 
@@ -175,21 +179,20 @@ function isRateLimitError(error: unknown): boolean {
  */
 async function withRateLimit<T>(
   fn: () => Promise<T>,
-  client: object,
+  options: { model: LanguageModelV1 },
   config: RateLimitConfig = {},
 ): Promise<T> {
   const finalConfig = { ...defaultConfig, ...config };
-  const semaphore = getSemaphore(client);
-
+  const client = options.model;
+  const semaphore = getSemaphore(
+    isOpenAIModel(client.modelId) ? "openai" : "anthropic",
+  );
   for (let attempt = 0; attempt <= finalConfig.maxRetries; attempt++) {
     try {
       await semaphore.acquire();
       const result = await fn();
-      semaphore.release();
       return result;
     } catch (error) {
-      semaphore.release();
-
       if (attempt === finalConfig.maxRetries) {
         throw error;
       }
@@ -199,7 +202,12 @@ async function withRateLimit<T>(
       }
 
       const delay = calculateBackoffDelay(attempt, finalConfig);
+      console.log(
+        `Rate limit error, retrying... (attempt ${attempt + 1}/${finalConfig.maxRetries + 1}, waiting ${Math.round(delay)}ms)`,
+      );
       await new Promise((resolve) => setTimeout(resolve, delay));
+    } finally {
+      semaphore.release();
     }
   }
 

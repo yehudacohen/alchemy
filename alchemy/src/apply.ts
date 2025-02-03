@@ -7,12 +7,12 @@ import {
   ResourceID,
   isResource,
 } from "./resource";
-import { type Scope, getScope } from "./scope";
+import { type Scope as IScope, getScope } from "./scope";
 import type { StateStore } from "./state";
 
 interface ApplyOptions {
   stage: string;
-  scope: Scope;
+  scope: IScope;
   stateStore: StateStore;
 }
 
@@ -79,6 +79,7 @@ export async function evaluate<T>(
       );
       resolve!(new Evaluated(result, [resourceID, ...deps]));
     } catch (error) {
+      console.error(error);
       reject!(error);
     }
     return promise;

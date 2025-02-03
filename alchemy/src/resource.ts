@@ -25,6 +25,7 @@ const OrthogonalProperties = [
   Value,
   Apply,
   Provide,
+  Scope,
 ] as const;
 
 export type Resource<In extends any[] = any[], Out = any> = {
@@ -131,10 +132,10 @@ export function Resource<
       this[Provider] = Resource as any;
       this[Input] = input;
       this[Value] = undefined;
+      this[Scope] = scope;
       this[Provide] = (value: Out) => {
         this[Value] = value;
       };
-      this[Scope] = scope;
 
       return new Proxy(this, {
         // TODO(sam): this won't work for the sub-class (class Table extends Resource)
@@ -205,13 +206,15 @@ export function Resource<
         await stateStore.set(resourceID, resourceState);
       }
 
+      const resourceFQN = `${resource[Scope].getScopePath(stage)}/${resourceID}`;
+
       // Skip update if inputs haven't changed and resource is in a stable state
       if (
         (resourceState.status === "created" ||
           resourceState.status === "updated") &&
         JSON.stringify(resourceState.inputs) === JSON.stringify(inputs)
       ) {
-        console.log(`Skip:    ${resourceID} (no changes)`);
+        console.log(`Skip:    ${resourceFQN} (no changes)`);
         if (resourceState.output !== undefined) {
           resource[Provide](resourceState.output);
         }
@@ -224,7 +227,7 @@ export function Resource<
       resourceState.inputs = inputs;
 
       console.log(
-        `${event === "create" ? "Create" : "Update"}:  ${resourceID}`,
+        `${event === "create" ? "Create" : "Update"}:  ${resourceFQN}`,
       );
 
       await stateStore.set(resourceID, resourceState);
@@ -245,7 +248,7 @@ export function Resource<
               replace: () => {
                 if (isReplaced) {
                   console.warn(
-                    `Resource ${type} ${resourceID} is already marked as REPLACE`,
+                    `Resource ${type} ${resourceFQN} is already marked as REPLACE`,
                   );
                   return;
                 }
@@ -287,7 +290,7 @@ export function Resource<
       );
 
       console.log(
-        `${event === "create" ? "Created" : "Updated"}: ${resourceID}`,
+        `${event === "create" ? "Created" : "Updated"}: ${resourceFQN}`,
       );
       await stateStore.set(resourceID, {
         provider: type,
@@ -310,6 +313,7 @@ export function Resource<
       state: State,
       inputs: Args,
     ) {
+      const resourceFQN = `${scope.getScopePath(stage)}/${resourceID}`;
       const nestedScope = new IScope(resourceID, scope);
       console.log(nestedScope.getScopePath(stage));
 
@@ -321,7 +325,7 @@ export function Resource<
         stateStore: defaultStateStore,
       });
 
-      console.log(`Delete:  ${scope.getScopePath(stage)}/${resourceID}`);
+      console.log(`Delete:  ${resourceFQN}`);
 
       await func(
         {
@@ -348,7 +352,7 @@ export function Resource<
         ...inputs,
       );
 
-      console.log(`Deleted: ${resourceID}`);
+      console.log(`Deleted: ${resourceFQN}`);
     }
   }
   providers.set(type, Resource as any);

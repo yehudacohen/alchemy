@@ -4,8 +4,9 @@
   "type": "module",
   "workspaces": ["alchemy", "alchemy-ui", "examples"],
   "devDependencies": {
-    "@ai-sdk/anthropic": "^1.1.4",
-    "@ai-sdk/openai": "^1.1.4",
+    "ai": "^4.1.16",
+    "@ai-sdk/anthropic": "^1.1.6",
+    "@ai-sdk/openai": "^1.1.9",
     "@biomejs/biome": "^1.9.4",
     "@types/bun": "latest",
     "@types/turndown": "^5.0.5",

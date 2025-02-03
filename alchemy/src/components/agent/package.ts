@@ -1,7 +1,8 @@
 import { generateObject } from "ai";
-import { mkdir, unlink, writeFile } from "fs/promises";
+import { mkdir, writeFile } from "fs/promises";
 import { dirname } from "path";
 import { z } from "zod";
+import { rm } from "../fs";
 import { Agent } from "./agent";
 import type { AnthropicModelId } from "./anthropic";
 import { resolveModel } from "./model";
@@ -83,7 +84,7 @@ export class PackageJson extends Agent(
   },
   async (ctx, input) => {
     if (ctx.event === "delete") {
-      await unlink(input.path);
+      await rm(input.path);
       return;
     }
 

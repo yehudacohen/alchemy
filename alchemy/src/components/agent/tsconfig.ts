@@ -1,7 +1,8 @@
 import { generateObject } from "ai";
-import { mkdir, unlink, writeFile } from "fs/promises";
+import { mkdir, writeFile } from "fs/promises";
 import { dirname } from "path";
 import { z } from "zod";
+import { rm } from "../fs";
 import { Agent } from "./agent";
 import { resolveModel } from "./model";
 
@@ -108,7 +109,7 @@ export class TypeScriptConfig extends Agent(
   },
   async (ctx, props) => {
     if (ctx.event === "delete") {
-      await unlink(props.path);
+      await rm(props.path);
       return;
     }
 

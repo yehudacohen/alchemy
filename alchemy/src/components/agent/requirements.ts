@@ -1,10 +1,12 @@
-import { mkdir, unlink, writeFile } from "fs/promises";
+import { mkdir, writeFile } from "fs/promises";
 import { dirname } from "path";
 import { z } from "zod";
+import { rm } from "../fs";
 import { Agent } from "./agent";
 import { generateText } from "./ai";
 import { ModelId, resolveModel } from "./model";
-import { scrapeWebPage } from "./scrape";
+
+export const ReasoningEffort = z.enum(["low", "medium", "high"]);
 
 export const RequirementsInput = z.object({
   /**
@@ -12,6 +14,11 @@ export const RequirementsInput = z.object({
    * @default "gpt-4o"
    */
   modelId: ModelId.optional(),
+
+  /**
+   * The effort to put into reasoning about the requirements
+   */
+  reasoningEffort: ReasoningEffort.optional(),
 
   /**
    * List of requirements to document and analyze
@@ -54,9 +61,8 @@ export class Requirements extends Agent(
     output: RequirementsOutput,
   },
   async (ctx, input) => {
-    console.log("Requirements input", ctx.event);
     if (ctx.event === "delete") {
-      await unlink(input.path);
+      await rm(input.path);
       return;
     }
 
@@ -68,8 +74,15 @@ export class Requirements extends Agent(
       model,
       temperature: input.temperature ?? 0.7,
       maxSteps: 3, // Allow multiple steps for potential tool usage
+      providerOptions: input.reasoningEffort
+        ? {
+            openai: {
+              reasoningEffort: input.reasoningEffort,
+            },
+          }
+        : undefined,
       tools: {
-        scrapeWebPage,
+        // scrapeWebPage,
       },
       messages: [
         {

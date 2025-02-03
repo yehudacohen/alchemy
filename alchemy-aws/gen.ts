@@ -8,82 +8,6 @@ import { fileURLToPath } from "url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-type UpdateType = "Immutable" | "Mutable" | "Conditional";
-
-type PrimitiveType = "String" | "Double" | "Integer" | "Json";
-
-type PropertySpec =
-  | {
-      Type?: never;
-      PrimitiveType?: never;
-      Documentation: string;
-      Properties: {
-        [propertyName: string]: {
-          Documentation: string;
-          Type: "Extensions" | "Subject";
-          UpdateType: UpdateType;
-          Required: boolean;
-        };
-      };
-    }
-  | {
-      Type: "List" | "Map";
-      PrimitiveType?: PrimitiveType;
-      Required: boolean;
-      ItemType: string;
-      UpdateType: UpdateType;
-    }
-  | {
-      Type?: never;
-      PrimitiveType: PrimitiveType;
-      Documentation: string;
-      UpdateType: UpdateType;
-      Required: boolean;
-    };
-
-type ResourceProperty = {
-  [propertyName: string]: {
-    Documentation: string;
-    UpdateType: UpdateType;
-    Required: boolean;
-  } & (
-    | {
-        Type: string;
-        PrimitiveType?: never;
-      }
-    | {
-        Type: "List";
-        ItemType?: string;
-        PrimitiveItemType?: PrimitiveType;
-        DuplicatesAllowed: boolean;
-      }
-    | {
-        Type?: never;
-        PrimitiveType: PrimitiveType;
-      }
-  );
-};
-
-type ResourceSpec = {
-  Documentation: string;
-  Properties: ResourceProperty;
-  Attributes?: {
-    [attributeName: string]: {
-      PrimitiveType: PrimitiveType;
-    };
-  };
-};
-
-interface CfnSpec {
-  PropertyTypes: {
-    [propertyFQN: `${keyof CfnSpec["ResourceTypes"]}.${string}`]: PropertySpec;
-  };
-  ResourceTypes: {
-    [key: `AWS::${string}::${string}`]: ResourceSpec;
-  };
-  ResourceSpecificationVersion: string;
-}
-
 async function loadSpec(): Promise<CfnSpec> {
   const awsSpecURL =
     "https://dnwj8swjjbsbt.cloudfront.net/latest/gzip/CloudFormationResourceSpecification.json";
@@ -207,7 +131,8 @@ class AWSResource extends Agent(
     },
   ) => {
     const requirements = new Requirements("requirements", {
-      modelId: "gpt-4o",
+      modelId: "o3-mini",
+      reasoningEffort: "high",
       path: path.join(
         props.requirementsDir,
         kebabCase(props.ResourceName) + ".md",
@@ -260,6 +185,8 @@ ${JSON.stringify(props, null, 2)}
     const implementation = new TypeScriptFile("implementation", {
       modelId: "claude-3-5-sonnet-20241022",
       path: path.join(props.srcDir, kebabCase(props.ResourceName) + ".ts"),
+      projectRoot: __dirname,
+      typeCheck: true,
       requirements: requirements.content.apply(
         (
           content,
@@ -285,7 +212,7 @@ import { Resource, ignore } from "alchemy";`,
 ) {}
 
 const requirementsDir = new Folder(
-  "requirementsDir",
+  "requirements",
   path.join(__dirname, "requirements"),
 );
 
@@ -300,3 +227,79 @@ const iam = new AWSService("AWS::IAM", {
 await alchemize({
   mode: process.argv.includes("destroy") ? "destroy" : "up",
 });
+
+type UpdateType = "Immutable" | "Mutable" | "Conditional";
+
+type PrimitiveType = "String" | "Double" | "Integer" | "Json";
+
+type PropertySpec =
+  | {
+      Type?: never;
+      PrimitiveType?: never;
+      Documentation: string;
+      Properties: {
+        [propertyName: string]: {
+          Documentation: string;
+          Type: "Extensions" | "Subject";
+          UpdateType: UpdateType;
+          Required: boolean;
+        };
+      };
+    }
+  | {
+      Type: "List" | "Map";
+      PrimitiveType?: PrimitiveType;
+      Required: boolean;
+      ItemType: string;
+      UpdateType: UpdateType;
+    }
+  | {
+      Type?: never;
+      PrimitiveType: PrimitiveType;
+      Documentation: string;
+      UpdateType: UpdateType;
+      Required: boolean;
+    };
+
+type ResourceProperty = {
+  [propertyName: string]: {
+    Documentation: string;
+    UpdateType: UpdateType;
+    Required: boolean;
+  } & (
+    | {
+        Type: string;
+        PrimitiveType?: never;
+      }
+    | {
+        Type: "List";
+        ItemType?: string;
+        PrimitiveItemType?: PrimitiveType;
+        DuplicatesAllowed: boolean;
+      }
+    | {
+        Type?: never;
+        PrimitiveType: PrimitiveType;
+      }
+  );
+};
+
+type ResourceSpec = {
+  Documentation: string;
+  Properties: ResourceProperty;
+  Attributes?: {
+    [attributeName: string]: {
+      PrimitiveType: PrimitiveType;
+    };
+  };
+};
+
+interface CfnSpec {
+  PropertyTypes: {
+    [propertyFQN: `${keyof CfnSpec["ResourceTypes"]}.${string}`]: PropertySpec;
+  };
+  ResourceTypes: {
+    [key: `AWS::${string}::${string}`]: ResourceSpec;
+  };
+  ResourceSpecificationVersion: string;
+}

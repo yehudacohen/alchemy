@@ -1,8 +1,6 @@
 import { z } from "zod";
 export const OpenAIModels = [
-  "o3-mini-low",
-  "o3-mini-medium",
-  "o3-mini-high",
+  "o3-mini",
 
   // O1 models
   "o1",
@@ -46,6 +44,7 @@ export function isOpenAIModel(model: string): model is OpenAIChatModelId {
   return (
     model.startsWith("gpt-") ||
     model.startsWith("o1") ||
+    model.startsWith("o3") ||
     model.startsWith("gpt-4o")
   );
 }
