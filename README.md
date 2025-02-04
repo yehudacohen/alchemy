@@ -1,10 +1,8 @@
 # Alchemy
 
-Alchemy is a JS-native, embeddable Infrastructure as Code (IaC) library designed to run in any JavaScript runtime, including the browser.
+Alchemy is a JS-native, embeddable library for the materialization of resource graphs. From Infrastructure-as-Code (IaC) to code generation, Alchemy provides the fundamental building blocks for modeling resources that are Created, Updated and Deleted automatically.
 
-Alchemy fully embraces AI code generation at its core, even going so far as to encourage you to fork this repo and include it in your project as a Git submodule (instead of installing as a dependency) so that you can modify the core resources to fit your needs. Contribute 'em back if you want, or not - that's fine too!
-
-AI is so damn good at CRUD, so good that we no longer need to shackle ourselves to heavy toolchains like Pulumi and Terraform. All of the pre-built components in [src/components](./alchemy/src/components) were generated in less than a few minutes. Use them if you want, or create your own. It's that easy.
+Unlike similar tools like Pulumi, Terraform, and CloudFormation, Alchemy is implemented in pure ESM-native TypeScript with zero dependencies. It can run in any JavaScript runtime, including the browser.
 
 [![Demo](./alchemy.gif)](./alchemy.gif)
 
@@ -19,10 +17,12 @@ AI is so damn good at CRUD, so good that we no longer need to shackle ourselves 
 - **No service** - state files are stored locally in your project and can be easily inspected, modified, checked into your repo, etc.
 - **No strong opinions** - structure your codebase however you want, store state anywhere - we don't care!
 
-# Getting Started
+# Examples
 
-> [!NOTE]
-> You can see a comprehensive example involving a DynamoDB Table, IAM Role, Bundling and AWS Lambda [here](./examples/app.ts).
+- LLM-based code generation of all 200+ AWS CloudFormation resources: [alchemy-aws/gen.ts](./alchemy-aws/gen.ts)
+- Deploy an AWS Lambda Function with a DynamoDB Table and IAM Role: [example/app.ts](./examples/app.ts)
+
+# Getting Started
 
 An alchemy "app" (if you want to call it that) is just an ordinary TypeScript or JavaScript script. Once you've installed the `alchemy` package, you can start using it however you want.
 
