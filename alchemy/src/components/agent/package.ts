@@ -2,8 +2,11 @@ import { generateObject } from "ai";
 import { mkdir, writeFile } from "fs/promises";
 import { dirname } from "path";
 import { z } from "zod";
+import type { Context } from "../../resource";
 import { rm } from "../fs";
 import { Agent } from "./agent";
+import { dependenciesAsMessages } from "./dependencies";
+import { FileContext } from "./file-context";
 import { resolveModel } from "./model";
 
 export const PackageJsonSchema = z.object({
@@ -32,12 +35,17 @@ export const PackageJsonSchema = z.object({
   files: z.array(z.string()).optional(),
 });
 
-export const PackageInput = z.object({
+export const PackageJsonInput = z.object({
   /**
    * List of requirements for the package
    * Can include dependencies, dev dependencies, scripts, etc.
    */
   requirements: z.array(z.string()),
+
+  /**
+   * List of dependencies for the package
+   */
+  dependencies: z.array(FileContext).optional(),
 
   /**
    * Name of the package
@@ -62,30 +70,32 @@ export const PackageInput = z.object({
   path: z.string(),
 });
 
-export type PackageInput = z.infer<typeof PackageInput>;
+export type PackageJsonInput = z.infer<typeof PackageJsonInput>;
 
-export type PackageOutput = z.infer<typeof PackageJsonSchema>;
-export const PackageOutput = z.object({
-  content: z.string(),
-  packageJson: PackageJsonSchema,
-});
+export interface PackageJsonOutput {
+  path: string;
+  content: string;
+  packageJson: z.infer<typeof PackageJsonSchema>;
+}
 
 export class PackageJson extends Agent(
   "code::Package",
   {
     description:
       "This Agent is responsible for generating package.json configuration based on requirements.",
-    input: PackageInput,
-    output: PackageOutput,
+    input: PackageJsonInput,
   },
-  async (ctx, input) => {
+  async (
+    ctx: Context<PackageJsonOutput>,
+    input: PackageJsonInput,
+  ): Promise<PackageJsonOutput | void> => {
     if (ctx.event === "delete") {
       await rm(input.path);
       return;
     }
 
     // Get the appropriate model
-    const { model } = await resolveModel(input.model ?? "gpt-4o");
+    const model = await resolveModel(input.model ?? "gpt-4o");
 
     // Generate the package configuration using generateObject for type safety
     const result = await generateObject({
@@ -98,6 +108,7 @@ export class PackageJson extends Agent(
           content:
             "You are an expert at creating Node.js/TypeScript package configurations. You will generate a package.json configuration based on requirements.",
         },
+        ...dependenciesAsMessages(input.dependencies ?? []),
         {
           role: "user",
           content: `Please generate a package.json configuration based on these requirements:
@@ -112,7 +123,9 @@ Rules:
 2. Use latest stable versions for all dependencies
 3. Include standard TypeScript configuration in devDependencies
 4. Use "bun" as the package manager
-5. Must use ESM modules (type: "module")`,
+5. Must use ESM modules (type: "module")
+
+Output only the package.json code (do not emit any other files).`,
         },
       ],
     });
@@ -126,6 +139,7 @@ Rules:
     await writeFile(input.path, content);
 
     return {
+      path: input.path,
       content,
       packageJson: result.object,
     };

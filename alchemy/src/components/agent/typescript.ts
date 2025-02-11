@@ -12,12 +12,13 @@ import { ModelId, resolveModel } from "./model";
 import { repairTypeScriptCode } from "./repair-typescript";
 import { validateTypeScript } from "./validate-typescript";
 
-import { File } from "./file";
+import { dependenciesAsMessages } from "./dependencies";
+import { FileContext } from "./file-context";
 import { repairCodeOmissions } from "./repair-omissions";
 
-export type CodeProps = z.infer<typeof CodeProps>;
+export type TypeScriptFileInput = z.infer<typeof TypeScriptFileInput>;
 
-const CodeProps = z.object({
+const TypeScriptFileInput = z.object({
   /**
    * The ID of the model to use for generating TypeScript code
    * @default "gpt-4o"
@@ -37,7 +38,7 @@ const CodeProps = z.object({
   /**
    * List of other code files that it depends on
    */
-  dependencies: z.array(File).optional(),
+  dependencies: z.array(FileContext).optional(),
 
   /**
    * Temperature setting for model generation (higher = more creative, lower = more focused)
@@ -66,16 +67,16 @@ const CodeProps = z.object({
   projectRoot: z.string().optional(),
 });
 
-export type CodeOutput = z.infer<typeof CodeOutput>;
-export const CodeOutput = File;
+export type TypeScriptFileOutput = z.infer<typeof TypeScriptFileOutput>;
+export const TypeScriptFileOutput = FileContext;
 
 export class TypeScriptFile extends Agent(
   "code::TypeScriptFile",
   {
     description:
       "This Agent is responsible for generating TypeScript code based on requirements and context from other code files.",
-    input: CodeProps,
-    output: CodeOutput,
+    input: TypeScriptFileInput,
+    output: TypeScriptFileOutput,
   },
   async (ctx, props) => {
     if (ctx.event === "delete") {
@@ -84,7 +85,7 @@ export class TypeScriptFile extends Agent(
     }
 
     // Get the appropriate model based on the ID
-    const { model } = await resolveModel(props.modelId ?? "gpt-4o");
+    const model = await resolveModel(props.modelId ?? "gpt-4o");
 
     const messages: CoreMessage[] = [
       {
@@ -98,19 +99,13 @@ export class TypeScriptFile extends Agent(
           "NEVER output partial code or omit any functionality from the original file when making changes.\n" +
           "Do not include any other explanations or multiple code blocks.",
       },
+      ...dependenciesAsMessages(props.dependencies ?? []),
       {
         role: "user" as const,
         content: `Please generate TypeScript code based on the following specifications:
 
 Requirements:
 ${props.requirements}
-
-${
-  props.dependencies?.length
-    ? `Context (other code files):
-${props.dependencies.map((dep) => dep.content).join("\n\n")}`
-    : ""
-}
 
 The code should:
 1. Be well-documented with JSDoc comments
@@ -182,7 +177,6 @@ The code should:
 
         if (props.typeCheck) {
           typeErrors = await validateTypeScript(props.path, {
-            dependencies: props.dependencies,
             tsconfigPath: props.tsconfigPath,
             projectRoot: props.projectRoot,
           });

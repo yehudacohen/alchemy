@@ -10,10 +10,12 @@ export function Agent<Type extends string, TInput, TOutput>(
     description,
     input,
     output,
+    alwaysUpdate = false,
   }: {
     description: string;
     input?: ZodType<TInput>;
     output?: ZodType<TOutput>;
+    alwaysUpdate?: boolean;
   },
   handler: (
     ctx: Context<TOutput>,
@@ -49,6 +51,9 @@ export function Agent<Type extends string, TInput, TOutput>(
       const validatedOutput = output ? output.parse(evaluated) : evaluated;
 
       return validatedOutput;
+    },
+    {
+      alwaysUpdate,
     },
   ) {
     static readonly description = description;

@@ -7,7 +7,7 @@ export async function consultExpert(
   typeErrors: string,
 ): Promise<string> {
   console.log("[TypeScript] Consulting expert for code analysis...");
-  const { model: o3Model } = await resolveModel("o3-mini");
+  const o3Model = await resolveModel("o3-mini");
 
   // Get diagnostic analysis from o3-mini
   const consultationMessages: CoreMessage[] = [

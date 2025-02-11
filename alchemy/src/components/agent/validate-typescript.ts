@@ -1,10 +1,7 @@
 import { dirname, resolve } from "path";
 import * as ts from "typescript";
 
-import type { File } from "./file";
-
 export interface TypeCheckOptions {
-  dependencies?: File[];
   tsconfigPath?: string;
   projectRoot?: string;
 }

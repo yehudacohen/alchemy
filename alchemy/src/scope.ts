@@ -41,7 +41,7 @@ export function withScope<T>(
     try {
       return await fn();
     } catch (error) {
-      throw new Error(`Error in scope ${scope.scopeName}: ${error}`);
+      throw error;
     }
   });
 }

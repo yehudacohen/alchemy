@@ -4,8 +4,9 @@ import { z } from "zod";
 import { rm } from "../fs";
 import { Agent } from "./agent";
 import { generateText } from "./ai";
+import { dependenciesAsMessages } from "./dependencies";
+import { FileContext } from "./file-context";
 import { ModelId, resolveModel } from "./model";
-
 export const ReasoningEffort = z.enum(["low", "medium", "high"]);
 
 export const RequirementsInput = z.object({
@@ -26,9 +27,9 @@ export const RequirementsInput = z.object({
   requirements: z.array(z.string()),
 
   /**
-   * One-line summary of the requirements document
+   * List of dependencies for the requirements document
    */
-  title: z.string(),
+  dependencies: z.array(FileContext).optional(),
 
   /**
    * Temperature setting for model generation (higher = more creative, lower = more focused)
@@ -39,7 +40,7 @@ export const RequirementsInput = z.object({
   /**
    * File path where the requirements document should be written
    */
-  path: z.string(),
+  file: z.string().optional(),
 });
 
 export const RequirementsOutput = z.object({
@@ -49,7 +50,7 @@ export const RequirementsOutput = z.object({
   content: z.string(),
 });
 
-export type RequirementsInput = z.infer<typeof RequirementsInput>;
+export interface RequirementsInput extends z.infer<typeof RequirementsInput> {}
 export type RequirementsOutput = z.infer<typeof RequirementsOutput>;
 
 export class Requirements extends Agent(
@@ -62,12 +63,14 @@ export class Requirements extends Agent(
   },
   async (ctx, input) => {
     if (ctx.event === "delete") {
-      await rm(input.path);
+      if (input.file) {
+        await rm(input.file);
+      }
       return;
     }
 
     // Get the appropriate model based on the ID
-    const { model } = await resolveModel(input.modelId ?? "gpt-4o");
+    const model = await resolveModel(input.modelId ?? "gpt-4o");
 
     // Generate the requirements document
     const { text } = await generateText({
@@ -90,11 +93,10 @@ export class Requirements extends Agent(
           content:
             "You are a helpful assistant that creates markdown documents from requirements. You can use the scrapeWebPage tool to get additional requirements from relevant URLs if needed.",
         },
+        ...dependenciesAsMessages(input.dependencies ?? []),
         {
           role: "user",
           content: `Please analyze the following system requirements and create a comprehensive, unambiguous markdown document that covers all aspects:
-
-Title: ${input.title}
 
 Requirements:
 ${input.requirements.map((req) => `- ${req}`).join("\n")}
@@ -112,11 +114,13 @@ Include technical considerations and implementation details, ensuring every requ
       ],
     });
 
-    // Ensure the directory exists
-    await mkdir(dirname(input.path), { recursive: true });
+    if (input.file) {
+      // Ensure the directory exists
+      await mkdir(dirname(input.file), { recursive: true });
 
-    // Write the requirements to the file
-    await writeFile(input.path, text);
+      // Write the requirements to the file
+      await writeFile(input.file, text);
+    }
 
     return {
       content: text,

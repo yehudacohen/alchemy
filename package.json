@@ -4,16 +4,16 @@
   "type": "module",
   "workspaces": ["alchemy", "alchemy-ui", "alchemy-aws", "examples"],
   "devDependencies": {
-    "ai": "^4.1.16",
     "@ai-sdk/anthropic": "^1.1.6",
     "@ai-sdk/openai": "^1.1.9",
     "@biomejs/biome": "^1.9.4",
     "@types/bun": "latest",
     "@types/node": "latest",
     "@types/turndown": "^5.0.5",
+    "ai": "^4.1.16",
     "change-case": "^5.4.4",
     "turndown": "^7.2.0",
-    "typescript": "^5.0.0",
+    "typescript": "latest",
     "vite": "^6.0.7"
   }
 }

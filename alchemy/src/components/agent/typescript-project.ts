@@ -30,7 +30,7 @@ export class TypeScriptProject extends Agent(
   },
   async (ctx, input) => {
     const requirements = new Requirements("requirements", {
-      path: path.join(input.path, "requirements.md"),
+      file: path.join(input.path, "requirements.md"),
       title: "A simple TODO application",
       requirements: input.requirements,
     });

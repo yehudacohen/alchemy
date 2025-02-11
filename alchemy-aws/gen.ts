@@ -186,7 +186,7 @@ class AWSDocReference extends Agent(
     const markdown = turndownService.turndown(html);
 
     // Use AI to analyze the docs and extract relevant API information
-    const { model } = await resolveModel("gpt-4o");
+    const model = await resolveModel("gpt-4o");
     const apiSummary = await generateText({
       model,
       temperature: 0.1,
@@ -441,7 +441,7 @@ async function identifyRelevantFiles(
   resourcePrefix: string,
   cfnSpec: CfnResource,
 ): Promise<z.infer<typeof RelevantFilesSchema>> {
-  const { model } = await resolveModel("gpt-4o");
+  const model = await resolveModel("gpt-4o");
 
   const result = await generateObject({
     model,

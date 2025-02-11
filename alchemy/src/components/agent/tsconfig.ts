@@ -4,11 +4,13 @@ import { dirname } from "path";
 import { z } from "zod";
 import { rm } from "../fs";
 import { Agent } from "./agent";
+import { dependenciesAsMessages } from "./dependencies";
+import { FileContext } from "./file-context";
 import { resolveModel } from "./model";
 
-export type TsConfigProps = z.infer<typeof TsConfigProps>;
+export type TypeScriptConfigInput = z.infer<typeof TypeScriptConfigInput>;
 
-export const TsConfigProps = z.object({
+export const TypeScriptConfigInput = z.object({
   /**
    * The ID of the model to use for generating tsconfig configuration
    * @default "gpt-4o"
@@ -20,6 +22,11 @@ export const TsConfigProps = z.object({
    * Can include module settings, compilation options, etc.
    */
   requirements: z.array(z.string()),
+
+  /**
+   * List of dependencies for the TypeScript configuration
+   */
+  dependencies: z.array(FileContext),
 
   /**
    * Temperature setting for model generation
@@ -94,7 +101,10 @@ export const TsConfigSchema = z.object({
     .optional(),
 });
 
-export const TsConfigOutput = z.object({
+export interface TypeScriptConfigOutput
+  extends z.infer<typeof TypeScriptConfigOutput> {}
+export const TypeScriptConfigOutput = z.object({
+  path: z.string(),
   content: z.string(),
   tsconfig: TsConfigSchema,
 });
@@ -104,8 +114,8 @@ export class TypeScriptConfig extends Agent(
   {
     description:
       "This Agent is responsible for generating tsconfig.json configuration based on requirements.",
-    input: TsConfigProps,
-    output: TsConfigOutput,
+    input: TypeScriptConfigInput,
+    output: TypeScriptConfigOutput,
   },
   async (ctx, props) => {
     if (ctx.event === "delete") {
@@ -114,7 +124,7 @@ export class TypeScriptConfig extends Agent(
     }
 
     // Get the appropriate model
-    const { model } = await resolveModel(props.modelId ?? "gpt-4o");
+    const model = await resolveModel(props.modelId ?? "gpt-4o");
 
     // Generate the tsconfig configuration using generateObject for type safety
     const result = await generateObject({
@@ -127,6 +137,7 @@ export class TypeScriptConfig extends Agent(
           content:
             "You are an expert at creating TypeScript configurations. You will generate a tsconfig.json configuration based on requirements.",
         },
+        ...dependenciesAsMessages(props.dependencies ?? []),
         {
           role: "user",
           content: `Please generate a tsconfig.json configuration based on these requirements:
@@ -154,6 +165,7 @@ Rules:
     await writeFile(props.path, content);
 
     return {
+      path: props.path,
       content,
       tsconfig: result.object,
     };

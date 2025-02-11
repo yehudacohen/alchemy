@@ -11,33 +11,22 @@ export type ModelId = OpenAIChatModelId | AnthropicModelId;
 
 export const ModelId = z.union([OpenAIModel, AnthropicModel]);
 
-type ModelClient = {
-  type: "openai" | "anthropic";
-  model: LanguageModelV1;
-};
+const modelCache = new Map<ModelId, Promise<LanguageModelV1>>();
 
-const modelCache = new Map<ModelId, Promise<ModelClient>>();
-
-export async function resolveModel(modelId: ModelId) {
+export async function resolveModel(modelId: ModelId): Promise<LanguageModelV1> {
   const cached = modelCache.get(modelId);
   if (cached) {
     return await cached;
   }
 
   const client = (async () => {
-    let client: ModelClient;
+    let client: LanguageModelV1;
     if (isOpenAIModel(modelId)) {
       const { openai } = await import("@ai-sdk/openai");
-      client = {
-        type: "openai" as const,
-        model: openai(modelId as OpenAIChatModelId),
-      };
+      client = openai(modelId as OpenAIChatModelId);
     } else if (isAnthropicModel(modelId)) {
       const { anthropic } = await import("@ai-sdk/anthropic");
-      client = {
-        type: "anthropic" as const,
-        model: anthropic(modelId as AnthropicModelId),
-      };
+      client = anthropic(modelId as AnthropicModelId);
     } else {
       throw new Error(`Unsupported model ID: ${modelId}`);
     }

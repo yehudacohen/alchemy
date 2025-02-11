@@ -1,5 +1,11 @@
 export type Eval<U> = U extends Output<infer V> ? Eval<V> : U;
 
+export function isOutput<T>(value: any): value is Output<T> {
+  return (
+    value && typeof value === "object" && typeof value.apply === "function"
+  );
+}
+
 export type Outputs<P extends readonly any[]> = P extends [
   infer First,
   ...infer Rest,

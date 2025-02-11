@@ -16,6 +16,7 @@ export const Value = Symbol.for("Value");
 export const Apply = Symbol.for("Apply");
 export const Provide = Symbol.for("Provide");
 export const Scope = Symbol.for("Scope");
+export const Options = Symbol.for("Options");
 
 // properties that pierce through the Proxy
 const OrthogonalProperties = [
@@ -26,7 +27,15 @@ const OrthogonalProperties = [
   Apply,
   Provide,
   Scope,
+  Options,
 ] as const;
+
+export interface ProviderOptions {
+  /**
+   * If true, the resource will be updated even if the inputs have not changed.
+   */
+  alwaysUpdate: boolean;
+}
 
 export type Resource<In extends any[] = any[], Out = any> = {
   [ResourceID]: string;
@@ -35,9 +44,10 @@ export type Resource<In extends any[] = any[], Out = any> = {
   [Value]?: Out;
   [Apply]: <O>(value: Out) => O;
   [Provide]: (value: Out) => void;
+  [Options]: ProviderOptions;
 } & Output<Out>;
 
-export type Context<Outputs> = {
+export interface BaseContext {
   stage: string;
   resourceID: ResourceID;
   scope: IScope;
@@ -49,15 +59,26 @@ export type Context<Outputs> = {
    * This will cause the resource to be deleted at the end of the stack's CREATE phase.
    */
   replace(): void;
-} & (
-  | {
-      event: "create";
-    }
-  | {
-      event: "update" | "delete";
-      output: Outputs;
-    }
-);
+}
+
+export interface CreateContext extends BaseContext {
+  event: "create";
+}
+
+export interface UpdateContext<Outputs> extends BaseContext {
+  event: "update";
+  output: Outputs;
+}
+
+export interface DeleteContext<Outputs> extends BaseContext {
+  event: "delete";
+  output: Outputs;
+}
+
+export type Context<Outputs> =
+  | CreateContext
+  | UpdateContext<Outputs>
+  | DeleteContext<Outputs>;
 
 export type Provider<
   Type extends ResourceType = ResourceType,
@@ -81,7 +102,7 @@ export type Provider<
   ): Promise<void>;
 } & (new (
   id: string,
-  ...inputs: Inputs<In>
+  ...inputs: [...Inputs<In>, ...any[]]
 ) => Resource<In, Out>);
 
 export function isResource(value: any): value is Resource {
@@ -98,6 +119,7 @@ export function Resource<
     ctx: Context<Out>,
     ...args: Args
   ) => Promise<input<Out> | void> | input<Out> | void,
+  options?: Partial<ProviderOptions>,
 ): Provider<Type, Args, Awaited<Out>> {
   if (providers.has(type)) {
     throw new Error(`Resource ${type} already exists`);
@@ -109,6 +131,7 @@ export function Resource<
     [Input]: Inputs<Args>;
     [Value]?: Out;
     [Scope]: IScope;
+    [Options]: ProviderOptions;
   }
 
   class Resource {
@@ -135,6 +158,9 @@ export function Resource<
       this[Scope] = scope;
       this[Provide] = (value: Out) => {
         this[Value] = value;
+      };
+      this[Options] = {
+        alwaysUpdate: options?.alwaysUpdate ?? false,
       };
 
       return new Proxy(this, {
@@ -210,15 +236,19 @@ export function Resource<
 
       // Skip update if inputs haven't changed and resource is in a stable state
       if (
-        (resourceState.status === "created" ||
-          resourceState.status === "updated") &&
-        JSON.stringify(resourceState.inputs) === JSON.stringify(inputs)
+        resourceState.status === "created" ||
+        resourceState.status === "updated"
       ) {
-        console.log(`Skip:    ${resourceFQN} (no changes)`);
-        if (resourceState.output !== undefined) {
-          resource[Provide](resourceState.output);
+        if (
+          JSON.stringify(resourceState.inputs) === JSON.stringify(inputs) &&
+          !resource[Options].alwaysUpdate
+        ) {
+          console.log(`Skip:    ${resourceFQN} (no changes)`);
+          if (resourceState.output !== undefined) {
+            resource[Provide](resourceState.output);
+          }
+          return resourceState.output;
         }
-        return resourceState.output;
       }
 
       const event = resourceState.status === "creating" ? "create" : "update";
