@@ -2,12 +2,12 @@ import { tool } from "ai";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { z } from "zod";
-import type { Context } from "../../resource";
 import { rm } from "../fs";
+import type { Context } from "../resource";
+import { extractMarkdown } from "../typescript/extract-typescript";
 import { Agent } from "./agent";
 import { generateText } from "./ai";
 import { dependenciesAsMessages } from "./dependencies";
-import { extractMarkdown } from "./extract";
 import type { FileContext } from "./file-context";
 import { type ModelId, resolveModel } from "./model";
 import { Prompts } from "./prompts";
@@ -79,7 +79,7 @@ export class Design extends Agent(
             `Call the \`import\` tool to import additional files for context if needed.`,
           ].join("\n\n"),
         },
-        ...dependenciesAsMessages(props.dependencies ?? []),
+        ...dependenciesAsMessages(props.dependencies),
         ...(existingContent
           ? [
               {

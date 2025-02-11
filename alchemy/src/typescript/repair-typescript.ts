@@ -1,6 +1,6 @@
 import type { CoreMessage } from "ai";
-import { generateText } from "./ai";
-import { extractTypeScriptCode } from "./extract";
+import { generateText } from "../agent";
+import { extractTypeScriptCode } from "./extract-typescript";
 
 export async function repairTypeScriptCode(
   model: any,

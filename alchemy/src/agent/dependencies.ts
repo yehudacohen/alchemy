@@ -2,9 +2,9 @@ import type { CoreMessage } from "ai";
 import type { FileContext } from "./file-context";
 
 export function dependenciesAsMessages(
-  dependencies: FileContext[],
+  dependencies: FileContext[] | undefined,
 ): CoreMessage[] {
-  return dependencies.length
+  return dependencies?.length
     ? [
         {
           role: "user" as const,

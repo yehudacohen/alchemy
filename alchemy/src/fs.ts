@@ -1,8 +1,8 @@
 import fs from "node:fs";
 import { unlink } from "node:fs/promises";
 import path from "node:path";
-import { ignore } from "../error";
-import { Resource } from "../resource";
+import { ignore } from "./error";
+import { Resource } from "./resource";
 
 export class File extends Resource(
   "fs::File",

@@ -2,12 +2,12 @@ import { generateObject } from "ai";
 import { mkdir, writeFile } from "fs/promises";
 import { dirname } from "path";
 import { z } from "zod";
-import type { Context } from "../../resource";
+import { Agent } from "../agent/agent";
+import { dependenciesAsMessages } from "../agent/dependencies";
+import { FileContext } from "../agent/file-context";
+import { resolveModel } from "../agent/model";
 import { rm } from "../fs";
-import { Agent } from "./agent";
-import { dependenciesAsMessages } from "./dependencies";
-import { FileContext } from "./file-context";
-import { resolveModel } from "./model";
+import type { Context } from "../resource";
 
 export const PackageJsonSchema = z.object({
   name: z.string(),

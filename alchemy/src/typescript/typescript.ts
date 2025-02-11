@@ -2,19 +2,16 @@ import type { CoreMessage } from "ai";
 import { mkdir, writeFile } from "fs/promises";
 import { dirname } from "path";
 import { z } from "zod";
+import { Agent, ModelId, generateText, resolveModel } from "../agent";
+import { dependenciesAsMessages } from "../agent/dependencies";
+import { FileContext } from "../agent/file-context";
 import { rm } from "../fs";
-import { Agent } from "./agent";
-import { generateText } from "./ai";
 import { checkForCodeOmission } from "./check-omission";
 import { consultExpert } from "./consult-expert";
-import { extractTypeScriptCode } from "./extract";
-import { ModelId, resolveModel } from "./model";
+import { extractTypeScriptCode } from "./extract-typescript";
+import { repairCodeOmissions } from "./repair-omissions";
 import { repairTypeScriptCode } from "./repair-typescript";
 import { validateTypeScript } from "./validate-typescript";
-
-import { dependenciesAsMessages } from "./dependencies";
-import { FileContext } from "./file-context";
-import { repairCodeOmissions } from "./repair-omissions";
 
 export type TypeScriptFileInput = z.infer<typeof TypeScriptFileInput>;
 
@@ -99,7 +96,7 @@ export class TypeScriptFile extends Agent(
           "NEVER output partial code or omit any functionality from the original file when making changes.\n" +
           "Do not include any other explanations or multiple code blocks.",
       },
-      ...dependenciesAsMessages(props.dependencies ?? []),
+      ...dependenciesAsMessages(props.dependencies),
       {
         role: "user" as const,
         content: `Please generate TypeScript code based on the following specifications:

@@ -1,8 +1,8 @@
 import path from "path";
 import { z } from "zod";
-import { Agent } from "./agent";
+import { Agent } from "../agent";
+import { Requirements } from "../agent/requirements";
 import { PackageJson } from "./package";
-import { Requirements } from "./requirements";
 import { TypeScriptConfig } from "./tsconfig";
 import { TypeScriptFile } from "./typescript";
 

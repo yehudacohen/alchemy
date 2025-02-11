@@ -2,20 +2,23 @@ import type { CoreMessage, LanguageModel } from "ai";
 import { createPatch } from "diff";
 import fs from "node:fs/promises";
 import { z } from "zod";
-import type { Input } from "../../input";
-import type { Output } from "../../output";
-import type { Context, CreateContext, UpdateContext } from "../../resource";
 import { Folder } from "../fs";
+import type { Input } from "../input";
+import type { Output } from "../output";
+import type { Context, CreateContext, UpdateContext } from "../resource";
+import { TypeScriptFile, type TypeScriptFileInput } from "../typescript";
+import { PackageJson, type PackageJsonInput } from "../typescript/package";
+import {
+  TypeScriptConfig,
+  type TypeScriptConfigInput,
+} from "../typescript/tsconfig";
 import { Agent } from "./agent";
 import { generateObject } from "./ai";
 import { Design, type DesignInput } from "./design";
 import type { FileContext } from "./file-context";
 import { type ModelId, resolveModel } from "./model";
-import { PackageJson, type PackageJsonInput } from "./package";
 import { Prompts } from "./prompts";
 import { Requirements, type RequirementsInput } from "./requirements";
-import { TypeScriptConfig, type TypeScriptConfigInput } from "./tsconfig";
-import { TypeScriptFile, type TypeScriptFileInput } from "./typescript";
 
 type ProjectFileType = z.infer<typeof ProjectFileType>;
 const ProjectFileType = z.enum([

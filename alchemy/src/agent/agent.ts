@@ -1,8 +1,8 @@
 import type { ZodType } from "zod";
-import { apply } from "../../apply";
-import type { Input } from "../../input";
-import type { Output } from "../../output";
-import { type Context, type Provider, Resource } from "../../resource";
+import { apply } from "../apply";
+import type { Input } from "../input";
+import type { Output } from "../output";
+import { type Context, type Provider, Resource } from "../resource";
 
 export function Agent<Type extends string, TInput, TOutput>(
   type: Type,

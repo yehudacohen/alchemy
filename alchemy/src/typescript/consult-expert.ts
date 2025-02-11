@@ -1,6 +1,6 @@
 import type { CoreMessage } from "ai";
-import { generateText } from "./ai";
-import { resolveModel } from "./model";
+import { generateText } from "../agent/ai";
+import { resolveModel } from "../agent/model";
 
 export async function consultExpert(
   messages: CoreMessage[],

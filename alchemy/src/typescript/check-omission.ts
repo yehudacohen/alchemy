@@ -1,6 +1,6 @@
 import { z } from "zod";
-import { generateObject } from "./ai";
-import { resolveModel } from "./model";
+import { generateObject } from "../agent/ai";
+import { resolveModel } from "../agent/model";
 
 const CodeOmissionCheck = z.object({
   hasOmittedCode: z.boolean(),

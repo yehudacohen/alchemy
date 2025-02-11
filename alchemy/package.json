@@ -8,10 +8,11 @@
   },
   "exports": {
     ".": "./src/index.ts",
-    "./agent": "./src/components/agent/index.ts",
-    "./fs": "./src/components/fs.ts",
-    "./aws": "./src/components/aws/index.ts",
-    "./esbuild": "./src/components/esbuild.ts"
+    "./agent": "./src/agent/index.ts",
+    "./aws": "./src/aws/index.ts",
+    "./esbuild": "./src/esbuild.ts",
+    "./fs": "./src/fs.ts",
+    "./typescript": "./src/typescript/index.ts"
   },
   "devDependencies": {
     "@types/bun": "latest",

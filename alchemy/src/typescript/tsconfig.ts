@@ -2,11 +2,13 @@ import { generateObject } from "ai";
 import { mkdir, writeFile } from "fs/promises";
 import { dirname } from "path";
 import { z } from "zod";
+import {
+  Agent,
+  FileContext,
+  dependenciesAsMessages,
+  resolveModel,
+} from "../agent";
 import { rm } from "../fs";
-import { Agent } from "./agent";
-import { dependenciesAsMessages } from "./dependencies";
-import { FileContext } from "./file-context";
-import { resolveModel } from "./model";
 
 export type TypeScriptConfigInput = z.infer<typeof TypeScriptConfigInput>;
 
@@ -26,7 +28,7 @@ export const TypeScriptConfigInput = z.object({
   /**
    * List of dependencies for the TypeScript configuration
    */
-  dependencies: z.array(FileContext),
+  dependencies: z.array(FileContext).optional(),
 
   /**
    * Temperature setting for model generation
@@ -137,7 +139,7 @@ export class TypeScriptConfig extends Agent(
           content:
             "You are an expert at creating TypeScript configurations. You will generate a tsconfig.json configuration based on requirements.",
         },
-        ...dependenciesAsMessages(props.dependencies ?? []),
+        ...dependenciesAsMessages(props.dependencies),
         {
           role: "user",
           content: `Please generate a tsconfig.json configuration based on these requirements:
