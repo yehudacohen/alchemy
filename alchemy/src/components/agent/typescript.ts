@@ -164,7 +164,7 @@ The code should:
         }
 
         // First check for omissions
-        const hasOmissions = await checkForCodeOmission(model, code);
+        const hasOmissions = await checkForCodeOmission(code);
         if (hasOmissions) {
           code = await repairCodeOmissions(model, messages);
         }

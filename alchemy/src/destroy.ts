@@ -4,10 +4,11 @@ import { Provider, ResourceID, isResource } from "./resource";
 import type { Scope } from "./scope";
 import type { State, StateStore } from "./state";
 
-interface DestroyOptions {
+export interface DestroyOptions {
   stage?: string;
   stateStore?: StateStore;
   scope?: Scope;
+  quiet?: boolean;
 }
 
 /**
@@ -28,12 +29,13 @@ export async function destroy<T>(
   resourceState: State,
   resourceProvider: Provider,
   stateStore: StateStore,
+  options: DestroyOptions,
 ): Promise<void>;
 
 export async function destroy<T>(
   ...args:
     | [Output<T>, DestroyOptions?]
-    | [string, Scope, ResourceID, State, Provider, StateStore]
+    | [string, Scope, ResourceID, State, Provider, StateStore, DestroyOptions]
 ): Promise<void> {
   let resourceID: ResourceID;
   let resourceState: State;
@@ -41,13 +43,15 @@ export async function destroy<T>(
   let stage: string;
   let stateStore: StateStore;
   let scope: Scope | undefined = undefined;
-  if (args.length === 6) {
+  let options: DestroyOptions | undefined = undefined;
+  if (args.length === 7) {
     stage = args[0];
     scope = args[1];
     resourceID = args[2];
     resourceState = args[3];
     resourceProvider = args[4];
     stateStore = args[5];
+    options = args[6];
   } else if (isResource(args[0])) {
     const resource = args[0];
     // stage = args[1]?.stage ?? defaultStage;
@@ -64,6 +68,7 @@ export async function destroy<T>(
     }
     resourceState = _resourceState;
     resourceProvider = resource[Provider];
+    options = args[1];
   } else {
     console.log(args[0]);
     throw new Error("Not implemented: must handle destroy a Output chain");
@@ -74,6 +79,9 @@ export async function destroy<T>(
     resourceID,
     resourceState,
     resourceState.inputs as [],
+    options ?? {
+      quiet: false,
+    },
   );
   await stateStore.delete(resourceID);
 }

@@ -31,6 +31,12 @@ export interface AlchemizeOptions {
    * A custom scope to use instead of the default root scope.
    */
   scope?: Scope;
+  /**
+   * If true, will not print any Create/Update/Delete messages.
+   *
+   * @default false
+   */
+  quiet?: boolean;
 }
 
 /**
@@ -67,6 +73,7 @@ export async function alchemize(options?: AlchemizeOptions) {
             stage,
             scope,
             stateStore,
+            quiet: options?.quiet,
           }),
         ),
     );
@@ -105,7 +112,10 @@ export async function alchemize(options?: AlchemizeOptions) {
 
   // Recursively delete orphans in dependency order
   async function deleteOrphan(orphanID: string): Promise<void> {
-    console.log("orphanID", orphanID);
+    if (!options?.quiet) {
+      console.log("orphanID", orphanID);
+    }
+
     // Return existing deletion promise if this orphan is already being deleted
     const existing = deletionPromises.get(orphanID);
     if (existing) {
@@ -132,7 +142,9 @@ export async function alchemize(options?: AlchemizeOptions) {
           `No provider found for ${providerType}. Did you forget to import it?`,
         );
       }
-      await destroy(stage, scope, orphanID, orphanState, provider, stateStore);
+      await destroy(stage, scope, orphanID, orphanState, provider, stateStore, {
+        quiet: options?.quiet,
+      });
 
       // After this resource is deleted, we can delete its dependencies if they're orphans
       if (orphanState.deps.length > 0) {

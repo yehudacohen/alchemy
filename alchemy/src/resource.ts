@@ -1,5 +1,6 @@
 import { alchemize } from "./alchemize";
-import { apply } from "./apply";
+import { type ApplyOptions, apply } from "./apply";
+import type { DestroyOptions } from "./destroy";
 import { defaultStateStore, deletions, providers } from "./global";
 import type { Inputs, Input as input } from "./input";
 import { Output } from "./output";
@@ -48,6 +49,7 @@ export type Resource<In extends any[] = any[], Out = any> = {
 } & Output<Out>;
 
 export interface BaseContext {
+  quiet: boolean;
   stage: string;
   resourceID: ResourceID;
   scope: IScope;
@@ -92,6 +94,7 @@ export type Provider<
     deps: Set<ResourceID>,
     inputs: Inputs<In>,
     stateStore: StateStore,
+    options: ApplyOptions,
   ): Promise<Awaited<Out>>;
   delete(
     stage: string,
@@ -99,6 +102,7 @@ export type Provider<
     resourceID: ResourceID,
     state: State,
     inputs: Inputs<In>,
+    options: DestroyOptions,
   ): Promise<void>;
 } & (new (
   id: string,
@@ -215,7 +219,9 @@ export function Resource<
       deps: Set<ResourceID>,
       inputs: Args,
       stateStore: StateStore,
+      options: ApplyOptions,
     ): Promise<Awaited<Out | void>> {
+      console.log("quiet", options.quiet);
       // const stack = resource[ResourceStack];
       const resourceID = resource[ResourceID];
 
@@ -243,7 +249,9 @@ export function Resource<
           JSON.stringify(resourceState.inputs) === JSON.stringify(inputs) &&
           !resource[Options].alwaysUpdate
         ) {
-          console.log(`Skip:    ${resourceFQN} (no changes)`);
+          if (!options?.quiet) {
+            console.log(`Skip:    ${resourceFQN} (no changes)`);
+          }
           if (resourceState.output !== undefined) {
             resource[Provide](resourceState.output);
           }
@@ -256,9 +264,11 @@ export function Resource<
       resourceState.oldInputs = resourceState.inputs;
       resourceState.inputs = inputs;
 
-      console.log(
-        `${event === "create" ? "Create" : "Update"}:  ${resourceFQN}`,
-      );
+      if (!options?.quiet) {
+        console.log(
+          `${event === "create" ? "Create" : "Update"}:  ${resourceFQN}`,
+        );
+      }
 
       await stateStore.set(resourceID, resourceState);
 
@@ -302,6 +312,7 @@ export function Resource<
                 await stateStore.set(resourceID, resourceState!);
                 return value;
               },
+              quiet: options.quiet ?? false,
             },
             ...inputs,
           );
@@ -319,9 +330,11 @@ export function Resource<
         },
       );
 
-      console.log(
-        `${event === "create" ? "Created" : "Updated"}: ${resourceFQN}`,
-      );
+      if (!options?.quiet) {
+        console.log(
+          `${event === "create" ? "Created" : "Updated"}: ${resourceFQN}`,
+        );
+      }
       await stateStore.set(resourceID, {
         provider: type,
         data: resourceState.data,
@@ -342,10 +355,10 @@ export function Resource<
       resourceID: ResourceID,
       state: State,
       inputs: Args,
+      options: DestroyOptions,
     ) {
       const resourceFQN = `${scope.getScopePath(stage)}/${resourceID}`;
       const nestedScope = new IScope(resourceID, scope);
-      console.log(nestedScope.getScopePath(stage));
 
       await alchemize({
         mode: "destroy",
@@ -355,7 +368,9 @@ export function Resource<
         stateStore: defaultStateStore,
       });
 
-      console.log(`Delete:  ${resourceFQN}`);
+      if (!options?.quiet) {
+        console.log(`Delete:  ${resourceFQN}`);
+      }
 
       await func(
         {
@@ -378,11 +393,14 @@ export function Resource<
             delete state.data[key];
             return value;
           },
+          quiet: options.quiet ?? false,
         },
         ...inputs,
       );
 
-      console.log(`Deleted: ${resourceFQN}`);
+      if (!options?.quiet) {
+        console.log(`Deleted: ${resourceFQN}`);
+      }
     }
   }
   providers.set(type, Resource as any);

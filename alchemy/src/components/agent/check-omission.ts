@@ -1,19 +1,18 @@
-import type { LanguageModelV1 } from "ai";
 import { z } from "zod";
 import { generateObject } from "./ai";
+import { resolveModel } from "./model";
 
 const CodeOmissionCheck = z.object({
   hasOmittedCode: z.boolean(),
   explanation: z.string(),
 });
 
-export async function checkForCodeOmission(
-  model: LanguageModelV1,
-  code: string,
-): Promise<boolean> {
+const haiku = await resolveModel("claude-3-5-haiku-latest");
+
+export async function checkForCodeOmission(code: string): Promise<boolean> {
   console.log("[TypeScript] Checking for code omissions...");
   const result = await generateObject({
-    model,
+    model: haiku,
     schema: CodeOmissionCheck,
     temperature: 0.1,
     messages: [

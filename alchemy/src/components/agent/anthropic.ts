@@ -5,11 +5,12 @@ import { z } from "zod";
  */
 export const AnthropicModels = [
   // Claude 3.5 Sonnet models
+  "claude-3-5-sonnet-latest",
   "claude-3-5-sonnet-20241022",
   "claude-3-5-sonnet-20240620",
 
   // Claude 3.5 Haiku models
-  "claude-3-5-haiku",
+  "claude-3-5-haiku-latest",
   "claude-3-5-haiku-20241022",
 
   // Claude 3 models

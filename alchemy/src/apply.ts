@@ -10,10 +10,11 @@ import {
 import { type Scope as IScope, getScope } from "./scope";
 import type { StateStore } from "./state";
 
-interface ApplyOptions {
+export interface ApplyOptions {
   stage: string;
   scope: IScope;
   stateStore: StateStore;
+  quiet?: boolean;
 }
 
 /**
@@ -30,7 +31,9 @@ export async function apply<T>(
   const statePath = scope.getScopePath(stage);
   const stateStore = options?.stateStore ?? new defaultStateStore(statePath);
 
-  return (await evaluate(output, { stage, scope, stateStore })).value;
+  return (
+    await evaluate(output, { stage, scope, stateStore, quiet: options?.quiet })
+  ).value;
 }
 
 class Evaluated<T> {
@@ -76,6 +79,7 @@ export async function evaluate<T>(
         deps,
         inputs as [],
         stateStore,
+        options,
       );
       resolve!(new Evaluated(result, [resourceID, ...deps]));
     } catch (error) {

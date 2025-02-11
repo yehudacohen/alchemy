@@ -45,6 +45,7 @@ export function Agent<Type extends string, TInput, TOutput>(
       const evaluated = await apply(result as Output<TOutput>, {
         stage: ctx.stage,
         scope: ctx.scope,
+        quiet: ctx.quiet,
       });
 
       // Validate output
