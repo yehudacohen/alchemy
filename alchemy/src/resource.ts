@@ -221,7 +221,6 @@ export function Resource<
       stateStore: StateStore,
       options: ApplyOptions,
     ): Promise<Awaited<Out | void>> {
-      console.log("quiet", options.quiet);
       // const stack = resource[ResourceStack];
       const resourceID = resource[ResourceID];
 

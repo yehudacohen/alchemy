@@ -11,6 +11,7 @@
     "./agent": "./src/agent/index.ts",
     "./aws": "./src/aws/index.ts",
     "./esbuild": "./src/esbuild.ts",
+    "./markdown": "./src/markdown/index.ts",
     "./fs": "./src/fs.ts",
     "./typescript": "./src/typescript/index.ts"
   },

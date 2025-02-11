@@ -4,6 +4,8 @@ import fs from "node:fs/promises";
 import { z } from "zod";
 import { Folder } from "../fs";
 import type { Input } from "../input";
+import { Design, type DesignInput } from "../markdown/design";
+import { Requirements, type RequirementsInput } from "../markdown/requirements";
 import type { Output } from "../output";
 import type { Context, CreateContext, UpdateContext } from "../resource";
 import { TypeScriptFile, type TypeScriptFileInput } from "../typescript";
@@ -14,11 +16,9 @@ import {
 } from "../typescript/tsconfig";
 import { Agent } from "./agent";
 import { generateObject } from "./ai";
-import { Design, type DesignInput } from "./design";
 import type { FileContext } from "./file-context";
 import { type ModelId, resolveModel } from "./model";
 import { Prompts } from "./prompts";
-import { Requirements, type RequirementsInput } from "./requirements";
 
 type ProjectFileType = z.infer<typeof ProjectFileType>;
 const ProjectFileType = z.enum([

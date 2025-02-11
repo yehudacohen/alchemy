@@ -1,12 +1,16 @@
 import { mkdir, writeFile } from "fs/promises";
 import { dirname } from "path";
 import { z } from "zod";
+import {
+  Agent,
+  FileContext,
+  ModelId,
+  dependenciesAsMessages,
+  generateText,
+  resolveModel,
+} from "../agent";
 import { rm } from "../fs";
-import { Agent } from "./agent";
-import { generateText } from "./ai";
-import { dependenciesAsMessages } from "./dependencies";
-import { FileContext } from "./file-context";
-import { ModelId, resolveModel } from "./model";
+
 export const ReasoningEffort = z.enum(["low", "medium", "high"]);
 
 export const RequirementsInput = z.object({

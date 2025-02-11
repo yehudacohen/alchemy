@@ -2,15 +2,18 @@ import { tool } from "ai";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { z } from "zod";
+import {
+  Agent,
+  type FileContext,
+  type ModelId,
+  dependenciesAsMessages,
+  generateText,
+  resolveModel,
+} from "../agent";
+import { Prompts } from "../agent/prompts";
 import { rm } from "../fs";
+import { extractMarkdown } from "../markdown/extract";
 import type { Context } from "../resource";
-import { extractMarkdown } from "../typescript/extract-typescript";
-import { Agent } from "./agent";
-import { generateText } from "./ai";
-import { dependenciesAsMessages } from "./dependencies";
-import type { FileContext } from "./file-context";
-import { type ModelId, resolveModel } from "./model";
-import { Prompts } from "./prompts";
 
 export interface DesignInput {
   prompt: string;

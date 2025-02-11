@@ -7,5 +7,4 @@ export * from "./model";
 export * from "./module";
 export * from "./openai";
 export * from "./program";
-export * from "./requirements";
 export * from "./scrape";

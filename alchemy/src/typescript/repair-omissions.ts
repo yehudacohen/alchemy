@@ -1,6 +1,6 @@
 import type { CoreMessage, LanguageModelV1 } from "ai";
 import { generateText } from "../agent/ai";
-import { extractTypeScriptCode } from "./extract-typescript";
+import { extractTypeScriptCode } from "./extract";
 
 export async function repairCodeOmissions(
   model: LanguageModelV1,

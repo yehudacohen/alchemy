@@ -2,11 +2,10 @@ import type { CoreMessage } from "ai";
 import { generateText } from "../agent/ai";
 import { resolveModel } from "../agent/model";
 
-export async function consultExpert(
+export async function debugTypeErrors(
   messages: CoreMessage[],
   typeErrors: string,
 ): Promise<string> {
-  console.log("[TypeScript] Consulting expert for code analysis...");
   const o3Model = await resolveModel("o3-mini");
 
   // Get diagnostic analysis from o3-mini

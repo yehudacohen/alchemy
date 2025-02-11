@@ -7,11 +7,11 @@ import { dependenciesAsMessages } from "../agent/dependencies";
 import { FileContext } from "../agent/file-context";
 import { rm } from "../fs";
 import { checkForCodeOmission } from "./check-omission";
-import { consultExpert } from "./consult-expert";
-import { extractTypeScriptCode } from "./extract-typescript";
+import { debugTypeErrors } from "./debug-type-errors";
+import { extractTypeScriptCode } from "./extract";
+import { repairTypeScriptCode } from "./repair";
 import { repairCodeOmissions } from "./repair-omissions";
-import { repairTypeScriptCode } from "./repair-typescript";
-import { validateTypeScript } from "./validate-typescript";
+import { validateTypeScript } from "./validate";
 
 export type TypeScriptFileInput = z.infer<typeof TypeScriptFileInput>;
 
@@ -123,7 +123,10 @@ The code should:
       try {
         // After 2 failed attempts, consult o3-mini for analysis
         if (attempt === maxAttempts) {
-          const diagnosis = await consultExpert(messages, typeErrors!);
+          if (!ctx.quiet) {
+            console.log("[TypeScript] Consulting expert for code analysis...");
+          }
+          const diagnosis = await debugTypeErrors(messages, typeErrors!);
 
           messages.push({
             role: "user",
@@ -132,7 +135,9 @@ The code should:
         }
 
         // Generate the TypeScript code
-        console.log(`[TypeScript] Generating code attempt ${attempt}...`);
+        if (!ctx.quiet) {
+          console.log(`[TypeScript] Generating code attempt ${attempt}...`);
+        }
         const { text } = await generateText({
           model,
           temperature: Math.max(
@@ -200,7 +205,9 @@ The code should:
           throw error;
         }
         // Otherwise continue to the next attempt
-        console.log(`Attempt ${attempt} failed:`, error);
+        if (!ctx.quiet) {
+          console.log(`Attempt ${attempt} failed:`, error);
+        }
       }
     }
 
