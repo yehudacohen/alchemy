@@ -2,8 +2,15 @@
   "name": "alchemy-examples",
   "type": "module",
   "module": "index.ts",
+  "scripts": {
+    "up": "bun src/app.ts up",
+    "destroy": "bun src/app.ts destroy"
+  },
   "dependencies": {
     "alchemy": "workspace:*",
     "dotenv": "^16.4.7"
+  },
+  "devDependencies": {
+    "bun": "latest"
   }
 }

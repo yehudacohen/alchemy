@@ -91,10 +91,6 @@ export async function alchemize(options?: AlchemizeOptions) {
 
   const orphanIDs = Array.from(priorIDs).filter((id) => !aliveIDs.has(id));
 
-  console.log("orphanIDs", orphanIDs);
-  console.log("priorIDs", priorIDs);
-  console.log("aliveIDs", aliveIDs);
-
   const orphanStates = Object.fromEntries(
     orphanIDs.map((id) => [id, priorStates[id]] as const),
   );
@@ -105,10 +101,6 @@ export async function alchemize(options?: AlchemizeOptions) {
     for (const dep of orphanState.deps) {
       (orphanGraph[dep] ??= new Set()).add(orphanID);
     }
-  }
-  if (Object.keys(orphanGraph).length > 0) {
-    console.log(stateStore.path);
-    console.log(orphanGraph);
   }
 
   // Start deletion from each orphan that has no dependents (nothing depends on it)
