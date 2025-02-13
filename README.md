@@ -19,8 +19,9 @@ Unlike similar tools like Pulumi, Terraform, and CloudFormation, Alchemy is impl
 
 # Examples
 
-- LLM-based code generation of all 200+ AWS CloudFormation resources: [alchemy-aws/gen.ts](./alchemy-aws/gen.ts)
-- Deploy an AWS Lambda Function with a DynamoDB Table and IAM Role: [example/app.ts](./examples/app.ts)
+- LLM-based code generation of all 200+ AWS CloudFormation resources: [examples/generate-aws-cfn/gen.ts](./examples/generate-aws-cfn/gen.ts)
+- Deploy an AWS Lambda Function with a DynamoDB Table and IAM Role: [examples/deploy-aws/app.ts](./examples/deploy-aws/)
+- Generate a TODO application from a Markdown document: [examples/markdown-program/index.md](./examples/markdown-program/)
 
 # Getting Started
 
