@@ -10,5 +10,5 @@ new Program("index.md", {
 await alchemize({
   mode: process.argv.includes("destroy") ? "destroy" : "up",
   stage: "md",
-  quiet: true,
+  quiet: !process.argv.includes("--verbose"),
 });

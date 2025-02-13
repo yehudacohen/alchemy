@@ -10,8 +10,8 @@ import {
   PutBucketTaggingCommand,
   S3Client,
 } from "@aws-sdk/client-s3";
-import { ignore } from "../../error";
-import { Resource } from "../../resource";
+import { ignore } from "../error";
+import { Resource } from "../resource";
 
 export interface BucketProps {
   bucketName: string;

@@ -2,10 +2,11 @@ import type { CoreMessage } from "ai";
 import { mkdir, writeFile } from "fs/promises";
 import { dirname } from "path";
 import { z } from "zod";
-import { Agent, ModelId, generateText, resolveModel } from "../agent";
+import { ModelId, generateText, resolveModel } from "../agent";
 import { dependenciesAsMessages } from "../agent/dependencies";
 import { FileContext } from "../agent/file-context";
 import { rm } from "../fs";
+import { type Context, Resource } from "../resource";
 import { checkForCodeOmission } from "./check-omission";
 import { debugTypeErrors } from "./debug-type-errors";
 import { extractTypeScriptCode } from "./extract";
@@ -67,19 +68,15 @@ const TypeScriptFileInput = z.object({
 export type TypeScriptFileOutput = z.infer<typeof TypeScriptFileOutput>;
 export const TypeScriptFileOutput = FileContext;
 
-export class TypeScriptFile extends Agent(
+export class TypeScriptFile extends Resource(
   "code::TypeScriptFile",
-  {
-    description:
-      "This Agent is responsible for generating TypeScript code based on requirements and context from other code files.",
-    input: TypeScriptFileInput,
-    output: TypeScriptFileOutput,
-  },
-  async (ctx, props) => {
+  async (ctx: Context<TypeScriptFileOutput>, props: TypeScriptFileInput) => {
     if (ctx.event === "delete") {
       await rm(props.path);
       return;
     }
+
+    console.log("Implementing", props.path);
 
     // Get the appropriate model based on the ID
     const model = await resolveModel(props.modelId ?? "gpt-4o");
@@ -166,6 +163,9 @@ The code should:
         }
 
         // First check for omissions
+        if (!ctx.quiet) {
+          console.log("[TypeScript] Checking for code omissions...");
+        }
         const hasOmissions = await checkForCodeOmission(code);
         if (hasOmissions) {
           code = await repairCodeOmissions(model, messages);

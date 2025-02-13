@@ -91,6 +91,10 @@ export async function alchemize(options?: AlchemizeOptions) {
 
   const orphanIDs = Array.from(priorIDs).filter((id) => !aliveIDs.has(id));
 
+  console.log("orphanIDs", orphanIDs);
+  console.log("priorIDs", priorIDs);
+  console.log("aliveIDs", aliveIDs);
+
   const orphanStates = Object.fromEntries(
     orphanIDs.map((id) => [id, priorStates[id]] as const),
   );
@@ -102,6 +106,10 @@ export async function alchemize(options?: AlchemizeOptions) {
       (orphanGraph[dep] ??= new Set()).add(orphanID);
     }
   }
+  if (Object.keys(orphanGraph).length > 0) {
+    console.log(stateStore.path);
+    console.log(orphanGraph);
+  }
 
   // Start deletion from each orphan that has no dependents (nothing depends on it)
   await Promise.all(
@@ -110,12 +118,13 @@ export async function alchemize(options?: AlchemizeOptions) {
       .map((id) => deleteOrphan(id)),
   );
 
+  const remaining = await stateStore.count();
+  if (remaining === 0) {
+    await stateStore.deinit?.();
+  }
+
   // Recursively delete orphans in dependency order
   async function deleteOrphan(orphanID: string): Promise<void> {
-    if (!options?.quiet) {
-      console.log("orphanID", orphanID);
-    }
-
     // Return existing deletion promise if this orphan is already being deleted
     const existing = deletionPromises.get(orphanID);
     if (existing) {
@@ -141,6 +150,9 @@ export async function alchemize(options?: AlchemizeOptions) {
         throw new Error(
           `No provider found for ${providerType}. Did you forget to import it?`,
         );
+      }
+      if (!options?.quiet) {
+        console.log("Destroy:", orphanID);
       }
       await destroy(stage, scope, orphanID, orphanState, provider, stateStore, {
         quiet: options?.quiet,

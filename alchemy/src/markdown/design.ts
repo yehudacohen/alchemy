@@ -3,7 +3,6 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { z } from "zod";
 import {
-  Agent,
   type FileContext,
   type ModelId,
   dependenciesAsMessages,
@@ -13,7 +12,7 @@ import {
 import { Prompts } from "../agent/prompts";
 import { rm } from "../fs";
 import { extractMarkdown } from "../markdown/extract";
-import type { Context } from "../resource";
+import { type Context, Resource } from "../resource";
 
 export interface DesignInput {
   prompt: string;
@@ -28,11 +27,8 @@ export interface DesignOutput {
   content: string;
 }
 
-export class Design extends Agent(
+export class Design extends Resource(
   "design",
-  {
-    description: "",
-  },
   async (ctx: Context<DesignOutput>, props: DesignInput) => {
     if (ctx.event === "delete") {
       await rm(props.path);
@@ -61,6 +57,12 @@ export class Design extends Agent(
       }
     }
 
+    console.log(
+      ctx.event === "create" ? "Designing" : "Revising design",
+      ":",
+      props.path,
+    );
+
     const result = await generateText({
       model,
       // tools: {
@@ -77,10 +79,7 @@ export class Design extends Agent(
       messages: [
         {
           role: "system",
-          content: [
-            Prompts.program,
-            `Call the \`import\` tool to import additional files for context if needed.`,
-          ].join("\n\n"),
+          content: Prompts.program,
         },
         ...dependenciesAsMessages(props.dependencies),
         ...(existingContent

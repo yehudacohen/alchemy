@@ -2,7 +2,12 @@
   "name": "alchemy-monorepo",
   "module": "index.ts",
   "type": "module",
-  "workspaces": ["alchemy", "alchemy-ui", "alchemy-aws", "examples"],
+  "workspaces": [
+    "alchemy",
+    "examples/deploy-aws",
+    "examples/generate-aws-cfn",
+    "examples/markdown-program"
+  ],
   "devDependencies": {
     "@ai-sdk/anthropic": "^1.1.6",
     "@ai-sdk/openai": "^1.1.9",

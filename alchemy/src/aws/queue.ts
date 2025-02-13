@@ -5,7 +5,7 @@ import {
   GetQueueUrlCommand,
   SQSClient,
 } from "@aws-sdk/client-sqs";
-import { Resource } from "../../resource";
+import { Resource } from "../resource";
 
 export interface QueueProps {
   queueName: string;

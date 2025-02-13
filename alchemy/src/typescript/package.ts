@@ -2,12 +2,11 @@ import { generateObject } from "ai";
 import { mkdir, writeFile } from "fs/promises";
 import { dirname } from "path";
 import { z } from "zod";
-import { Agent } from "../agent/agent";
 import { dependenciesAsMessages } from "../agent/dependencies";
 import { FileContext } from "../agent/file-context";
 import { resolveModel } from "../agent/model";
 import { rm } from "../fs";
-import type { Context } from "../resource";
+import { type Context, Resource } from "../resource";
 
 export const PackageJsonSchema = z.object({
   name: z.string(),
@@ -78,45 +77,42 @@ export interface PackageJsonOutput {
   packageJson: z.infer<typeof PackageJsonSchema>;
 }
 
-export class PackageJson extends Agent(
+export class PackageJson extends Resource(
   "code::Package",
-  {
-    description:
-      "This Agent is responsible for generating package.json configuration based on requirements.",
-    input: PackageJsonInput,
-  },
   async (
     ctx: Context<PackageJsonOutput>,
-    input: PackageJsonInput,
+    props: PackageJsonInput,
   ): Promise<PackageJsonOutput | void> => {
     if (ctx.event === "delete") {
-      await rm(input.path);
+      await rm(props.path);
       return;
     }
 
+    console.log(ctx.event === "create" ? "Creating" : "Updating", props.path);
+
     // Get the appropriate model
-    const model = await resolveModel(input.model ?? "gpt-4o");
+    const model = await resolveModel(props.model ?? "gpt-4o");
 
     // Generate the package configuration using generateObject for type safety
     const result = await generateObject({
       model,
       schema: PackageJsonSchema,
-      temperature: input.temperature ?? 0.3,
+      temperature: props.temperature ?? 0.3,
       messages: [
         {
           role: "system",
           content:
             "You are an expert at creating Node.js/TypeScript package configurations. You will generate a package.json configuration based on requirements.",
         },
-        ...dependenciesAsMessages(input.dependencies ?? []),
+        ...dependenciesAsMessages(props.dependencies ?? []),
         {
           role: "user",
           content: `Please generate a package.json configuration based on these requirements:
 
-Package name: ${input.name}
+Package name: ${props.name}
 
 Requirements:
-${input.requirements.map((req) => `- ${req}`).join("\n")}
+${props.requirements.map((req) => `- ${req}`).join("\n")}
 
 Rules:
 1. All dependencies must be peer dependencies
@@ -131,15 +127,15 @@ Output only the package.json code (do not emit any other files).`,
     });
 
     // Ensure the directory exists
-    await mkdir(dirname(input.path), { recursive: true });
+    await mkdir(dirname(props.path), { recursive: true });
 
     const content = JSON.stringify(result.object, null, 2);
 
     // Write the package.json file
-    await writeFile(input.path, content);
+    await writeFile(props.path, content);
 
     return {
-      path: input.path,
+      path: props.path,
       content,
       packageJson: result.object,
     };

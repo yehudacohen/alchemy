@@ -119,15 +119,50 @@ export function Resource<
   Out,
 >(
   type: Type,
+  options: Partial<ProviderOptions>,
   func: (
     ctx: Context<Out>,
     ...args: Args
   ) => Promise<input<Out> | void> | input<Out> | void,
-  options?: Partial<ProviderOptions>,
+): Provider<Type, Args, Awaited<Out>>;
+
+export function Resource<
+  const Type extends ResourceType,
+  Args extends any[],
+  Out,
+>(
+  type: Type,
+  func: (
+    ctx: Context<Out>,
+    ...args: Args
+  ) => Promise<input<Out> | void> | input<Out> | void,
+): Provider<Type, Args, Awaited<Out>>;
+
+export function Resource<
+  const Type extends ResourceType,
+  Args extends any[],
+  Out,
+>(
+  type: Type,
+  ...args:
+    | [
+        Partial<ProviderOptions>,
+        (
+          ctx: Context<Out>,
+          ...args: Args
+        ) => Promise<input<Out> | void> | input<Out> | void,
+      ]
+    | [
+        (
+          ctx: Context<Out>,
+          ...args: Args
+        ) => Promise<input<Out> | void> | input<Out> | void,
+      ]
 ): Provider<Type, Args, Awaited<Out>> {
   if (providers.has(type)) {
     throw new Error(`Resource ${type} already exists`);
   }
+  const [options, func] = args.length === 2 ? args : [undefined, args[0]];
 
   interface Resource {
     [ResourceID]: ResourceID;
@@ -273,6 +308,8 @@ export function Resource<
 
       let isReplaced = false;
 
+      const quiet = options.quiet ?? false;
+
       const evaluated = await pushScope(
         resource[Scope],
         resourceID,
@@ -311,7 +348,7 @@ export function Resource<
                 await stateStore.set(resourceID, resourceState!);
                 return value;
               },
-              quiet: options.quiet ?? false,
+              quiet,
             },
             ...inputs,
           );
@@ -323,6 +360,7 @@ export function Resource<
           const evaluated = await apply(result as Out, {
             stage,
             scope: getScope(),
+            quiet,
           });
 
           return evaluated;
@@ -365,6 +403,7 @@ export function Resource<
         scope: nestedScope,
         // TODO(sam): should use the appropriate state store
         stateStore: defaultStateStore,
+        quiet: options.quiet,
       });
 
       if (!options?.quiet) {

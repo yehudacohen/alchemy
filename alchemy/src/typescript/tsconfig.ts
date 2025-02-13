@@ -2,13 +2,9 @@ import { generateObject } from "ai";
 import { mkdir, writeFile } from "fs/promises";
 import { dirname } from "path";
 import { z } from "zod";
-import {
-  Agent,
-  FileContext,
-  dependenciesAsMessages,
-  resolveModel,
-} from "../agent";
+import { FileContext, dependenciesAsMessages, resolveModel } from "../agent";
 import { rm } from "../fs";
+import { type Context, Resource } from "../resource";
 
 export type TypeScriptConfigInput = z.infer<typeof TypeScriptConfigInput>;
 
@@ -111,19 +107,18 @@ export const TypeScriptConfigOutput = z.object({
   tsconfig: TsConfigSchema,
 });
 
-export class TypeScriptConfig extends Agent(
+export class TypeScriptConfig extends Resource(
   "code::tsconfig",
-  {
-    description:
-      "This Agent is responsible for generating tsconfig.json configuration based on requirements.",
-    input: TypeScriptConfigInput,
-    output: TypeScriptConfigOutput,
-  },
-  async (ctx, props) => {
+  async (
+    ctx: Context<TypeScriptConfigOutput>,
+    props: TypeScriptConfigInput,
+  ) => {
     if (ctx.event === "delete") {
       await rm(props.path);
       return;
     }
+
+    console.log(ctx.event === "create" ? "Creating" : "Updating", props.path);
 
     // Get the appropriate model
     const model = await resolveModel(props.modelId ?? "gpt-4o");

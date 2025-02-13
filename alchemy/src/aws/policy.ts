@@ -11,8 +11,8 @@ import {
   ListPolicyVersionsCommand,
   NoSuchEntityException,
 } from "@aws-sdk/client-iam";
-import { ignore } from "../../error";
-import { Resource } from "../../resource";
+import { ignore } from "../error";
+import { Resource } from "../resource";
 
 // Type-safe policy document types
 export type Effect = "Allow" | "Deny";

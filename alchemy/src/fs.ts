@@ -21,22 +21,12 @@ export class Folder extends Resource(
   "fs::Folder",
   async (ctx, dirPath: string): Promise<{ path: string }> => {
     if (ctx.event === "delete") {
-      if (await ctx.get("isOwned")) {
-        // only delete the folder if we own it (we created it)
-        await ignore("ENOENT", () => fs.promises.rmdir(dirPath));
-      }
+      // we just do a best effort attempt
+      await ignore(["ENOENT", "ENOTEMPTY"], () => fs.promises.rmdir(dirPath));
     } else {
-      try {
-        await fs.promises.mkdir(dirPath, { recursive: true });
-        await ctx.set("isOwned", true);
-      } catch (error: any) {
-        if (error.code === "EEXIST") {
-          // record that we own the directory
-          await ctx.set("isOwned", false);
-        } else {
-          throw error;
-        }
-      }
+      await ignore("EEXIST", () =>
+        fs.promises.mkdir(dirPath, { recursive: true }),
+      );
     }
     return { path: dirPath };
   },

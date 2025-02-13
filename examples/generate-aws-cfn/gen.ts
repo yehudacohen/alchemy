@@ -1,12 +1,9 @@
 import { generateObject, generateText } from "ai";
-import { type Context, alchemize } from "alchemy";
-import {
-  Agent,
-  Requirements,
-  TypeScriptFile,
-  resolveModel,
-} from "alchemy/agent";
+import { type Context, Resource, alchemize } from "alchemy";
+import { resolveModel } from "alchemy/agent";
 import { Folder } from "alchemy/fs";
+import { Requirements } from "alchemy/markdown";
+import { TypeScriptFile } from "alchemy/typescript";
 import { kebabCase } from "change-case";
 import fs from "fs/promises";
 import path from "path";
@@ -105,11 +102,8 @@ const RelevantFilesSchema = z.object({
   relevantFiles: z.array(z.string()),
 });
 
-class AWSService extends Agent(
+class AWSService extends Resource(
   "aws-service",
-  {
-    description: "Generate a Service implementation for a given AWS service",
-  },
   async (
     ctx,
     props: CfnService & {
@@ -150,12 +144,8 @@ class AWSService extends Agent(
   },
 ) {}
 
-class AWSDocReference extends Agent(
+class AWSDocReference extends Resource(
   "aws-doc-reference",
-  {
-    description:
-      "Fetch and process AWS SDK v3 documentation for a specific service and resource",
-  },
   async (
     ctx: Context<{ content: string }>,
     props: {
@@ -223,11 +213,8 @@ ${markdown}`,
   },
 ) {}
 
-class AWSResource extends Agent(
+class AWSResource extends Resource(
   "cfn-resource",
-  {
-    description: "Generate a Resource implementation for a given AWS resource",
-  },
   async (
     ctx,
     props: CfnResource & {
@@ -300,11 +287,10 @@ class AWSResource extends Agent(
     const requirements = new Requirements("requirements", {
       modelId: "o3-mini",
       reasoningEffort: "high",
-      path: path.join(
+      file: path.join(
         props.requirementsDir,
         kebabCase(props.ResourceName) + ".md",
       ),
-      title: props.ResourceName,
       requirements: [
         `Due to problems relying on the AWS CloudFormation Service, we have decided
 to reproduce the CRUD lifecycle of the ${props.ResourceName} resource locally using

@@ -1,44 +1,83 @@
 # Alchemy Application
 
-This is an ViteJS application.
-
 # Tools
 
 We use `bun` (Bun JavaScript runtime) to install dependencies, run the application etc.
 
-# Frontend
+Vite for our React frontend, all implemented in TypeScript.
 
-We will use React, Tan Stack Router, Shadcn UI, Tailwind CSS, and TypeScript.
+DrizzleKit ORM for SQL ORM.
 
-Detailed design for the frontend can be found in [frontend.md](./designs/frontend.md):
+Hono for the REST API TypeScript implementation.
 
-1. Home Page
-2. Login Page
-3. Register Page
-4. Forgot Password Page
-5. Reset Password Page
-6. Verify Email Page
+# File Layout
 
-# Backend
+```
+package.json
+tsconfig.json (configured for JSX)
+tailwind.config.ts
+src/
+  db/
+    schema.sql.ts (drizzle kit ORM schema)
+  api/
+    get-todos.ts
+    create-todo.ts
+    delete-todo.ts
+  components/
+    (shadcn components, e.g. button, input, card, etc.)
+  main.tsx
+  App.tsx
+  index.html
+```
 
-We will use Hono, and TypeScript.
+# Requirements
 
-Detailed design for the backend can be found in [backend.md](./designs/backend.md):
+We are building a simple TODO application.
+It has a single webpage that lists all TODOs.
+It has a text input to add a new TODO.
+It has an 'X' button next to each TODO to delete it.
+The application has no auth.
+We use a sqlite in memory database, managed with Drizzle ORM.
 
-1. API Endpoints
-2. Database Schema
-3. Authentication
-4. Authorization
+# API
 
-This design contains:
+The API has 3 endpoints:
 
-1. input/output contract for each API endpoint.
-2. database schema.
-3. authentication and authorization logic.
+- [List TODOs](./src/api/get-todos.ts)
 
-Each API endpoint will be placed in its own file.
+```json
+// GET /todos
+// status: 200 OK
+[
+  {
+    "id": 1,
+    "text": "Buy groceries"
+  }
+]
+```
 
-Our design is not ambiguous. We leave no "optional" parts.
+- [Add TODO](./src/api/create-todo.ts)
+
+```json
+// POST /todos
+{
+  "text": "Buy groceries"
+}
+// response
+{
+  "id": 1,
+}
+```
+
+- [Delete TODO](./src/api/delete-todo.ts)
+
+```json
+// DELETE /todos/:id
+{
+  "id": 1
+}
+// status: 200 OK
+```
 
 # Dependencies
 
@@ -46,7 +85,10 @@ Our design is not ambiguous. We leave no "optional" parts.
 2. Vite
 3. React
 4. React-dom
-5. Tan Stack Router
-6. Tailwind CSS
-7. Shadcn UI
-8. @tsconfig/node22
+5. Tailwind CSS
+6. Shadcn UI
+7. @tsconfig/node22
+
+# TSConfig
+
+We need jsx: "react". Keep it standard @tsconfig/node22 beyond that.

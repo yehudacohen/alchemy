@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+import { ignore } from "./error";
 
 export interface State {
   status:
@@ -18,9 +19,14 @@ export interface State {
 }
 
 export interface StateStore {
+  /** Initialize the state container if one is required */
   init?(): Promise<void>;
+  /** Delete the state container if one exists */
+  deinit?(): Promise<void>;
   /** List all resources in the given stage. */
   list(): Promise<string[]>;
+  /** Return the number of items let in this store */
+  count(): Promise<number>;
   get(key: string): Promise<State | undefined>;
   getBatch(ids: string[]): Promise<Record<string, State>>;
   all(): Promise<Record<string, State>>;
@@ -41,6 +47,14 @@ export class FileSystemStateStore implements StateStore {
   async init(): Promise<void> {
     await fs.promises.mkdir(stateFile, { recursive: true });
     await fs.promises.mkdir(this.path, { recursive: true });
+  }
+
+  async deinit(): Promise<void> {
+    await ignore("ENOENT", () => fs.promises.rmdir(this.path));
+  }
+
+  async count(): Promise<number> {
+    return Object.keys(await this.list()).length;
   }
 
   async list(): Promise<string[]> {

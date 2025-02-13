@@ -7,8 +7,8 @@ import {
   ResourceInUseException,
   ResourceNotFoundException,
 } from "@aws-sdk/client-dynamodb";
-import { ignore } from "../../error";
-import { type Context, Resource } from "../../resource";
+import { ignore } from "../error";
+import { type Context, Resource } from "../resource";
 
 export interface TableProps {
   tableName: string;

@@ -12,8 +12,8 @@ import {
   UpdateAssumeRolePolicyCommand,
   UpdateRoleCommand,
 } from "@aws-sdk/client-iam";
-import { ignore } from "../../error";
-import { type Context, Resource } from "../../resource";
+import { ignore } from "../error";
+import { type Context, Resource } from "../resource";
 import type { PolicyDocument } from "./policy";
 
 export interface RoleProps {

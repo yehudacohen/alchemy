@@ -12,8 +12,8 @@ import {
 } from "@aws-sdk/client-lambda";
 import fs from "node:fs";
 import path from "node:path";
-import { ignore } from "../../error";
-import { Resource, type Context } from "../../resource";
+import { ignore } from "../error";
+import { type Context, Resource } from "../resource";
 
 async function resolveRegion(client: LambdaClient): Promise<string> {
   const region = client.config.region;

@@ -10,7 +10,6 @@ const CodeOmissionCheck = z.object({
 const haiku = await resolveModel("claude-3-5-haiku-latest");
 
 export async function checkForCodeOmission(code: string): Promise<boolean> {
-  console.log("[TypeScript] Checking for code omissions...");
   const result = await generateObject({
     model: haiku,
     schema: CodeOmissionCheck,

@@ -1,16 +1,18 @@
 import fs from "node:fs/promises";
-import { Agent } from "./agent";
+import type { Context } from "../resource";
+import { Resource } from "../resource";
 import type { ModelId } from "./model";
 import { Module } from "./module";
 
-export class Program extends Agent(
+export class Program extends Resource(
   "Program",
   {
-    description: "Generate a markdown document",
     alwaysUpdate: true,
   },
   async (
-    ctx,
+    ctx: Context<{
+      module: Module;
+    }>,
     props: {
       path: string;
       model?: ModelId;

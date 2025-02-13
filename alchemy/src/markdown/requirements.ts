@@ -2,7 +2,6 @@ import { mkdir, writeFile } from "fs/promises";
 import { dirname } from "path";
 import { z } from "zod";
 import {
-  Agent,
   FileContext,
   ModelId,
   dependenciesAsMessages,
@@ -10,6 +9,7 @@ import {
   resolveModel,
 } from "../agent";
 import { rm } from "../fs";
+import { type Context, Resource } from "../resource";
 
 export const ReasoningEffort = z.enum(["low", "medium", "high"]);
 
@@ -57,34 +57,36 @@ export const RequirementsOutput = z.object({
 export interface RequirementsInput extends z.infer<typeof RequirementsInput> {}
 export type RequirementsOutput = z.infer<typeof RequirementsOutput>;
 
-export class Requirements extends Agent(
+export class Requirements extends Resource(
   "code::Requirements",
-  {
-    description:
-      "This Agent is responsible for writing and refining a detailed requirements document from a list of requirements.",
-    input: RequirementsInput,
-    output: RequirementsOutput,
-  },
-  async (ctx, input) => {
+  async (ctx: Context<RequirementsOutput>, props: RequirementsInput) => {
     if (ctx.event === "delete") {
-      if (input.file) {
-        await rm(input.file);
+      if (props.file) {
+        await rm(props.file);
       }
       return;
     }
 
+    if (props.file) {
+      console.log(
+        ctx.event === "create" ? "Designing" : "Revising",
+        "requirements",
+        props.file,
+      );
+    }
+
     // Get the appropriate model based on the ID
-    const model = await resolveModel(input.modelId ?? "gpt-4o");
+    const model = await resolveModel(props.modelId ?? "gpt-4o");
 
     // Generate the requirements document
     const { text } = await generateText({
       model,
-      temperature: input.temperature ?? 0.7,
+      temperature: props.temperature ?? 0.7,
       maxSteps: 3, // Allow multiple steps for potential tool usage
-      providerOptions: input.reasoningEffort
+      providerOptions: props.reasoningEffort
         ? {
             openai: {
-              reasoningEffort: input.reasoningEffort,
+              reasoningEffort: props.reasoningEffort,
             },
           }
         : undefined,
@@ -97,13 +99,13 @@ export class Requirements extends Agent(
           content:
             "You are a helpful assistant that creates markdown documents from requirements. You can use the scrapeWebPage tool to get additional requirements from relevant URLs if needed.",
         },
-        ...dependenciesAsMessages(input.dependencies ?? []),
+        ...dependenciesAsMessages(props.dependencies ?? []),
         {
           role: "user",
           content: `Please analyze the following system requirements and create a comprehensive, unambiguous markdown document that covers all aspects:
 
 Requirements:
-${input.requirements.map((req) => `- ${req}`).join("\n")}
+${props.requirements.map((req) => `- ${req}`).join("\n")}
 
 Guidelines:
 1. Make explicit decisions for any ambiguous requirements - do not leave open questions
@@ -118,12 +120,12 @@ Include technical considerations and implementation details, ensuring every requ
       ],
     });
 
-    if (input.file) {
+    if (props.file) {
       // Ensure the directory exists
-      await mkdir(dirname(input.file), { recursive: true });
+      await mkdir(dirname(props.file), { recursive: true });
 
       // Write the requirements to the file
-      await writeFile(input.file, text);
+      await writeFile(props.file, text);
     }
 
     return {
