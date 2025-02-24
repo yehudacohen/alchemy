@@ -10,6 +10,7 @@
     ".": "./src/index.ts",
     "./agent": "./src/agent/index.ts",
     "./aws": "./src/aws/index.ts",
+    "./aws/auto": "./src/aws/auto/index.ts",
     "./esbuild": "./src/esbuild.ts",
     "./markdown": "./src/markdown/index.ts",
     "./fs": "./src/fs.ts",

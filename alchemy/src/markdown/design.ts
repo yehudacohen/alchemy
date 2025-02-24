@@ -36,8 +36,8 @@ export class Design extends Resource(
     }
     const model = await resolveModel(props.model ?? "gpt-4o");
 
-    const importFile = tool({
-      description: "Imports a relevant file into context",
+    const loadFile = tool({
+      description: "Load a relevant file into context",
       parameters: z.object({
         file: z.string(),
       }),
