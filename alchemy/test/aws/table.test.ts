@@ -5,7 +5,7 @@ import {
 } from "@aws-sdk/client-dynamodb";
 import { describe, expect, test } from "bun:test";
 import { apply } from "../../src/apply";
-import { Table } from "../../src/components/aws/table";
+import { Table } from "../../src/aws/table";
 import { destroy } from "../../src/destroy";
 
 const dynamo = new DynamoDBClient({});

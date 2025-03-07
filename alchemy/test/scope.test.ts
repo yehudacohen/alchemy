@@ -1,9 +1,9 @@
 import { describe, expect, it } from "bun:test";
 import { apply } from "../src/apply";
-import type { PolicyDocument } from "../src/components/aws/policy";
-import { Role } from "../src/components/aws/role";
-import { File } from "../src/components/fs";
+import type { PolicyDocument } from "../src/aws/policy";
+import { Role } from "../src/aws/role";
 import { destroy } from "../src/destroy";
+import { File } from "../src/fs";
 import { rootScope } from "../src/global";
 import { type Context, Resource } from "../src/resource";
 import { Scope, getScope, withScope } from "../src/scope";

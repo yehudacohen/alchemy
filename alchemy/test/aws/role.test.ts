@@ -5,8 +5,8 @@ import {
 } from "@aws-sdk/client-iam";
 import { describe, expect, test } from "bun:test";
 import { apply } from "../../src/apply";
-import type { PolicyDocument } from "../../src/components/aws";
-import { Role, type RoleProps } from "../../src/components/aws/role";
+import type { PolicyDocument } from "../../src/aws/policy";
+import { Role, type RoleProps } from "../../src/aws/role";
 import { destroy } from "../../src/destroy";
 
 // Verify role was deleted

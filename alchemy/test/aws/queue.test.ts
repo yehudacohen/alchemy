@@ -5,7 +5,7 @@ import {
 } from "@aws-sdk/client-sqs";
 import { describe, expect, test } from "bun:test";
 import { apply } from "../../src/apply";
-import { Queue } from "../../src/components/aws/queue";
+import { Queue } from "../../src/aws/queue";
 import { destroy } from "../../src/destroy";
 
 const sqs = new SQSClient({});

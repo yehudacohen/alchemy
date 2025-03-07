@@ -1,8 +1,4 @@
 {
   "files": [],
-  "references": [
-    { "path": "./alchemy/tsconfig.json" },
-    { "path": "./alchemy-ui/tsconfig.json" },
-    { "path": "./examples/tsconfig.json" }
-  ]
+  "references": [{ "path": "./alchemy" }]
 }

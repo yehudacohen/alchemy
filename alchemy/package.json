@@ -14,6 +14,7 @@
     "./esbuild": "./src/esbuild.ts",
     "./markdown": "./src/markdown/index.ts",
     "./fs": "./src/fs.ts",
+    "./stripe": "./src/stripe/index.ts",
     "./typescript": "./src/typescript/index.ts"
   },
   "devDependencies": {
@@ -30,6 +31,7 @@
     "ai": "^4.1.16",
     "diff": "^7.0.0",
     "jszip": "^3.0.0",
+    "stripe": "^17.7.0",
     "esbuild": "^0.24.2",
     "turndown": "^7.2.0",
     "zod": "^3.24.1"

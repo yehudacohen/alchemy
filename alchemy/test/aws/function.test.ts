@@ -7,11 +7,11 @@ import {
 import { describe, expect, test } from "bun:test";
 import path from "node:path";
 import { apply } from "../../src/apply";
-import { Function } from "../../src/components/aws/function";
-import type { PolicyDocument } from "../../src/components/aws/policy";
-import { Role } from "../../src/components/aws/role";
-import { Bundle } from "../../src/components/esbuild";
+import { Function } from "../../src/aws/function";
+import type { PolicyDocument } from "../../src/aws/policy";
+import { Role } from "../../src/aws/role";
 import { destroy } from "../../src/destroy";
+import { Bundle } from "../../src/esbuild";
 
 const __dirname = path.dirname(new URL(import.meta.url).pathname);
 

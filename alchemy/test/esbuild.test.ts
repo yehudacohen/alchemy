@@ -2,8 +2,8 @@ import { describe, expect, test } from "bun:test";
 import fs from "node:fs";
 import path from "node:path";
 import { apply } from "../src/apply";
-import { Bundle } from "../src/components/esbuild";
 import { destroy } from "../src/destroy";
+import { Bundle } from "../src/esbuild";
 
 const __dirname = path.dirname(new URL(import.meta.url).pathname);
 
