@@ -178,3 +178,5 @@ dist
 .output/
 .out/
 alchemy/README.md
+
+lib/

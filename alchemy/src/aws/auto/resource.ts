@@ -1,4 +1,3 @@
-import { Resource } from "alchemy";
 import { kebabCase } from "change-case";
 import fs from "node:fs/promises";
 import path from "node:path";
@@ -6,6 +5,7 @@ import { z } from "zod";
 import { generateObject } from "../../agent/ai";
 import { resolveModel } from "../../agent/model";
 import { Requirements } from "../../markdown/requirements";
+import { Resource } from "../../resource";
 import { TypeScriptFile } from "../../typescript";
 import { AWSDocReference } from "./docs";
 import type { CfnResource } from "./spec";
