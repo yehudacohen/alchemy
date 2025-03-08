@@ -11,10 +11,10 @@ We use Bun for testing. Here's how to run tests:
 bun test
 
 # Run tests in a specific file
-bun test alchemy/test/stripe/price.test.ts
+bun test test/stripe/price.test.ts
 
 # Run a specific test in a specific file
-bun test --test-name-pattern="create and update price" alchemy/test/stripe/price.test.ts
+bun test --test-name-pattern="create and update price" test/stripe/price.test.ts
 ```
 
 For resource tests, create a dedicated test file for each resource type following the pattern `test/service-name/resource-name.test.ts`.
