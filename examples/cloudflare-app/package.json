@@ -1,5 +1,6 @@
 {
-  "name": "alchemy-examples",
+  "name": "cloudflare-app",
+  "private": true,
   "type": "module",
   "module": "index.ts",
   "scripts": {
@@ -7,10 +8,12 @@
     "destroy": "bun src/app.ts destroy"
   },
   "dependencies": {
-    "alchemy": "latest",
+    "alchemy": "workspace:*",
     "dotenv": "^16.4.7"
   },
   "devDependencies": {
-    "bun": "latest"
+    "bun": "latest",
+    "@cloudflare/workers-types": "latest",
+    "@types/node": "latest"
   }
 }

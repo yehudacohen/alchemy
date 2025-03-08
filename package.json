@@ -6,11 +6,6 @@
   "scripts": {
     "publish:npm": "cp ../README.md ./README.md && npm publish && rm ./README.md"
   },
-  "workspaces": [
-    "examples/deploy-aws",
-    "examples/generate-aws-cfn",
-    "examples/markdown-program"
-  ],
   "files": ["lib", "src"],
   "exports": {
     ".": "./lib/index.js",
@@ -43,12 +38,14 @@
     "@ai-sdk/anthropic": "^1.1.6",
     "@ai-sdk/openai": "^1.1.9",
     "@biomejs/biome": "^1.9.4",
+    "@cloudflare/workers-types": "latest",
     "@types/bun": "latest",
     "@types/diff": "^5.0.0",
     "@types/node": "latest",
     "@types/turndown": "^5.0.5",
     "ai": "^4.1.16",
     "change-case": "^5.4.4",
+    "openpgp": "^6.1.0",
     "turndown": "^7.2.0",
     "typescript": "latest",
     "vite": "^6.0.7",

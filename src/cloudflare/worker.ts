@@ -20,7 +20,7 @@ export interface WorkerProps {
    * Will be bundled using esbuild
    * One of script, entryPoint, or bundle must be provided
    */
-  entryPoint?: string;
+  entrypoint?: string;
 
   /**
    * Reference to a pre-configured Bundle resource
@@ -101,7 +101,7 @@ export class Worker extends Resource(
     const workerName = props.name;
 
     // Validate input - we need either script, entryPoint, or bundle
-    if (!props.script && !props.entryPoint && !props.bundle) {
+    if (!props.script && !props.entrypoint && !props.bundle) {
       throw new Error("One of script, entryPoint, or bundle must be provided");
     }
 
@@ -137,7 +137,7 @@ export class Worker extends Resource(
       // Use a pre-configured Bundle resource
       const bundleOutput = await apply(props.bundle);
       scriptContent = await fs.readFile(bundleOutput.path, "utf-8");
-    } else if (props.entryPoint) {
+    } else if (props.entrypoint) {
       // Create and use a Bundle resource with worker-optimized configuration
       const defaultBundleOptions: Omit<BundleProps, "entryPoint"> = {
         format: props.format === "cjs" ? "cjs" : "esm", // Use the specified format or default to ESM
@@ -156,8 +156,8 @@ export class Worker extends Resource(
       };
 
       // Create the bundle
-      const bundle = new Bundle(`${workerName}-bundle`, {
-        entryPoint: props.entryPoint,
+      const bundle = new Bundle("bundle", {
+        entryPoint: props.entrypoint,
         ...bundleOptions,
       });
 

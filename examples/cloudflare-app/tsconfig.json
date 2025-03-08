@@ -1,0 +1,17 @@
+{
+  "include": ["alchemy.config.ts", "src/**/*.ts"],
+  "compilerOptions": {
+    "types": ["@cloudflare/workers-types", "@types/node"],
+    "lib": ["ES2020", "DOM"],
+    "target": "ES2020",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "allowSyntheticDefaultImports": true,
+    "esModuleInterop": true,
+    "strict": true,
+    "skipLibCheck": true,
+    "isolatedModules": true,
+    "resolveJsonModule": true,
+    "noEmit": true
+  }
+}

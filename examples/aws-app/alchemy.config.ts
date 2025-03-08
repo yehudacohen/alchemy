@@ -40,7 +40,7 @@ const role = new Role("alchemy-api-role", {
 
 // Create Lambda function
 const bundle = new Bundle("api-bundle", {
-  entryPoint: path.join(__dirname, "handler.ts"),
+  entryPoint: path.join(__dirname, "src", "index.ts"),
   outdir: ".out",
   format: "esm",
   platform: "node",
