@@ -1,6 +1,7 @@
 {
   "include": ["src/**/*"],
   "compilerOptions": {
+    "types": ["@cloudflare/workers-types", "@types/node"],
     "rootDir": "./src",
     "outDir": "./lib",
     "noEmit": false,
