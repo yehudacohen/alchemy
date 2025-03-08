@@ -14,7 +14,7 @@
     "react": "latest",
     "react-dom": "latest",
     "tailwindcss": "latest",
-    "shadcn-ui": "latest"
+    "alchemy": "latest"
   },
   "devDependencies": {
     "typescript": "latest",

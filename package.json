@@ -1,18 +1,49 @@
 {
-  "name": "alchemy-monorepo",
-  "module": "index.ts",
+  "name": "alchemy",
+  "version": "0.1.11",
   "type": "module",
+  "module": "./lib/index.js",
+  "scripts": {
+    "publish:npm": "cp ../README.md ./README.md && npm publish && rm ./README.md"
+  },
   "workspaces": [
-    "alchemy",
     "examples/deploy-aws",
     "examples/generate-aws-cfn",
     "examples/markdown-program"
   ],
+  "files": ["lib", "src"],
+  "exports": {
+    ".": "./lib/index.js",
+    "./agent": "./lib/agent/index.js",
+    "./aws": "./lib/aws/index.js",
+    "./aws/auto": "./lib/aws/auto/index.js",
+    "./esbuild": "./lib/esbuild.js",
+    "./markdown": "./lib/markdown/index.js",
+    "./fs": "./lib/fs.js",
+    "./stripe": "./lib/stripe/index.js",
+    "./typescript": "./lib/typescript/index.js"
+  },
+  "peerDependencies": {
+    "@ai-sdk/openai": "^1.1.9",
+    "@aws-sdk/client-dynamodb": "^3.0.0",
+    "@aws-sdk/client-iam": "^3.0.0",
+    "@aws-sdk/client-lambda": "^3.0.0",
+    "@aws-sdk/client-s3": "^3.0.0",
+    "@aws-sdk/client-sqs": "^3.0.1",
+    "ai": "^4.1.16",
+    "diff": "^7.0.0",
+    "jszip": "^3.0.0",
+    "stripe": "^17.7.0",
+    "esbuild": "^0.24.2",
+    "turndown": "^7.2.0",
+    "zod": "^3.24.1"
+  },
   "devDependencies": {
     "@ai-sdk/anthropic": "^1.1.6",
     "@ai-sdk/openai": "^1.1.9",
     "@biomejs/biome": "^1.9.4",
     "@types/bun": "latest",
+    "@types/diff": "^5.0.0",
     "@types/node": "latest",
     "@types/turndown": "^5.0.5",
     "ai": "^4.1.16",

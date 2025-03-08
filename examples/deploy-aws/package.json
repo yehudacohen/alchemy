@@ -7,7 +7,7 @@
     "destroy": "bun src/app.ts destroy"
   },
   "dependencies": {
-    "alchemy": "workspace:*",
+    "alchemy": "latest",
     "dotenv": "^16.4.7"
   },
   "devDependencies": {
