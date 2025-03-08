@@ -17,12 +17,12 @@
     "./agent": "./lib/agent/index.js",
     "./aws": "./lib/aws/index.js",
     "./aws/auto": "./lib/aws/auto/index.js",
+    "./cloudflare": "./lib/cloudflare/index.js",
     "./esbuild": "./lib/esbuild.js",
     "./markdown": "./lib/markdown/index.js",
     "./fs": "./lib/fs.js",
     "./stripe": "./lib/stripe/index.js",
-    "./typescript": "./lib/typescript/index.js",
-    "./cloudflare": "./lib/cloudflare/index.js"
+    "./typescript": "./lib/typescript/index.js"
   },
   "peerDependencies": {
     "@ai-sdk/openai": "^1.1.9",
