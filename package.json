@@ -21,7 +21,8 @@
     "./markdown": "./lib/markdown/index.js",
     "./fs": "./lib/fs.js",
     "./stripe": "./lib/stripe/index.js",
-    "./typescript": "./lib/typescript/index.js"
+    "./typescript": "./lib/typescript/index.js",
+    "./cloudflare": "./lib/cloudflare/index.js"
   },
   "peerDependencies": {
     "@ai-sdk/openai": "^1.1.9",
@@ -50,6 +51,7 @@
     "change-case": "^5.4.4",
     "turndown": "^7.2.0",
     "typescript": "latest",
-    "vite": "^6.0.7"
+    "vite": "^6.0.7",
+    "wrangler": "^3.114.0"
   }
 }

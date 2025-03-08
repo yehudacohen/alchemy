@@ -39,10 +39,6 @@ Start by importing dependencies and defining the resource interfaces:
 
 ```typescript
 import { Resource, type Context } from "../resource";
-import {{ServiceSDK}} from "{{service-sdk}}";
-
-// Import or define any types needed from the service SDK
-type {{TypeName}} = {{ServiceSDK}}.{{ServiceType}};
 
 /**
  * Properties for creating or updating a {{ResourceName}}
@@ -82,70 +78,201 @@ export interface {{ResourceName}}Output extends {{ResourceName}}Props {
 }
 ```
 
-## Step 3: Implement the Resource Class
+## Step 3: API Client Implementation
 
-Create the resource class that extends the Resource type:
+Create a minimal API client that wraps fetch calls without excessive abstraction:
+
+```typescript
+/**
+ * Options for {{ServiceName}} API requests
+ */
+export interface {{ServiceName}}ApiOptions {
+  /**
+   * API key or token to use (overrides environment variable)
+   */
+  apiKey?: string;
+
+  /**
+   * Account or project ID (overrides environment variable)
+   */
+  accountId?: string;
+}
+
+/**
+ * Minimal API client using raw fetch
+ */
+export class {{ServiceName}}Api {
+  /** Base URL for API */
+  readonly baseUrl: string;
+
+  /** API key or token */
+  readonly apiKey: string;
+
+  /** Account ID */
+  readonly accountId: string;
+
+  /**
+   * Create a new API client
+   *
+   * @param options API options
+   */
+  constructor(options: {{ServiceName}}ApiOptions = {}) {
+    // Initialize with environment variables or provided values
+    this.baseUrl = "https://api.{{service-name}}.com/v1";
+    this.apiKey = options.apiKey || process.env.{{SERVICE_API_KEY}} || '';
+    this.accountId = options.accountId || process.env.{{SERVICE_ACCOUNT_ID}} || '';
+
+    // Validate required configuration
+    if (!this.apiKey) {
+      throw new Error("{{SERVICE_API_KEY}} environment variable is required");
+    }
+  }
+
+  /**
+   * Make a request to the API
+   *
+   * @param path API path (without base URL)
+   * @param init Fetch init options
+   * @returns Raw Response object from fetch
+   */
+  async fetch(path: string, init: RequestInit = {}): Promise<Response> {
+    // Set up authentication headers
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${this.apiKey}`
+    };
+
+    // Add headers from init if provided
+    if (init.headers) {
+      const initHeaders = init.headers as Record<string, string>;
+      Object.keys(initHeaders).forEach(key => {
+        headers[key] = initHeaders[key];
+      });
+    }
+
+    // For FormData, remove Content-Type
+    if (init.body instanceof FormData) {
+      delete headers["Content-Type"];
+    }
+
+    // Make the request
+    return fetch(`${this.baseUrl}${path}`, {
+      ...init,
+      headers
+    });
+  }
+
+  /**
+   * Helper for GET requests
+   */
+  async get(path: string, init: RequestInit = {}): Promise<Response> {
+    return this.fetch(path, { ...init, method: "GET" });
+  }
+
+  /**
+   * Helper for POST requests
+   */
+  async post(path: string, body: any, init: RequestInit = {}): Promise<Response> {
+    const requestBody = body instanceof FormData ? body : JSON.stringify(body);
+    return this.fetch(path, { ...init, method: "POST", body: requestBody });
+  }
+
+  /**
+   * Helper for PUT requests
+   */
+  async put(path: string, body: any, init: RequestInit = {}): Promise<Response> {
+    const requestBody = body instanceof FormData ? body : JSON.stringify(body);
+    return this.fetch(path, { ...init, method: "PUT", body: requestBody });
+  }
+
+  /**
+   * Helper for DELETE requests
+   */
+  async delete(path: string, init: RequestInit = {}): Promise<Response> {
+    return this.fetch(path, { ...init, method: "DELETE" });
+  }
+}
+```
+
+## Step 4: Implement the Resource Class
+
+Create the resource class that extends the Resource type, using explicit path construction and HTTP status code checking:
 
 ```typescript
 export class {{ResourceName}} extends Resource(
   "{{service-name}}::{{ResourceName}}",
   async (ctx: Context<{{ResourceName}}Output>, props: {{ResourceName}}Props) => {
-    // Get service API key from environment
-    const apiKey = process.env.{{SERVICE_API_KEY}};
-    if (!apiKey) {
-      throw new Error("{{SERVICE_API_KEY}} environment variable is required");
-    }
+    // Create API client
+    const api = new {{ServiceName}}Api();
 
-    // Initialize service client
-    const client = new {{ServiceSDK}}(apiKey);
+    // Resource ID defaults to resource name if applicable
+    const resourceId = props.id || ctx.resourceID;
 
     if (ctx.event === "delete") {
-      try {
-        if (ctx.output?.id) {
-          // Handle resource deletion or deactivation
-          // Some services don't allow deletion and only support deactivation
-          await client.{{resourceCollection}}.{{deleteOrDeactivateMethod}}(ctx.output.id);
+      if (ctx.output?.id) {
+        // Delete resource
+        const deleteResponse = await api.delete(`/accounts/${api.accountId}/resources/${ctx.output.id}`);
+
+        // Check response status directly instead of relying on exceptions
+        if (!deleteResponse.ok && deleteResponse.status !== 404) {
+          const errorData = await deleteResponse.json().catch(() => ({ message: deleteResponse.statusText }));
+          console.error("Error deleting resource:", errorData.message || deleteResponse.statusText);
         }
-      } catch (error) {
-        // Handle errors (e.g., resource not found)
-        console.error("Error deleting {{resourceName}}:", error);
       }
 
-      // Return a minimal output for deleted state
+      // Return minimal output for deleted state
       return {
         ...props,
         id: "",
-        createdAt: 0,
-        // Add other required properties with empty/default values
+        createdAt: 0
       };
     } else {
       try {
-        let resource;
+        let response;
 
         if (ctx.event === "update" && ctx.output?.id) {
           // Update existing resource
-          resource = await client.{{resourceCollection}}.update(ctx.output.id, {
-            // Map props to the SDK's expected format
-            // Include only properties that can be updated
-          });
+          response = await api.put(
+            `/accounts/${api.accountId}/resources/${ctx.output.id}`,
+            {
+              // Map props to API-expected format
+              name: props.name,
+              description: props.description
+            }
+          );
         } else {
           // Create new resource
-          resource = await client.{{resourceCollection}}.create({
-            // Map props to the SDK's expected format
-          });
+          response = await api.post(
+            `/accounts/${api.accountId}/resources`,
+            {
+              // Map props to API-expected format
+              name: props.name,
+              description: props.description
+            }
+          );
         }
 
-        // Map service response to our output format
+        // Check response status directly
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({ message: response.statusText }));
+          throw new Error(`API error: ${errorData.message || response.statusText}`);
+        }
+
+        // Parse response JSON
+        const data = await response.json();
+        const resource = data.result || data;
+
+        // Map API response to our output format
         const output: {{ResourceName}}Output = {
           id: resource.id,
-          // Map all other properties from service response to output format
-          // Transform types and formats as needed
-          createdAt: resource.created,
+          name: resource.name,
+          description: resource.description,
+          createdAt: resource.created_at || Date.now()
         };
 
         return output;
       } catch (error) {
-        console.error("Error creating/updating {{resourceName}}:", error);
+        console.error("Error creating/updating resource:", error);
         throw error;
       }
     }
@@ -153,176 +280,7 @@ export class {{ResourceName}} extends Resource(
 ) {}
 ```
 
-## Step 3a: Handling Resource Lifecycle Challenges
-
-Many cloud services exhibit eventual consistency, rate limiting, and other behaviors that require special handling. Here are common challenges and how to address them:
-
-### 1. Wait for Resource Deletion
-
-Some resources don't delete immediately and require polling to confirm deletion has completed:
-
-```typescript
-// Example from AWS SQS Queue
-if (ctx.event === "delete") {
-  try {
-    // Delete the resource
-    await client.{{resourceCollection}}.delete({
-      resourceId: ctx.output.id
-    });
-
-    // Wait for resource to be fully deleted
-    let resourceDeleted = false;
-    while (!resourceDeleted) {
-      try {
-        // Try to retrieve the resource
-        await client.{{resourceCollection}}.get({
-          resourceId: ctx.output.id
-        });
-        // If we get here, resource still exists - wait and retry
-        await new Promise(resolve => setTimeout(resolve, 1000));
-      } catch (error: any) {
-        if (error.name === "ResourceNotFound") {
-          resourceDeleted = true; // Resource is confirmed deleted
-        } else {
-          throw error; // Unexpected error
-        }
-      }
-    }
-  } catch (error: any) {
-    // Handle specific errors
-  }
-}
-```
-
-### 2. Handle Recent Deletion Conflicts
-
-Some services prevent immediately recreating a recently deleted resource:
-
-```typescript
-// Handle "recently deleted" error with retries
-try {
-  const resource = await client.{{resourceCollection}}.create(createParams);
-  return mapToOutput(resource);
-} catch (error: any) {
-  if (error.name === "ResourceDeletedRecently") {
-    // Implement backoff retry strategy
-    const maxRetries = 3;
-    let retryCount = 0;
-
-    while (retryCount < maxRetries) {
-      try {
-        // Wait before retrying (exponential backoff)
-        await new Promise(resolve =>
-          setTimeout(resolve, 1000 * Math.pow(2, retryCount))
-        );
-
-        // Retry the operation
-        const resource = await client.{{resourceCollection}}.create(createParams);
-        return mapToOutput(resource);
-      } catch (retryError: any) {
-        if (retryError.name !== "ResourceDeletedRecently" ||
-            retryCount === maxRetries - 1) {
-          throw retryError;
-        }
-        retryCount++;
-      }
-    }
-  }
-  throw error;
-}
-```
-
-### 3. Resource Already Exists Handling
-
-Handle cases where the resource already exists gracefully:
-
-```typescript
-try {
-  // Try to create the resource
-  const createResponse = await client.{{resourceCollection}}.create(createParams);
-  return mapToOutput(createResponse);
-} catch (error: any) {
-  if (error.name === "ResourceAlreadyExists") {
-    // Get existing resource
-    const getResponse = await client.{{resourceCollection}}.get({
-      resourceId: props.resourceIdentifier
-    });
-
-    // Validate the existing resource matches what we want
-    // Update if needed and allowed by the service
-
-    return mapToOutput(getResponse);
-  }
-  throw error;
-}
-```
-
-### 4. Wait for Resource to Stabilize
-
-Some resources take time to become fully active or ready for use:
-
-```typescript
-// Wait for resource to reach a stable state
-async function waitForStableState(resourceId: string) {
-  const maxAttempts = 30;
-  const delayMs = 2000;
-
-  for (let attempt = 0; attempt < maxAttempts; attempt++) {
-    const resource = await client.{{resourceCollection}}.get({
-      resourceId: resourceId
-    });
-
-    if (resource.status === "ACTIVE" || resource.status === "READY") {
-      return resource;
-    }
-
-    if (resource.status === "FAILED") {
-      throw new Error(`Resource creation failed: ${resource.statusReason}`);
-    }
-
-    // Wait before checking again
-    await new Promise(resolve => setTimeout(resolve, delayMs));
-  }
-
-  throw new Error(`Resource did not stabilize after ${maxAttempts} attempts`);
-}
-```
-
-### 5. Rate Limiting and Throttling
-
-Handle rate limiting by implementing exponential backoff:
-
-```typescript
-async function executeWithBackoff<T>(
-  operation: () => Promise<T>,
-  maxRetries = 5
-): Promise<T> {
-  let lastError: any;
-
-  for (let attempt = 0; attempt < maxRetries; attempt++) {
-    try {
-      return await operation();
-    } catch (error: any) {
-      if (
-        error.name === "ThrottlingException" ||
-        error.name === "TooManyRequestsException" ||
-        error.name === "RateLimitExceeded"
-      ) {
-        lastError = error;
-        const delayMs = 100 * Math.pow(2, attempt);
-        await new Promise((resolve) => setTimeout(resolve, delayMs));
-        continue;
-      }
-
-      throw error; // Not a throttling error
-    }
-  }
-
-  throw lastError; // Exhausted retries
-}
-```
-
-## Step 4: Export from Service Index
+## Step 5: Export from Service Index
 
 Create or update the service index file to export the new resource:
 
@@ -331,7 +289,7 @@ Create or update the service index file to export the new resource:
 export * from "./{{resource-name}}";
 ```
 
-## Step 5: Update Package.json
+## Step 6: Update Package.json
 
 Add the service to package.json exports if not already present:
 
@@ -351,388 +309,131 @@ Add the service SDK as a peer dependency if not already present:
 }
 ```
 
-## Step 6: Create Tests
+## Step 7: Create Tests
 
-Create a new test file for the resource:
+Create a test file that uses direct API interaction for verification:
 
 ```typescript
 // test/{{service-name}}/{{resource-name}}.test.ts
-import { describe, test, expect, beforeAll, afterAll } from "bun:test";
+import { describe, test, expect } from "bun:test";
 import { {{ResourceName}} } from "../../src/{{service-name}}/{{resource-name}}";
-import { apply } from "../../src";
-import {{ServiceSDK}} from "{{service-sdk}}";
+import { apply } from "../../src/apply";
+import { destroy } from "../../src/destroy";
+import { {{ServiceName}}Api } from "../../src/{{service-name}}/api";
 
-// Initialize service client for verification
-const client = new {{ServiceSDK}}(process.env.{{SERVICE_API_KEY}}!);
+// Check that required environment variables are set
+const apiKey = process.env.{{SERVICE_API_KEY}};
+const accountId = process.env.{{SERVICE_ACCOUNT_ID}};
+
+if (!apiKey || !accountId) {
+  console.warn("Skipping tests: {{SERVICE_API_KEY}} and {{SERVICE_ACCOUNT_ID}} are required");
+}
 
 describe("{{ResourceName}} Resource", () => {
-  test("create, update, and delete {{resourceName}}", async () => {
+  const testId = `test-resource-${Date.now()}`;
+
+  test("create, update, and delete resource", async () => {
+    if (!apiKey || !accountId) {
+      return; // Skip if credentials aren't available
+    }
+
     // Create a test resource
-    const resource = new {{ResourceName}}("test-{{resource-name}}", {
-      // Set test properties
+    const resource = new {{ResourceName}}(testId, {
+      name: `Test Resource ${testId}`,
+      description: "This is a test resource"
     });
 
     // Apply to create the resource
     const output = await apply(resource);
     expect(output.id).toBeTruthy();
+    expect(output.name).toEqual(`Test Resource ${testId}`);
 
-    // Verify with service API
-    const serviceResource = await client.{{resourceCollection}}.retrieve(output.id);
-    expect(serviceResource.property).toBe(expectedValue);
+    // Verify resource was created by querying the API directly
+    const api = new {{ServiceName}}Api();
+    const getResponse = await api.get(`/accounts/${api.accountId}/resources/${output.id}`);
+    expect(getResponse.status).toEqual(200);
 
-    // Test update if applicable
-    // Test delete if applicable
+    const responseData = await getResponse.json();
+    expect(responseData.result.name).toEqual(`Test Resource ${testId}`);
+
+    // Update the resource
+    const updatedResource = new {{ResourceName}}(testId, {
+      name: `Updated Resource ${testId}`,
+      description: "This is an updated test resource"
+    });
+
+    const updateOutput = await apply(updatedResource);
+    expect(updateOutput.id).toEqual(output.id);
+
+    // Verify resource was updated
+    const getUpdatedResponse = await api.get(`/accounts/${api.accountId}/resources/${output.id}`);
+    const updatedData = await getUpdatedResponse.json();
+    expect(updatedData.result.name).toEqual(`Updated Resource ${testId}`);
+
+    // Delete the resource
+    await destroy(resource);
+
+    // Verify resource was deleted
+    const getDeletedResponse = await api.get(`/accounts/${api.accountId}/resources/${output.id}`);
+    expect(getDeletedResponse.status).toEqual(404);
   });
-
-  async function assert{{ResourceName}}Deleted(resourceId: string) {
-    // Verify resource was properly deleted or deactivated
-    try {
-      const resource = await client.{{resourceCollection}}.retrieve(resourceId);
-      expect(resource.active).toBe(false); // For services that deactivate instead of delete
-    } catch (error) {
-      // For services that fully delete resources, expect a not found error
-      expect(error.statusCode).toBe(404);
-    }
-  }
 });
 ```
 
-## Step 7: Add Resource Export to Main Index
+## API Design Principles
 
-Update the main index file to export the new resource if needed:
+When implementing resources that interact with external APIs, follow these design principles:
 
-```typescript
-// src/index.ts
-// ... existing exports
-export * from "./{{service-name}}";
-```
+1. **Minimal abstraction**: Use a thin wrapper around fetch rather than complex SDK clients.
 
-## Best Practices
+2. **Explicit path construction**: Construct API paths explicitly at the call site instead of using helper methods:
 
-1. Use consistent naming conventions:
+   ```typescript
+   // DO THIS:
+   await api.get(`/accounts/${api.accountId}/resources/${resourceId}`);
 
-   - File names: kebab-case.ts
-   - Class and interface names: PascalCase
-   - Properties and methods: camelCase
+   // NOT THIS:
+   await api.get(api.accountPath(`/resources/${resourceId}`));
+   ```
 
-2. Include comprehensive JSDoc comments for all properties and methods
+3. **Direct HTTP status handling**: Check response status codes directly rather than relying on exceptions:
 
-3. Handle errors gracefully and provide meaningful error messages
+   ```typescript
+   // DO THIS:
+   const response = await api.get(`/path/to/resource`);
+   if (!response.ok) {
+     // Handle error case
+   }
 
-4. Implement all CRUD operations (create, read, update, delete)
+   // NOT THIS:
+   try {
+     const data = await api.get(`/path/to/resource`);
+   } catch (error) {
+     // Handle error
+   }
+   ```
 
-5. Provide type safety by using TypeScript interfaces and types
+4. **Explicit JSON parsing**: Parse JSON responses explicitly where needed:
 
-6. Use consistent patterns across all resources for the same service
+   ```typescript
+   const response = await api.get(`/path/to/resource`);
+   if (response.ok) {
+     const data = await response.json();
+     // Process data
+   }
+   ```
 
-7. Add unit tests that verify all operations work as expected
+5. **Public properties over helper methods**: Expose properties like `api.accountId` publicly to construct URLs instead of creating helper methods.
+
+6. **Minimal error transformation**: Report errors with minimal transformation to preserve original error details.
 
 ## Using Raw Fetch Calls Instead of SDKs
 
-Where possible, prefer using raw fetch calls instead of service SDKs unless explicitly instructed not to by the user. This approach has several advantages:
+Always prefer using raw fetch calls instead of service SDKs unless explicitly instructed not to by the user. This approach:
 
 - Reduces dependency bloat
 - Minimizes version compatibility issues
 - Gives you more control over the request/response cycle
 - Often results in smaller bundle sizes
 
-This applies to both the resource implementation and tests - using fetch for API verification in tests provides consistency and reduces dependencies.
-
-Here are examples of implementing common API interaction patterns using fetch:
-
-### Basic REST API Interaction
-
-```typescript
-export class {{ResourceName}} extends Resource(
-  "{{service-name}}::{{ResourceName}}",
-  async (ctx: Context<{{ResourceName}}Output>, props: {{ResourceName}}Props) => {
-    // API base URL
-    const baseUrl = process.env.{{SERVICE_API_URL}} || "https://api.{{service-name}}.com/v1";
-
-    // Get API key from environment
-    const apiKey = process.env.{{SERVICE_API_KEY}};
-    if (!apiKey) {
-      throw new Error("{{SERVICE_API_KEY}} environment variable is required");
-    }
-
-    // Basic headers for all requests
-    const headers = {
-      "Content-Type": "application/json",
-      "Authorization": `Bearer ${apiKey}`
-    };
-
-    if (ctx.event === "delete") {
-      try {
-        if (ctx.output?.id) {
-          // Delete resource using fetch
-          const response = await fetch(`${baseUrl}/{{resources}}/${ctx.output.id}`, {
-            method: "DELETE",
-            headers
-          });
-
-          if (!response.ok) {
-            const error = await response.json();
-            throw new Error(`Error deleting resource: ${error.message}`);
-          }
-        }
-      } catch (error) {
-        console.error("Error deleting resource:", error);
-      }
-
-      // Return minimal output for deleted state
-      return {
-        ...props,
-        id: "",
-        createdAt: 0
-      };
-    } else {
-      try {
-        let response;
-
-        if (ctx.event === "update" && ctx.output?.id) {
-          // Update resource using fetch
-          response = await fetch(`${baseUrl}/{{resources}}/${ctx.output.id}`, {
-            method: "PATCH", // or PUT depending on the API
-            headers,
-            body: JSON.stringify({
-              // Map props to the API's expected format
-            })
-          });
-        } else {
-          // Create resource using fetch
-          response = await fetch(`${baseUrl}/{{resources}}`, {
-            method: "POST",
-            headers,
-            body: JSON.stringify({
-              // Map props to the API's expected format
-            })
-          });
-        }
-
-        if (!response.ok) {
-          const error = await response.json();
-          throw new Error(`API error: ${error.message}`);
-        }
-
-        const resource = await response.json();
-
-        // Map API response to our output format
-        const output: {{ResourceName}}Output = {
-          id: resource.id,
-          // Map all other properties
-          createdAt: resource.created_at || Date.now()
-        };
-
-        return output;
-      } catch (error) {
-        console.error("Error creating/updating resource:", error);
-        throw error;
-      }
-    }
-  },
-) {}
-```
-
-### OAuth Token Authentication
-
-For APIs that require OAuth tokens:
-
-```typescript
-// Get OAuth token
-async function getOAuthToken(): Promise<string> {
-  const clientId = process.env.{{SERVICE_CLIENT_ID}};
-  const clientSecret = process.env.{{SERVICE_CLIENT_SECRET}};
-
-  if (!clientId || !clientSecret) {
-    throw new Error("OAuth credentials are required");
-  }
-
-  const tokenUrl = "https://{{service-name}}.com/oauth/token";
-
-  const response = await fetch(tokenUrl, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/x-www-form-urlencoded"
-    },
-    body: new URLSearchParams({
-      grant_type: "client_credentials",
-      client_id: clientId,
-      client_secret: clientSecret,
-      scope: "read write"
-    })
-  });
-
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(`OAuth error: ${error.error_description || error.message}`);
-  }
-
-  const data = await response.json();
-  return data.access_token;
-}
-
-// Use the token
-const token = await getOAuthToken();
-const headers = {
-  "Authorization": `Bearer ${token}`,
-  "Content-Type": "application/json"
-};
-
-// Make API call
-const response = await fetch(`${baseUrl}/{{resources}}`, {
-  method: "POST",
-  headers,
-  body: JSON.stringify(requestData)
-});
-```
-
-### API Key Authentication
-
-Different services use API keys in different ways:
-
-```typescript
-// Header-based API key
-const headers = {
-  "X-API-Key": process.env.{{SERVICE_API_KEY}}!,
-  "Content-Type": "application/json"
-};
-
-// Query parameter API key
-const url = new URL(`${baseUrl}/{{resources}}`);
-url.searchParams.append("api_key", process.env.{{SERVICE_API_KEY}}!);
-
-const response = await fetch(url.toString(), {
-  method: "GET",
-  headers: { "Content-Type": "application/json" }
-});
-
-// Basic auth API key
-const encodedCredentials = Buffer.from(`${process.env.{{SERVICE_API_KEY}}}:`).toString('base64');
-const headers = {
-  "Authorization": `Basic ${encodedCredentials}`,
-  "Content-Type": "application/json"
-};
-```
-
-### AWS-Style Request Signing
-
-For services that require AWS-style request signing (simplified example):
-
-```typescript
-import { createHmac } from 'crypto';
-
-async function signRequest(method: string, path: string, body?: any) {
-  const accessKey = process.env.{{SERVICE_ACCESS_KEY}}!;
-  const secretKey = process.env.{{SERVICE_SECRET_KEY}}!;
-
-  const timestamp = new Date().toISOString();
-  const contentHash = body ? createHmac('sha256', secretKey).update(JSON.stringify(body)).digest('hex') : '';
-
-  const stringToSign = [
-    method,
-    contentHash,
-    'application/json',
-    timestamp,
-    path
-  ].join('\n');
-
-  const signature = createHmac('sha256', secretKey).update(stringToSign).digest('hex');
-
-  const headers = {
-    'Content-Type': 'application/json',
-    'X-{{Service}}-Date': timestamp,
-    'X-{{Service}}-Content-SHA256': contentHash,
-    'Authorization': `${accessKey}:${signature}`
-  };
-
-  return headers;
-}
-
-// Using the signed headers
-const path = '/{{resources}}';
-const headers = await signRequest('POST', path, requestData);
-
-const response = await fetch(`${baseUrl}${path}`, {
-  method: 'POST',
-  headers,
-  body: JSON.stringify(requestData)
-});
-```
-
-### Handling Rate Limiting with Fetch
-
-Implement rate limit handling and retries:
-
-```typescript
-async function fetchWithRetry(
-  url: string,
-  options: RequestInit,
-  maxRetries = 3
-): Promise<Response> {
-  let retries = 0;
-
-  while (true) {
-    const response = await fetch(url, options);
-
-    // Success case
-    if (response.ok) return response;
-
-    // Rate limit handling
-    if (response.status === 429 && retries < maxRetries) {
-      // Get retry-after header or use exponential backoff
-      const retryAfter = response.headers.get("Retry-After");
-      const delayMs = retryAfter
-        ? parseInt(retryAfter, 10) * 1000
-        : Math.pow(2, retries) * 1000;
-
-      console.log(`Rate limited. Retrying after ${delayMs}ms`);
-      await new Promise((resolve) => setTimeout(resolve, delayMs));
-      retries++;
-      continue;
-    }
-
-    // Handle other errors
-    const errorBody = await response.text();
-    throw new Error(`API error ${response.status}: ${errorBody}`);
-  }
-}
-```
-
-### Implementing Pagination
-
-For APIs that return paginated results:
-
-```typescript
-async function fetchAllPages(
-  baseUrl: string,
-  headers: HeadersInit
-): Promise<any[]> {
-  let allResults: any[] = [];
-  let nextPageToken: string | null = null;
-
-  do {
-    // Construct URL with pagination token if available
-    const url = new URL(baseUrl);
-    if (nextPageToken) {
-      url.searchParams.append("page_token", nextPageToken);
-    }
-
-    const response = await fetch(url.toString(), { headers });
-
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(`API error: ${error.message}`);
-    }
-
-    const data = await response.json();
-
-    // Add results from this page
-    allResults = [...allResults, ...data.items];
-
-    // Get next page token (format varies by API)
-    nextPageToken = data.next_page_token || data.pagination?.next || null;
-  } while (nextPageToken);
-
-  return allResults;
-}
-```
+For both implementation and tests, directly interact with APIs using fetch.
