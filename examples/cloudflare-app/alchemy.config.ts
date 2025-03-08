@@ -10,6 +10,13 @@ dotenv.config({
 new Worker("worker", {
   name: "alchemy-examples",
   entrypoint: "./src/index.ts",
+  bindings: [
+    {
+      type: "durable_object_namespace",
+      class_name: "Counter",
+      name: "COUNTER",
+    },
+  ],
 });
 
 await alchemize({
