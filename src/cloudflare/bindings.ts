@@ -249,6 +249,17 @@ export interface WorkerBindingWasmModule {
 }
 
 /**
+ * Static content binding for Cloudflare Workers
+ * Used for Workers Sites and static assets
+ */
+export interface WorkerBindingStaticContent {
+  /** The name of the binding */
+  name: string;
+  /** Type identifier for Static Content binding */
+  type: "static_content";
+}
+
+/**
  * Union type for all Worker binding types
  */
 export type WorkerBinding =
@@ -268,6 +279,7 @@ export type WorkerBinding =
   | WorkerBindingR2Bucket
   | WorkerBindingSecretText
   | WorkerBindingService
+  | WorkerBindingStaticContent
   | WorkerBindingTailConsumer
   | WorkerBindingVectorize
   | WorkerBindingVersionMetadata

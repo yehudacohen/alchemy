@@ -5,6 +5,11 @@ import { type CloudflareAuthOptions, getCloudflareHeaders } from "./auth";
  */
 export interface CloudflareApiOptions {
   /**
+   * API Key to use (overrides CLOUDFLARE_API_KEY env var)
+   */
+  apiKey?: string;
+
+  /**
    * Account ID to use (overrides CLOUDFLARE_ACCOUNT_ID env var)
    * If not provided, will be automatically retrieved from the Cloudflare API
    */
@@ -31,11 +36,39 @@ interface CloudflareAccount {
 }
 
 /**
+ * Creates a CloudflareApi instance with automatic account ID discovery if not provided
+ *
+ * @param options API options
+ * @returns Promise resolving to a CloudflareApi instance
+ */
+export async function createCloudflareApi(
+  options: CloudflareApiOptions = {},
+): Promise<CloudflareApi> {
+  try {
+    return new CloudflareApi({
+      ...options,
+      accountId:
+        options.accountId ||
+        process.env.CLOUDFLARE_ACCOUNT_ID ||
+        (await fetchAccountId()),
+    });
+  } catch (error) {
+    console.error("Error during Cloudflare account ID discovery:", error);
+    throw new Error(
+      "Failed to automatically discover Cloudflare account ID. Please provide an account ID explicitly or ensure your API token/key has sufficient permissions.",
+    );
+  }
+}
+
+/**
  * Cloudflare API client using raw fetch
  */
 export class CloudflareApi {
   /** Base URL for Cloudflare API */
   readonly baseUrl: string;
+
+  /** Cloudflare API Key */
+  readonly apiKey: string;
 
   /** Cloudflare account ID */
   readonly accountId: string;
@@ -59,6 +92,22 @@ export class CloudflareApi {
   constructor(options: CloudflareApiOptions = {}) {
     this.baseUrl = "https://api.cloudflare.com/client/v4";
 
+    const apiKey =
+      options.apiKey || process.env.CLOUDFLARE_API_KEY || undefined;
+    if (!apiKey) {
+      throw new Error(
+        "No API key provided. Use createCloudflareApi() instead for automatic account discovery.",
+      );
+    }
+    this.apiKey = apiKey;
+
+    this.email = options.email || process.env.CLOUDFLARE_EMAIL;
+    if (!this.email) {
+      throw new Error(
+        "No email provided. Use createCloudflareApi() instead for automatic account discovery.",
+      );
+    }
+
     // Get account ID from options or environment
     this.accountId =
       options.accountId || process.env.CLOUDFLARE_ACCOUNT_ID || "";
@@ -70,9 +119,6 @@ export class CloudflareApi {
 
     // Zone ID is optional for some operations
     this.zoneId = options.zoneId || process.env.CLOUDFLARE_ZONE_ID || null;
-
-    // Store email for API Key auth if provided
-    this.email = options.email;
 
     // Store auth options for later use
     this.authOptions = {
@@ -202,7 +248,7 @@ async function fetchAccountId(): Promise<string> {
   });
 
   if (!response.ok) {
-    const errorData = await response.json().catch(() => ({
+    const errorData: any = await response.json().catch(() => ({
       errors: [{ message: response.statusText }],
     }));
 
@@ -211,7 +257,7 @@ async function fetchAccountId(): Promise<string> {
     );
   }
 
-  const data = await response.json();
+  const data: any = await response.json();
   const accounts = data.result as CloudflareAccount[];
 
   if (!accounts || accounts.length === 0) {
@@ -222,35 +268,4 @@ async function fetchAccountId(): Promise<string> {
 
   // Return the first account ID
   return accounts[0].id;
-}
-
-/**
- * Creates a CloudflareApi instance with automatic account ID discovery if not provided
- *
- * @param options API options
- * @returns Promise resolving to a CloudflareApi instance
- */
-export async function createCloudflareApi(
-  options: CloudflareApiOptions = {},
-): Promise<CloudflareApi> {
-  // If account ID is already provided, create the API client directly
-  if (options.accountId || process.env.CLOUDFLARE_ACCOUNT_ID) {
-    return new CloudflareApi(options);
-  }
-
-  try {
-    // Otherwise, fetch the account ID first
-    const accountId = await fetchAccountId();
-
-    // Create the API client with the discovered account ID
-    return new CloudflareApi({
-      ...options,
-      accountId,
-    });
-  } catch (error) {
-    console.error("Error during Cloudflare account ID discovery:", error);
-    throw new Error(
-      "Failed to automatically discover Cloudflare account ID. Please provide an account ID explicitly or ensure your API token/key has sufficient permissions.",
-    );
-  }
 }

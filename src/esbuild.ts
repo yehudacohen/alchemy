@@ -62,12 +62,7 @@ export class Bundle extends Resource(
   "esbuild::Bundle",
   async (ctx, props: BundleProps): Promise<BundleOutput> => {
     // Determine output path
-    const outputPath =
-      props.outfile ||
-      path.join(
-        props.outdir || "dist",
-        path.basename(props.entryPoint, path.extname(props.entryPoint)) + ".js",
-      );
+    const outputPath = getOutputPath(props);
 
     // Ensure output directory exists
     await fs.promises.mkdir(path.dirname(outputPath), { recursive: true });
@@ -79,22 +74,7 @@ export class Bundle extends Resource(
       return { path: outputPath, hash: "" };
     }
 
-    // Build the bundle
-    const result = await esbuild.build({
-      entryPoints: [props.entryPoint],
-      outfile: outputPath,
-      bundle: true,
-      format: props.format,
-      target: props.target,
-      minify: props.minify,
-      sourcemap: props.sourcemap,
-      external: props.external,
-      platform: props.platform,
-      metafile: true,
-      write: true,
-      ...props.options,
-    });
-
+    const result = await bundle(props);
     // Calculate hash of the output
     const contents = await fs.promises.readFile(outputPath);
     const hash = crypto.createHash("sha256").update(contents).digest("hex");
@@ -125,4 +105,33 @@ export class Bundle extends Resource(
   public async getHash(ctx: { get<T>(key: string): Promise<T | undefined> }) {
     return ctx.get<string>("hash");
   }
+}
+
+export async function bundle(props: BundleProps) {
+  const outputPath = getOutputPath(props);
+  // Build the bundle
+  return await esbuild.build({
+    entryPoints: [props.entryPoint],
+    outfile: outputPath,
+    bundle: true,
+    format: props.format,
+    target: props.target,
+    minify: props.minify,
+    sourcemap: props.sourcemap,
+    external: props.external,
+    platform: props.platform,
+    metafile: true,
+    write: true,
+    ...props.options,
+  });
+}
+
+function getOutputPath(props: BundleProps) {
+  return (
+    props.outfile ||
+    path.join(
+      props.outdir || "dist",
+      path.basename(props.entryPoint, path.extname(props.entryPoint)) + ".js",
+    )
+  );
 }

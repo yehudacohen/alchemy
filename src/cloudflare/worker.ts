@@ -64,12 +64,19 @@ export interface WorkerProps {
    * @default true
    */
   production?: boolean;
+
+  /**
+   * Whether to enable a workers.dev URL for this worker
+   * If true, the worker will be available at {name}.{subdomain}.workers.dev
+   * @default false
+   */
+  url?: boolean;
 }
 
 /**
  * Output returned after Worker creation/update
  */
-export interface WorkerOutput extends WorkerProps {
+export interface WorkerOutput extends Omit<WorkerProps, "url"> {
   /**
    * The ID of the worker
    */
@@ -84,6 +91,12 @@ export interface WorkerOutput extends WorkerProps {
    * Time at which the worker was last updated
    */
   updatedAt: number;
+
+  /**
+   * The worker's URL if enabled
+   * Format: {name}.{subdomain}.workers.dev
+   */
+  url?: string;
 }
 
 export class Worker extends Resource(
@@ -117,7 +130,7 @@ export class Worker extends Resource(
         );
       } else if (checkExistsResponse.status !== 404) {
         // If it's neither a success nor a 404, it's an unexpected error
-        const errorData = await checkExistsResponse.json().catch(() => ({
+        const errorData: any = await checkExistsResponse.json().catch(() => ({
           errors: [{ message: checkExistsResponse.statusText }],
         }));
         throw new Error(
@@ -125,47 +138,6 @@ export class Worker extends Resource(
         );
       }
       // If it's a 404, that means the worker doesn't exist yet, which is what we want
-    }
-
-    // Get the script content - either from props.script, or by bundling
-    let scriptContent: string;
-
-    if (props.script) {
-      // Use the provided script
-      scriptContent = props.script;
-    } else if (props.bundle) {
-      // Use a pre-configured Bundle resource
-      const bundleOutput = await apply(props.bundle);
-      scriptContent = await fs.readFile(bundleOutput.path, "utf-8");
-    } else if (props.entrypoint) {
-      // Create and use a Bundle resource with worker-optimized configuration
-      const defaultBundleOptions: Omit<BundleProps, "entryPoint"> = {
-        format: props.format === "cjs" ? "cjs" : "esm", // Use the specified format or default to ESM
-        target: "es2020",
-        platform: "browser",
-        minify: true,
-        options: {
-          keepNames: true, // Important for Durable Object classes
-        },
-      };
-
-      // Merge with user-provided options
-      const bundleOptions = {
-        ...defaultBundleOptions,
-        ...(props.bundleOptions || {}),
-      };
-
-      // Create the bundle
-      const bundle = new Bundle("bundle", {
-        entryPoint: props.entrypoint,
-        ...bundleOptions,
-      });
-
-      // Get the bundled content
-      const bundleOutput = await apply(bundle);
-      scriptContent = await fs.readFile(bundleOutput.path, "utf-8");
-    } else {
-      throw new Error("No script source provided"); // Shouldn't reach here due to earlier validation
     }
 
     if (ctx.event === "delete") {
@@ -176,7 +148,7 @@ export class Worker extends Resource(
 
       // Check for success (2xx status code)
       if (!deleteResponse.ok && deleteResponse.status !== 404) {
-        const errorData = await deleteResponse
+        const errorData: any = await deleteResponse
           .json()
           .catch(() => ({ errors: [{ message: deleteResponse.statusText }] }));
         console.error(
@@ -193,7 +165,7 @@ export class Worker extends Resource(
         );
 
         if (routesResponse.ok) {
-          const routesData = await routesResponse.json();
+          const routesData: any = await routesResponse.json();
           const existingRoutes = routesData.result || [];
 
           for (const route of existingRoutes) {
@@ -219,14 +191,75 @@ export class Worker extends Resource(
         }
       }
 
+      // Disable the URL if it was enabled
+      if (ctx.output?.url) {
+        try {
+          await api.post(
+            `/accounts/${api.accountId}/workers/scripts/${workerName}/subdomain`,
+            JSON.stringify({ enabled: false }),
+            {
+              headers: { "Content-Type": "application/json" },
+            },
+          );
+        } catch (error) {
+          console.warn("Failed to disable worker URL during deletion:", error);
+        }
+      }
+
       // Return minimal output for deleted state
       return {
         ...props,
         id: "",
         createdAt: 0,
         updatedAt: 0,
+        url: undefined,
       };
     } else {
+      // Get the script content - either from props.script, or by bundling
+      let scriptContent: string;
+
+      if (props.script) {
+        // Use the provided script
+        scriptContent = props.script;
+      } else if (props.bundle) {
+        // Use a pre-configured Bundle resource
+        const bundleOutput = await apply(props.bundle);
+        scriptContent = await fs.readFile(bundleOutput.path, "utf-8");
+      } else if (props.entrypoint) {
+        // Create and use a Bundle resource with worker-optimized configuration
+        const defaultBundleOptions: Omit<BundleProps, "entryPoint"> = {
+          format: props.format === "cjs" ? "cjs" : "esm", // Use the specified format or default to ESM
+          target: "es2020",
+          platform: "browser",
+          minify: true,
+          options: {
+            keepNames: true, // Important for Durable Object classes
+          },
+        };
+
+        // Merge with user-provided options
+        const bundleOptions = {
+          ...defaultBundleOptions,
+          ...(props.bundleOptions || {}),
+        };
+
+        // Create the bundle
+        const bundle = new Bundle("bundle", {
+          entryPoint: props.entrypoint,
+          ...bundleOptions,
+        });
+
+        // Get the bundled content
+        const bundleOutput = await apply(bundle);
+        try {
+          scriptContent = await fs.readFile(bundleOutput.path, "utf-8");
+        } catch (error) {
+          console.error("Error reading bundle:", error);
+          throw new Error("Error reading bundle");
+        }
+      } else {
+        throw new Error("No script source provided"); // Shouldn't reach here due to earlier validation
+      }
       // Prepare metadata with bindings
       const metadata: any = {
         bindings: [],
@@ -383,7 +416,7 @@ export class Worker extends Resource(
 
       // Check if the upload was successful
       if (!uploadResponse.ok) {
-        const errorData = await uploadResponse
+        const errorData: any = await uploadResponse
           .json()
           .catch(() => ({ errors: [{ message: uploadResponse.statusText }] }));
         throw new Error(
@@ -399,7 +432,7 @@ export class Worker extends Resource(
         );
 
         if (routesResponse.ok) {
-          const routesData = await routesResponse.json();
+          const routesData: any = await routesResponse.json();
           const existingRoutes = routesData.result || [];
 
           // For each desired route
@@ -451,6 +484,67 @@ export class Worker extends Resource(
         }
       }
 
+      // Handle worker URL if requested
+      let workerUrl;
+      if (props.url) {
+        try {
+          // Enable the workers.dev subdomain for this worker
+          await api.post(
+            `/accounts/${api.accountId}/workers/scripts/${workerName}/subdomain`,
+            JSON.stringify({ enabled: true }),
+            {
+              headers: { "Content-Type": "application/json" },
+            },
+          );
+
+          // Get the account's workers.dev subdomain
+          const subdomainResponse = await api.get(
+            `/accounts/${api.accountId}/workers/subdomain`,
+          );
+
+          if (subdomainResponse.ok) {
+            const subdomainData: {
+              result: {
+                subdomain: string;
+              };
+            } = await subdomainResponse.json();
+            const subdomain = subdomainData.result?.subdomain;
+
+            if (subdomain) {
+              workerUrl = `${workerName}.${subdomain}.workers.dev`;
+
+              // Add a delay when the subdomain is first created.
+              // This is to prevent an issue where a negative cache-hit
+              // causes the subdomain to be unavailable for 30 seconds.
+              if (ctx.event === "create" || !ctx.output?.url) {
+                await new Promise((resolve) => setTimeout(resolve, 3000));
+              }
+            }
+          } else {
+            console.warn(
+              "Could not fetch workers.dev subdomain:",
+              subdomainResponse.status,
+              subdomainResponse.statusText,
+            );
+          }
+        } catch (error) {
+          console.warn("Failed to enable worker URL:", error);
+        }
+      } else if (props.url === false && ctx.output?.url) {
+        // Explicitly disable URL if it was previously enabled
+        try {
+          await api.post(
+            `/accounts/${api.accountId}/workers/scripts/${workerName}/subdomain`,
+            JSON.stringify({ enabled: false }),
+            {
+              headers: { "Content-Type": "application/json" },
+            },
+          );
+        } catch (error) {
+          console.warn("Failed to disable worker URL:", error);
+        }
+      }
+
       // Get current timestamp
       const now = Date.now();
 
@@ -465,6 +559,7 @@ export class Worker extends Resource(
         production: props.production !== false,
         createdAt: now,
         updatedAt: now,
+        url: workerUrl,
       };
 
       return output;

@@ -84,7 +84,7 @@ export class KVNamespace extends Resource(
         );
 
         if (!deleteResponse.ok && deleteResponse.status !== 404) {
-          const errorData = await deleteResponse.json().catch(() => ({
+          const errorData: any = await deleteResponse.json().catch(() => ({
             errors: [{ message: deleteResponse.statusText }],
           }));
           console.error(
@@ -95,12 +95,7 @@ export class KVNamespace extends Resource(
       }
 
       // Return minimal output for deleted state
-      return {
-        title: props.title,
-        id: "",
-        createdAt: 0,
-        modifiedAt: 0,
-      };
+      return;
     } else {
       // For create or update operations
       // If ctx.event is "update", we expect ctx.output to exist
@@ -122,7 +117,7 @@ export class KVNamespace extends Resource(
         );
 
         if (!createResponse.ok) {
-          const errorData = await createResponse.json().catch(() => ({
+          const errorData: any = await createResponse.json().catch(() => ({
             errors: [{ message: createResponse.statusText }],
           }));
           throw new Error(
@@ -130,7 +125,7 @@ export class KVNamespace extends Resource(
           );
         }
 
-        const createResult = await createResponse.json();
+        const createResult: any = await createResponse.json();
         namespaceId = createResult.result.id;
         createdAt = Date.now();
       }
@@ -173,7 +168,7 @@ export class KVNamespace extends Resource(
           );
 
           if (!bulkResponse.ok) {
-            const errorData = await bulkResponse.json().catch(() => ({
+            const errorData: any = await bulkResponse.json().catch(() => ({
               errors: [{ message: bulkResponse.statusText }],
             }));
             console.warn(

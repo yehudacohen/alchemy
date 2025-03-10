@@ -65,6 +65,7 @@ export interface BaseContext {
 
 export interface CreateContext extends BaseContext {
   event: "create";
+  output?: undefined;
 }
 
 export interface UpdateContext<Outputs> extends BaseContext {
