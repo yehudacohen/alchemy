@@ -1,4 +1,3 @@
-export * from "./assets";
 export * from "./bindings";
 export * from "./kv-namespace";
 export * from "./state";

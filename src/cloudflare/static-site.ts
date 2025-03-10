@@ -1,6 +1,7 @@
 import { promises as fs } from "fs";
 import path from "path";
 import { apply } from "../apply";
+import type { BundleProps } from "../esbuild";
 import { type Context, Resource } from "../resource";
 import { createCloudflareApi } from "./api";
 import type { WorkerBinding } from "./bindings";
@@ -112,6 +113,8 @@ export interface StaticSiteProps {
         name: string;
         redirects?: string[];
       };
+
+  build?: Partial<BundleProps>;
 }
 
 /**
@@ -196,6 +199,9 @@ export interface StaticSiteOutput {
 
 export class StaticSite extends Resource(
   "cloudflare::StaticSite",
+  {
+    alwaysUpdate: true,
+  },
   async (ctx: Context<StaticSiteOutput>, props: StaticSiteProps) => {
     if (ctx.event === "delete") {
       // For delete operations, we'll rely on the Worker delete to clean up
@@ -277,6 +283,11 @@ export class StaticSite extends Resource(
       bindings.push(...props.additionalBindings);
     }
 
+    // Create asset manifest banner for static site router
+    const assetManifestBanner = `const __ASSET_MANIFEST__ = ${JSON.stringify(
+      Object.fromEntries(assetManifest.map((item) => [item.key, item.hash])),
+    )};\n`;
+
     const worker = new Worker(
       "worker",
       {
@@ -286,7 +297,19 @@ export class StaticSite extends Resource(
         // If a custom worker script is provided, use it, otherwise use the entrypoint from router
         ...(props.workerScript
           ? { script: props.workerScript }
-          : { entrypoint: routerScriptPath }),
+          : {
+              entrypoint: routerScriptPath,
+              bundleOptions: {
+                ...props.build,
+                options: {
+                  ...props.build?.options,
+                  banner: {
+                    js: assetManifestBanner,
+                    ...props.build?.options?.banner,
+                  },
+                },
+              },
+            }),
         bindings,
         url: true,
       },

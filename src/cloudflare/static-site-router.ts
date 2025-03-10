@@ -1,8 +1,11 @@
+// see: https://developers.cloudflare.com/workers/runtime-apis/cache/
 declare var caches: any;
-declare var SST_ASSET_MANIFEST: Record<string, string>;
+
+// injected by src/cloudflare/static-site.ts
+declare var __ASSET_MANIFEST__: Record<string, string>;
 
 export interface Env {
-  ASSETS: any;
+  ASSETS: KVNamespace;
   INDEX_PAGE: string;
   ERROR_PAGE?: string;
 }
@@ -10,6 +13,7 @@ export interface Env {
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
+    console.log("url", request.url);
     const pathname = url.pathname.replace(/^\//, "");
     const filePath = pathname === "" ? env.INDEX_PAGE : pathname;
 
@@ -54,7 +58,7 @@ export default {
       if (!r) return;
 
       // cache exists but etag does not match
-      if (r.headers.get("etag") !== SST_ASSET_MANIFEST[filePath]) return;
+      if (r.headers.get("etag") !== __ASSET_MANIFEST__[filePath]) return;
 
       // cache exists
       return r;
@@ -65,15 +69,21 @@ export default {
       await cache.put(request, response.clone());
     }
 
-    async function respond(status: number, filePath: string, object: any) {
+    async function respond(
+      status: number,
+      filePath: string,
+      object: KVNamespaceGetWithMetadataResult<any, any>,
+    ) {
       // build response
       const headers = new Headers();
-      if (SST_ASSET_MANIFEST[filePath]) {
-        headers.set("etag", SST_ASSET_MANIFEST[filePath]);
+      if (__ASSET_MANIFEST__[filePath]) {
+        headers.set("etag", __ASSET_MANIFEST__[filePath]);
         headers.set("content-type", object.metadata.contentType);
         headers.set("cache-control", object.metadata.cacheControl);
       }
-      const response = new Response(base64ToArrayBuffer(object.value), {
+      // TODO: do we need base64 encoded here?
+      // const response = new Response(base64ToArrayBuffer(object.value), {
+      const response = new Response(object.value, {
         status,
         headers,
       });

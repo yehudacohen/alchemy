@@ -14,6 +14,7 @@ const alchemy = path.resolve(process.cwd(), "alchemy.ts");
 let _config: Config | undefined;
 
 const exists =
+  // @ts-ignore
   fs.promises.exists ??
   async function exists(path: string): Promise<boolean> {
     try {

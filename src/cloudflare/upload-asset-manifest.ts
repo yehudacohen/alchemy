@@ -46,23 +46,27 @@ export async function uploadAssetManifest(
 
   async function uploadItem(item: AssetItem): Promise<UploadResult> {
     const content = await fs.readFile(item.source);
-    const metadataParam = encodeURIComponent(
-      JSON.stringify({
-        hash: item.hash,
-        contentType: item.contentType,
-        cacheControl: item.cacheControl,
-      }),
-    );
+
+    // Create metadata object
+    const metadata = {
+      key: item.key,
+      hash: item.hash,
+      contentType: item.contentType,
+      cacheControl: item.cacheControl,
+    };
+
+    // Create FormData for multipart upload
+    const formData = new FormData();
+    formData.append("metadata", JSON.stringify(metadata));
+
+    // Add file content as 'value'
+    const blob = new Blob([content]);
+    formData.append("value", blob);
 
     try {
       const response = await api.put(
-        `/accounts/${api.accountId}/storage/kv/namespaces/${namespaceId}/values/${item.key}?metadata=${metadataParam}`,
-        content,
-        {
-          headers: {
-            "Content-Type": "application/octet-stream",
-          },
-        },
+        `/accounts/${api.accountId}/storage/kv/namespaces/${namespaceId}/values/${item.key}`,
+        formData,
       );
 
       const result = { item, success: response.ok, status: response.status };
