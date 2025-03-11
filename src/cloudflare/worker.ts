@@ -491,7 +491,7 @@ export class Worker extends Resource(
           // Enable the workers.dev subdomain for this worker
           await api.post(
             `/accounts/${api.accountId}/workers/scripts/${workerName}/subdomain`,
-            JSON.stringify({ enabled: true }),
+            { enabled: true, previews_enabled: true },
             {
               headers: { "Content-Type": "application/json" },
             },

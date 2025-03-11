@@ -191,7 +191,12 @@ export class CloudflareApi {
     body: any,
     init: RequestInit = {},
   ): Promise<Response> {
-    const requestBody = body instanceof FormData ? body : JSON.stringify(body);
+    const requestBody =
+      body instanceof FormData
+        ? body
+        : typeof body === "string"
+          ? body
+          : JSON.stringify(body);
     return this.fetch(path, { ...init, method: "POST", body: requestBody });
   }
 

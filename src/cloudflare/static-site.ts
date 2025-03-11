@@ -292,6 +292,7 @@ export class StaticSite extends Resource(
       "worker",
       {
         name: siteName,
+        url: true,
         format: props.format || "esm",
         routes: props.routes || [],
         // If a custom worker script is provided, use it, otherwise use the entrypoint from router
@@ -311,7 +312,6 @@ export class StaticSite extends Resource(
               },
             }),
         bindings,
-        url: true,
       },
       // place a dependency on the namespace
       namespace.id,
