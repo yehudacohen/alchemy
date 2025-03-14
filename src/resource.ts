@@ -3,7 +3,7 @@ import { type ApplyOptions, apply } from "./apply";
 import type { DestroyOptions } from "./destroy";
 import { defaultStateStore, deletions, providers } from "./global";
 import type { Inputs, Input as input } from "./input";
-import { type Export, type Output, OutputChain, type Resolve } from "./output";
+import { type Export, type Output, OutputChain, type Resolved } from "./output";
 import { Scope as IScope, getScope, pushScope } from "./scope";
 import type { State, StateStore } from "./state";
 
@@ -50,7 +50,7 @@ export type Resource<In extends any[] = any[], Out = any> = {
   Export<
     // the resource handler may export another Output - we need to resolve it first
     // then, export that resolved value
-    Resolve<Out>
+    Resolved<Out>
   >;
 
 export interface BaseContext {
@@ -120,17 +120,17 @@ export function isResource(value: any): value is Resource {
 }
 
 export function Resource<
-  const Type extends ResourceType,
+  // const Type extends ResourceType,
   Args extends any[],
   Out,
 >(
-  type: Type,
+  type: string,
   options: Partial<ProviderOptions>,
   func: (
     ctx: Context<Out>,
     ...args: Args
   ) => Promise<input<Out> | void> | input<Out> | void,
-): Provider<Type, Args, Awaited<Out>>;
+): Provider<string, Args, Awaited<Out>>;
 
 export function Resource<
   const Type extends ResourceType,

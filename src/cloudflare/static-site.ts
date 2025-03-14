@@ -34,12 +34,6 @@ export interface StaticSiteProps {
   dir: string;
 
   /**
-   * Routes to associate with this site
-   * Format: example.com/* or *.example.com/*
-   */
-  routes?: string[];
-
-  /**
    * Custom Worker script to serve the site
    * If not provided, a default script will be used
    */
@@ -131,19 +125,10 @@ export interface StaticSiteProps {
   bundle?: Partial<BundleProps>;
 
   /**
-   * Configure a backend worker for server-side logic
-   * This will be bound to the static site worker as BACKEND_WORKER
+   * Additional workers to route requests to.
    */
-  backend?: {
-    /**
-     * Path to the entrypoint script for the backend worker
-     */
-    entrypoint: string;
-
-    /**
-     * Bundle options for the backend worker
-     */
-    bundle?: Partial<BundleProps>;
+  routes?: {
+    [key: string]: Worker;
   };
 }
 
@@ -170,11 +155,6 @@ export interface StaticSiteOutput {
    * Path to the directory containing static assets
    */
   directory: string;
-
-  /**
-   * Routes to associate with this site
-   */
-  routes?: string[];
 
   /**
    * Worker script format
@@ -229,12 +209,7 @@ export interface StaticSiteOutput {
   /**
    * Information about the backend worker if configured
    */
-  backend?: {
-    /**
-     * The ID of the backend worker
-     */
-    workerId: string;
-  };
+  routes?: Record<string, string>;
 }
 
 export class StaticSite extends Resource(
@@ -338,24 +313,18 @@ export class StaticSite extends Resource(
       });
     }
 
+    const routes: Record<string, string> = {};
     // Create backend worker if configured
-    let backendWorker: Worker | undefined;
-    if (props.backend) {
-      // Create a separate worker for backend logic
-      backendWorker = new Worker("backend", {
-        name: `${siteName}-backend`,
-        url: true,
-        format: props.format || "esm",
-        entrypoint: props.backend.entrypoint,
-        bundleOptions: props.backend.bundle,
-      });
-
-      // Add backend worker as a binding to the main worker
-      bindings.push({
-        name: "BACKEND_WORKER",
-        type: "service",
-        service: backendWorker.id,
-      });
+    if (props.routes) {
+      for (const [path, entrypoint] of Object.entries(props.routes)) {
+        // @ts-ignore - TODO: need to use Resolved<Worker> to get the string ...
+        routes[path] = entrypoint.id;
+        bindings.push({
+          type: "service",
+          name: `ROUTE_${entrypoint.id}`,
+          service: entrypoint.id,
+        });
+      }
     }
 
     // Add any additional bindings
@@ -384,7 +353,6 @@ export class StaticSite extends Resource(
         name: siteName,
         url: true,
         format: props.format || "esm",
-        routes: props.routes || [],
         // If a custom worker script is provided, use it, otherwise use the entrypoint from router
         ...(props.workerScript
           ? { script: props.workerScript }
@@ -393,6 +361,14 @@ export class StaticSite extends Resource(
               bundleOptions,
             }),
         bindings,
+        env: {
+          ...Object.fromEntries(
+            Object.entries(routes).map(([key, value]) => [
+              `__ROUTE_${value}`,
+              key,
+            ]),
+          ),
+        },
       },
       // place a dependency on the namespace
       namespace.id,
@@ -407,7 +383,6 @@ export class StaticSite extends Resource(
       workerId: worker.id,
       name: siteName,
       directory: props.dir,
-      routes: props.routes || [],
       format: props.format || "esm",
       errorPage: props.errorPage,
       indexPage,
@@ -417,7 +392,7 @@ export class StaticSite extends Resource(
       domain: props.domain,
       production: props.production !== false,
       url: worker.url,
-      backend: backendWorker ? { workerId: backendWorker.id } : undefined,
+      routes,
     };
 
     return output;

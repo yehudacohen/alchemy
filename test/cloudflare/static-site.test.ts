@@ -4,6 +4,7 @@ import * as path from "path";
 import { apply } from "../../src/apply";
 import { createCloudflareApi } from "../../src/cloudflare/api";
 import { StaticSite } from "../../src/cloudflare/static-site";
+import { Worker } from "../../src/cloudflare/worker";
 import { destroy } from "../../src/destroy";
 
 // Check that required environment variables are set
@@ -142,11 +143,17 @@ export default {
 
     // Create a static site with backend worker configuration
     const siteName = `${testId}-with-backend`;
+
+    const backend = new Worker(`${siteName}-backend`, {
+      name: `${siteName}-backend`,
+      entrypoint: backendScriptPath,
+    });
+
     const site = new StaticSite(siteName, {
       name: siteName,
       dir: tempDir,
-      backend: {
-        entrypoint: backendScriptPath,
+      routes: {
+        "/api/*": backend,
       },
       bundle: {
         minify: false,
@@ -165,10 +172,6 @@ export default {
       expect(output.id).toBeTruthy();
       expect(output.workerId).toBeTruthy();
       expect(output.assets.length).toBeGreaterThan(0);
-
-      // Verify backend worker was created
-      expect(output.backend).toBeDefined();
-      expect(output.backend?.workerId).toBeTruthy();
 
       // Verify main worker exists
       const getMainResponse = await api.get(
@@ -207,20 +210,23 @@ export default {
       console.error("Error creating site with backend worker:", error);
       throw error;
     } finally {
-      // // Clean up
-      // await destroy(site, {
-      //   quiet: false,
-      // });
-      // // Verify site was deleted
-      // const getDeletedResponse = await api.get(
-      //   `/accounts/${api.accountId}/workers/scripts/${siteName}`,
-      // );
-      // expect(getDeletedResponse.status).toEqual(404);
-      // // Verify backend worker was deleted (should be handled by dependencies)
-      // const getBackendDeletedResponse = await api.get(
-      //   `/accounts/${api.accountId}/workers/scripts/${siteName}-backend`,
-      // );
-      // expect(getBackendDeletedResponse.status).toEqual(404);
+      // Clean up
+      await destroy(site, {
+        quiet: false,
+      });
+      await destroy(backend, {
+        quiet: false,
+      });
+      // Verify site was deleted
+      const getDeletedResponse = await api.get(
+        `/accounts/${api.accountId}/workers/scripts/${siteName}`,
+      );
+      expect(getDeletedResponse.status).toEqual(404);
+      // Verify backend worker was deleted (should be handled by dependencies)
+      const getBackendDeletedResponse = await api.get(
+        `/accounts/${api.accountId}/workers/scripts/${siteName}-backend`,
+      );
+      expect(getBackendDeletedResponse.status).toEqual(404);
     }
   });
 });

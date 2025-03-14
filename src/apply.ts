@@ -1,5 +1,5 @@
 import { defaultStage, defaultStateStore } from "./global";
-import { type Output, OutputChain, type Resolve } from "./output";
+import { type Output, OutputChain, type Resolved } from "./output";
 import {
   Input,
   Provider,
@@ -25,7 +25,7 @@ export interface ApplyOptions {
 export async function apply<T>(
   output: T,
   options?: Partial<ApplyOptions>,
-): Promise<Resolve<T>> {
+): Promise<Resolved<T>> {
   const stage = options?.stage ?? defaultStage;
   const scope = options?.scope ?? getScope();
   const statePath = scope.getScopePath(stage);
@@ -33,7 +33,7 @@ export async function apply<T>(
 
   return (
     await evaluate(output, { stage, scope, stateStore, quiet: options?.quiet })
-  ).value as Resolve<T>;
+  ).value as Resolved<T>;
 }
 
 class Evaluated<T> {

@@ -1,10 +1,15 @@
 import dotenv from "dotenv";
 import path from "node:path";
 import { alchemize } from "../../src";
-import { StaticSite } from "../../src/cloudflare";
+import { StaticSite, Worker } from "../../src/cloudflare";
 
 dotenv.config({
   path: path.join(__dirname, "..", "..", ".env"),
+});
+
+const api = new Worker("api", {
+  name: "alchemy-example-vite-api",
+  entrypoint: "./src/index.ts",
 });
 
 const website = new StaticSite("Website", {
@@ -15,6 +20,9 @@ const website = new StaticSite("Website", {
   },
   bundle: {
     minify: false,
+  },
+  routes: {
+    "/api/*": api,
   },
 });
 

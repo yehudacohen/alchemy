@@ -27,7 +27,7 @@ export class OutputChain<T, U> {
   }
 }
 
-export type Resolve<O> = O extends Output<infer U>
+export type Resolved<O> = O extends Output<infer U>
   ? U
   : O extends null
     ? O
@@ -35,12 +35,12 @@ export type Resolve<O> = O extends Output<infer U>
       ? ResolveN<O>
       : O extends object
         ? {
-            [k in keyof O]: Resolve<O[k]>;
+            [k in keyof O]: Resolved<O[k]>;
           }
         : O;
 
 type ResolveN<O extends any[]> = O extends [infer First, ...infer Rest]
-  ? [Resolve<First>, ...ResolveN<Rest>]
+  ? [Resolved<First>, ...ResolveN<Rest>]
   : [];
 
 // export data from a resource
