@@ -60,6 +60,14 @@ export interface WorkerProps {
   bindings?: WorkerBinding[];
 
   /**
+   * Environment variables to attach to the worker
+   * These will be converted to plain_text bindings
+   */
+  env?: {
+    [key: string]: string;
+  };
+
+  /**
    * Whether the worker should be deployed to production
    * @default true
    */
@@ -360,6 +368,17 @@ export class Worker extends Resource(
         }
       }
 
+      // Convert env variables to plain_text bindings
+      if (props.env) {
+        for (const [key, value] of Object.entries(props.env)) {
+          metadata.bindings.push({
+            name: key,
+            type: "plain_text",
+            text: value,
+          });
+        }
+      }
+
       // Create FormData for the upload
       const formData = new FormData();
 
@@ -569,6 +588,7 @@ export class Worker extends Resource(
         format: props.format || "esm", // Include format in the output
         routes: props.routes || [],
         bindings: props.bindings || [],
+        env: props.env,
         production: props.production !== false,
         observability: metadata.observability,
         createdAt: now,

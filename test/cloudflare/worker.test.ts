@@ -17,6 +17,7 @@ describe("Worker Resource", () => {
   const doBindingTestName = "test-worker-do-binding";
   const kvBindingTestName = "test-worker-kv-binding";
   const multiBindingsTestName = "test-worker-multi-bindings";
+  const envVarsTestName = "test-worker-env-vars";
 
   // Sample worker script (CJS style)
   const workerScript = `
@@ -114,6 +115,40 @@ describe("Worker Resource", () => {
         }
         
         return new Response('Hello worker with multiple bindings!', { status: 200 });
+      }
+    };
+  `;
+
+  // Sample ESM worker script with environment variables
+  const envVarsWorkerScript = `
+    export default {
+      async fetch(request, env, ctx) {
+        const url = new URL(request.url);
+        
+        // Return the value of the requested environment variable
+        if (url.pathname.startsWith('/env/')) {
+          const varName = url.pathname.split('/env/')[1];
+          const value = env[varName];
+          return new Response(value || 'undefined', { 
+            status: 200,
+            headers: { 'Content-Type': 'text/plain' }
+          });
+        }
+        
+        // Return all environment variables
+        if (url.pathname === '/env') {
+          const envVars = Object.entries(env)
+            .filter(([key]) => key !== 'COUNTER' && !key.includes('Durable')) // Filter out bindings
+            .map(([key, value]) => \`\${key}: \${value}\`)
+            .join('\\n');
+          
+          return new Response(envVars, { 
+            status: 200,
+            headers: { 'Content-Type': 'text/plain' }
+          });
+        }
+        
+        return new Response('Hello with environment variables!', { status: 200 });
       }
     };
   `;
@@ -465,6 +500,110 @@ describe("Worker Resource", () => {
         expect(response.status).toEqual(404);
       } catch (err) {
         console.log(`Error during cleanup: ${err}`);
+      }
+    }
+  });
+
+  // Add a new test for environment variables
+  test("create and test worker with environment variables", async () => {
+    let worker: Worker | undefined = undefined;
+    try {
+      // Create a worker with environment variables
+      worker = new Worker(envVarsTestName, {
+        name: envVarsTestName,
+        script: envVarsWorkerScript,
+        format: "esm",
+        env: {
+          TEST_API_KEY: "test-api-key-123",
+          NODE_ENV: "testing",
+          APP_DEBUG: "true",
+        },
+        url: true, // Enable workers.dev URL to test the worker
+      });
+
+      // Apply to create the worker
+      const output = await apply(worker);
+      expect(output.id).toBeTruthy();
+      expect(output.name).toEqual(envVarsTestName);
+      expect(output.env).toBeDefined();
+      expect(output.env?.TEST_API_KEY).toEqual("test-api-key-123");
+      expect(output.env?.NODE_ENV).toEqual("testing");
+      expect(output.url).toBeTruthy();
+
+      // Wait for the worker to be available
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+
+      if (output.url) {
+        // Test that the environment variables are accessible in the worker
+        const response = await fetch(`${output.url}/env/TEST_API_KEY`);
+        expect(response.status).toEqual(200);
+        const text = await response.text();
+        expect(text).toEqual("test-api-key-123");
+
+        // Test another environment variable
+        const nodeEnvResponse = await fetch(`${output.url}/env/NODE_ENV`);
+        expect(nodeEnvResponse.status).toEqual(200);
+        const nodeEnvText = await nodeEnvResponse.text();
+        expect(nodeEnvText).toEqual("testing");
+      }
+
+      // Update the worker with different environment variables
+      worker = new Worker(envVarsTestName, {
+        name: envVarsTestName,
+        script: envVarsWorkerScript,
+        format: "esm",
+        env: {
+          TEST_API_KEY: "updated-key-456",
+          NODE_ENV: "production",
+          NEW_VAR: "new-value",
+        },
+        url: true,
+      });
+
+      // Apply the update
+      const updateOutput = await apply(worker);
+      expect(updateOutput.id).toEqual(output.id);
+      expect(updateOutput.env?.TEST_API_KEY).toEqual("updated-key-456");
+      expect(updateOutput.env?.NODE_ENV).toEqual("production");
+      expect(updateOutput.env?.NEW_VAR).toEqual("new-value");
+      // APP_DEBUG should no longer be present
+      expect(updateOutput.env?.APP_DEBUG).toBeUndefined();
+
+      // Wait for the worker update to propagate
+      await new Promise((resolve) => setTimeout(resolve, 5000));
+
+      if (updateOutput.url) {
+        // Test that the updated environment variables are accessible
+        const response = await fetch(`${updateOutput.url}/env/TEST_API_KEY`);
+        expect(response.status).toEqual(200);
+        const text = await response.text();
+        expect(text).toEqual("updated-key-456");
+
+        // Test new environment variable
+        const newVarResponse = await fetch(`${updateOutput.url}/env/NEW_VAR`);
+        expect(newVarResponse.status).toEqual(200);
+        const newVarText = await newVarResponse.text();
+        expect(newVarText).toEqual("new-value");
+
+        // Test that the removed environment variable is no longer accessible
+        const removedVarResponse = await fetch(
+          `${updateOutput.url}/env/APP_DEBUG`,
+        );
+        expect(removedVarResponse.status).toEqual(200);
+        const removedVarText = await removedVarResponse.text();
+        expect(removedVarText).toEqual("undefined");
+      }
+    } finally {
+      if (worker) {
+        // Clean up by deleting the worker
+        await destroy(worker);
+
+        // Verify the worker was deleted
+        const api = await createCloudflareApi();
+        const response = await api.get(
+          `/accounts/${api.accountId}/workers/scripts/${envVarsTestName}`,
+        );
+        expect(response.status).toEqual(404);
       }
     }
   });
