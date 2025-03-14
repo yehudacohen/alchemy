@@ -1,9 +1,15 @@
+import { DurableObject } from "cloudflare:workers";
+
+export type CounterEnv = {};
+
 // Define the Durable Object class for an atomic counter
-export class Counter {
+export class Counter extends DurableObject {
   private state: DurableObjectState;
   private value = 0;
 
-  constructor(state: DurableObjectState) {
+  constructor(state: DurableObjectState, env: CounterEnv) {
+    super(state, env);
+
     this.state = state;
     // Restore value from storage on initialization
     this.state.blockConcurrencyWhile(async () => {

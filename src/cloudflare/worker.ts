@@ -267,6 +267,7 @@ export class Worker extends Resource(
         const bundle = new Bundle("bundle", {
           entryPoint: props.entrypoint,
           ...bundleOptions,
+          external: [...(bundleOptions.external ?? []), "cloudflare:workers"],
         });
 
         // Get the bundled content

@@ -1,3 +1,5 @@
+export { Counter } from "./objects/counter";
+
 // Worker script that uses the Counter Durable Object
 export default {
   async fetch(request: Request, env: any): Promise<Response> {

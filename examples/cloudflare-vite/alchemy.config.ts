@@ -12,6 +12,13 @@ dotenv.config({
 const api = new Worker("api", {
   name: "alchemy-example-vite-api",
   entrypoint: "./src/index.ts",
+  bindings: [
+    {
+      type: "durable_object_namespace",
+      class_name: "Counter",
+      name: "COUNTER",
+    },
+  ],
 });
 
 const website = new StaticSite("Website", {
@@ -31,18 +38,6 @@ const website = new StaticSite("Website", {
 $(console).log({
   url: website.url,
 });
-
-// new Worker("worker", {
-//   name: "alchemy-examples",
-//   entrypoint: "./src/index.ts",
-//   bindings: [
-//     {
-//       type: "durable_object_namespace",
-//       class_name: "Counter",
-//       name: "COUNTER",
-//     },
-//   ],
-// });
 
 await alchemize({
   mode: process.argv.includes("--destroy") ? "destroy" : "up",
