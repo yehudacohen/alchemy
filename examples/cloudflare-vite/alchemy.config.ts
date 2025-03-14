@@ -1,6 +1,6 @@
 import dotenv from "dotenv";
 import path from "node:path";
-import { alchemize } from "../../src";
+import { Print, alchemize } from "../../src";
 import { StaticSite, Worker } from "../../src/cloudflare";
 
 dotenv.config({
@@ -26,7 +26,9 @@ const website = new StaticSite("Website", {
   },
 });
 
-website.url;
+new Print("print", {
+  url: website.url,
+});
 
 // new Worker("worker", {
 //   name: "alchemy-examples",
