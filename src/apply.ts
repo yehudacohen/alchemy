@@ -1,5 +1,5 @@
 import { defaultStage, defaultStateStore } from "./global";
-import { Output } from "./output";
+import { type Output, OutputChain, type Resolve } from "./output";
 import {
   Input,
   Provider,
@@ -23,9 +23,9 @@ export interface ApplyOptions {
  * @returns The resource properties.
  */
 export async function apply<T>(
-  output: T | Output<T>,
+  output: T,
   options?: Partial<ApplyOptions>,
-): Promise<T> {
+): Promise<Resolve<T>> {
   const stage = options?.stage ?? defaultStage;
   const scope = options?.scope ?? getScope();
   const statePath = scope.getScopePath(stage);
@@ -33,7 +33,7 @@ export async function apply<T>(
 
   return (
     await evaluate(output, { stage, scope, stateStore, quiet: options?.quiet })
-  ).value;
+  ).value as Resolve<T>;
 }
 
 class Evaluated<T> {
@@ -87,7 +87,7 @@ export async function evaluate<T>(
       reject!(error);
     }
     return promise;
-  } else if (output instanceof Output) {
+  } else if (output instanceof OutputChain) {
     const inside = output as unknown as {
       parent: Output<any>;
       fn: (value: any) => T;

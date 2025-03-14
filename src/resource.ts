@@ -3,7 +3,7 @@ import { type ApplyOptions, apply } from "./apply";
 import type { DestroyOptions } from "./destroy";
 import { defaultStateStore, deletions, providers } from "./global";
 import type { Inputs, Input as input } from "./input";
-import { Output } from "./output";
+import { type Export, type Output, OutputChain, type Resolve } from "./output";
 import { Scope as IScope, getScope, pushScope } from "./scope";
 import type { State, StateStore } from "./state";
 
@@ -46,7 +46,11 @@ export type Resource<In extends any[] = any[], Out = any> = {
   [Apply]: <O>(value: Out) => O;
   [Provide]: (value: Out) => void;
   [Options]: ProviderOptions;
-} & Output<Out>;
+} & Export<
+  // the resource handler may export another Output - we need to resolve it first
+  // then, export that resolved value
+  Resolve<Out>
+>;
 
 export interface BaseContext {
   quiet: boolean;
@@ -219,7 +223,7 @@ export function Resource<
     }
 
     public [Apply]<U>(fn: (value: Out) => U): Output<U> {
-      return new Output<Out, U>(this as any, fn);
+      return new OutputChain<Out, U>(this as any, fn);
     }
 
     private box?: {
@@ -382,9 +386,9 @@ export function Resource<
         deps: [...deps],
       });
       if (evaluated !== undefined) {
-        resource[Provide](evaluated);
+        resource[Provide](evaluated as Out);
       }
-      return evaluated;
+      return evaluated as Awaited<Out>;
     }
 
     static async delete(

@@ -7,13 +7,18 @@ dotenv.config({
   path: path.join(__dirname, "..", "..", ".env"),
 });
 
-new StaticSite("Website", {
+const website = new StaticSite("Website", {
   name: "alchemy-example-vite",
-  directory: "./dist",
+  dir: "./dist",
   build: {
+    command: "bun run build",
+  },
+  bundle: {
     minify: false,
   },
 });
+
+website.url;
 
 // new Worker("worker", {
 //   name: "alchemy-examples",

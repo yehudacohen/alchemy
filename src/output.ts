@@ -1,5 +1,3 @@
-export type Eval<U> = U extends Output<infer V> ? Eval<V> : U;
-
 export function isOutput<T>(value: any): value is Output<T> {
   return (
     value && typeof value === "object" && typeof value.apply === "function"
@@ -13,33 +11,11 @@ export type Outputs<P extends readonly any[]> = P extends [
   ? [Output<First>, ...Outputs<Rest>]
   : [];
 
-export type Output<T> = {
-  apply<U>(fn: (value: T) => U): Output<Eval<U>>;
-} & (T extends string
-  ? {
-      [k in keyof typeof String.prototype]: Output<
-        (typeof String.prototype)[k]
-      >;
-    }
-  : T extends number
-    ? {
-        [K in keyof typeof Number.prototype]: Output<
-          (typeof Number.prototype)[K]
-        >;
-      }
-    : T extends boolean
-      ? {
-          [K in keyof typeof Boolean.prototype]: Output<
-            (typeof Boolean.prototype)[K]
-          >;
-        }
-      : T extends any[]
-        ? Outputs<T>
-        : {
-            [k in keyof T]: Output<T[k]>;
-          });
+export interface Output<T> {
+  apply<U>(fn: (value: T) => U): Output<U>;
+}
 
-export const Output = class<T, U> {
+export class OutputChain<T, U> {
   constructor(
     public readonly parent: Output<T>,
     public readonly fn: (value: T) => U,
@@ -49,7 +25,31 @@ export const Output = class<T, U> {
     // @ts-expect-error - we know we are an "Output"
     return new Output(this, fn);
   }
-} as new <T, U>(
-  parent: Output<T>,
-  fn: (value: T) => U,
-) => Output<U>;
+}
+
+export type Resolve<O> = O extends Output<infer U>
+  ? U
+  : O extends null
+    ? O
+    : O extends any[]
+      ? ResolveN<O>
+      : O extends object
+        ? {
+            [k in keyof O]: Resolve<O[k]>;
+          }
+        : O;
+
+type ResolveN<O extends any[]> = O extends [infer First, ...infer Rest]
+  ? [Resolve<First>, ...ResolveN<Rest>]
+  : [];
+
+// export data from a resource
+export type Export<Out> = Out extends null
+  ? Output<Out>
+  : Out extends any[]
+    ? Outputs<Out>
+    : Out extends object
+      ? {
+          [k in keyof Out]: Output<Out[k]>;
+        }
+      : Output<Out>;
