@@ -271,7 +271,7 @@ describe("Worker Resource", () => {
 
     // Expect the apply call to throw an error about duplicate worker
     await expect(apply(duplicateWorker)).rejects.toThrow(
-      `Worker with name '${duplicateTestName}' already exists`,
+      `Worker with name '${duplicateTestName}' already exists. Please use a unique name.`,
     );
 
     // Clean up by deleting the first worker
