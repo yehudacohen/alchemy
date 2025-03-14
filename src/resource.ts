@@ -46,11 +46,12 @@ export type Resource<In extends any[] = any[], Out = any> = {
   [Apply]: <O>(value: Out) => O;
   [Provide]: (value: Out) => void;
   [Options]: ProviderOptions;
-} & Export<
-  // the resource handler may export another Output - we need to resolve it first
-  // then, export that resolved value
-  Resolve<Out>
->;
+} & Output<Out> &
+  Export<
+    // the resource handler may export another Output - we need to resolve it first
+    // then, export that resolved value
+    Resolve<Out>
+  >;
 
 export interface BaseContext {
   quiet: boolean;

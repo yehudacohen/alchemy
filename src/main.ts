@@ -2,7 +2,7 @@
 import { parseArgs } from "util";
 
 const { values, positionals } = parseArgs({
-  args: Bun.argv.slice(2),
+  args: process.argv.slice(2),
   options: {
     help: {
       type: "boolean",

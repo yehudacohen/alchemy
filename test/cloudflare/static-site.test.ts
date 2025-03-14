@@ -21,7 +21,7 @@ describe("StaticSite Resource", () => {
   const testId = `test-static-site`;
   let tempDir: string;
 
-  // Create temp directory with test files
+  // Create temp dir with test files
   beforeAll(async () => {
     // if (!apiKey) return; // Skip setup if no credentials
 
@@ -48,12 +48,12 @@ describe("StaticSite Resource", () => {
     );
   });
 
-  // Clean up temp directory
+  // Clean up temp dir
   afterAll(async () => {
     try {
       await fs.rm(tempDir, { recursive: true, force: true });
     } catch (error) {
-      console.warn("Error cleaning up temp directory:", error);
+      console.warn("Error cleaning up temp dir:", error);
     }
   });
 
@@ -61,7 +61,7 @@ describe("StaticSite Resource", () => {
     // Create a static site
     const site = new StaticSite(testId, {
       name: testId,
-      directory: tempDir,
+      dir: tempDir,
     });
 
     // Verify site was created by trying to access the Worker
@@ -92,7 +92,7 @@ describe("StaticSite Resource", () => {
 
       // site = new StaticSite(testId, {
       //   name: testId,
-      //   directory: tempDir,
+      //   dir: tempDir,
       // });
 
       // // Update the site

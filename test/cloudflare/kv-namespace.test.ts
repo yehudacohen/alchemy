@@ -51,6 +51,8 @@ describe("KV Namespace Resource", () => {
     const updateOutput = await apply(updatedKVNamespace);
     expect(updateOutput.id).toEqual(output.id);
 
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+
     // Verify updated values
     await verifyKVValue(output.id, "test-key-1", "updated-value-1");
     await verifyKVValue(output.id, "test-key-3", "new-value-3");
