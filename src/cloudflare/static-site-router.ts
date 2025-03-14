@@ -8,46 +8,71 @@ export interface Env {
   ASSETS: KVNamespace;
   INDEX_PAGE: string;
   ERROR_PAGE?: string;
+  /**
+   * Optional backend worker bound to this static site
+   * Used to handle requests that don't match any static files
+   */
+  BACKEND_WORKER?: Service;
 }
 
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
-    console.log("url", request.url);
     const pathname = url.pathname.replace(/^\//, "");
     const filePath = pathname === "" ? env.INDEX_PAGE : pathname;
 
+    if (pathname.startsWith("api/") && env.BACKEND_WORKER) {
+      return env.BACKEND_WORKER.fetch(request);
+    }
+
     // Return from cache if available
     const cachedResponse = await lookupCache();
-    if (cachedResponse) return cachedResponse;
+    if (cachedResponse) {
+      return cachedResponse;
+    }
 
     // Fetch from KV
     {
       const object = await env.ASSETS.getWithMetadata(filePath);
-      if (object.value) return await respond(200, filePath, object);
+      if (object.value) {
+        return await respond(200, filePath, object);
+      }
     }
     {
       const guess =
         filePath + (filePath.endsWith("/") ? "" : "/") + "index.html";
       const object = await env.ASSETS.getWithMetadata(guess);
-      if (object.value) return await respond(200, guess, object);
+      if (object.value) {
+        return await respond(200, guess, object);
+      }
     }
     {
       const guess = filePath + ".html";
       const object = await env.ASSETS.getWithMetadata(guess);
-      if (object.value) return await respond(200, guess, object);
+      if (object.value) {
+        return await respond(200, guess, object);
+      }
     }
 
     // Handle error page
     if (env.ERROR_PAGE) {
       const object = await env.ASSETS.getWithMetadata(env.ERROR_PAGE);
-      if (object.value) return await respond(404, env.ERROR_PAGE, object);
+      if (object.value) {
+        return await respond(404, env.ERROR_PAGE, object);
+      }
     } else {
       const object = await env.ASSETS.getWithMetadata(env.INDEX_PAGE);
-      if (object.value) return await respond(200, env.INDEX_PAGE, object);
+      if (object.value) {
+        return await respond(200, env.INDEX_PAGE, object);
+      }
     }
 
-    // Handle failed to render error page
+    if (env.BACKEND_WORKER) {
+      // Fallback to the backend worker for server-side processing
+      // if the request doesn't match any static files
+      return env.BACKEND_WORKER.fetch(request);
+    }
+
     return new Response("Page Not Found", { status: 404 });
 
     async function lookupCache() {
@@ -96,13 +121,3 @@ export default {
     }
   },
 };
-
-function base64ToArrayBuffer(base64: any) {
-  const binaryString = atob(base64);
-  const len = binaryString.length;
-  const bytes = new Uint8Array(len);
-  for (let i = 0; i < len; i++) {
-    bytes[i] = binaryString.charCodeAt(i);
-  }
-  return bytes.buffer;
-}

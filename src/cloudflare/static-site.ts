@@ -4,6 +4,7 @@ import path from "path";
 import { promisify } from "util";
 import { apply } from "../apply";
 import type { BundleProps } from "../esbuild";
+import type { Input } from "../input";
 import { type Context, Resource } from "../resource";
 import { createCloudflareApi } from "./api";
 import type { WorkerBinding } from "./bindings";
@@ -124,7 +125,26 @@ export interface StaticSiteProps {
     command?: string;
   };
 
+  /**
+   * Bundle options for the worker script
+   */
   bundle?: Partial<BundleProps>;
+
+  /**
+   * Configure a backend worker for server-side logic
+   * This will be bound to the static site worker as BACKEND_WORKER
+   */
+  backend?: {
+    /**
+     * Path to the entrypoint script for the backend worker
+     */
+    entrypoint: string;
+
+    /**
+     * Bundle options for the backend worker
+     */
+    bundle?: Partial<BundleProps>;
+  };
 }
 
 /**
@@ -205,6 +225,16 @@ export interface StaticSiteOutput {
    * The URL of the deployed site
    */
   url?: string;
+
+  /**
+   * Information about the backend worker if configured
+   */
+  backend?: {
+    /**
+     * The ID of the backend worker
+     */
+    workerId: string;
+  };
 }
 
 export class StaticSite extends Resource(
@@ -285,11 +315,8 @@ export class StaticSite extends Resource(
     // Step 3: Upload assets to KV
     await uploadAssetManifest(api, kvNamespaceId, assetManifest);
 
-    // Define the worker script path
-    const routerScriptPath = path.resolve(__dirname, "static-site-router.ts");
-
     // Prepare the bindings for the worker
-    const bindings: WorkerBinding[] = [
+    const bindings: Input<WorkerBinding>[] = [
       {
         name: "ASSETS",
         type: "kv_namespace",
@@ -311,6 +338,26 @@ export class StaticSite extends Resource(
       });
     }
 
+    // Create backend worker if configured
+    let backendWorker: Worker | undefined;
+    if (props.backend) {
+      // Create a separate worker for backend logic
+      backendWorker = new Worker("backend", {
+        name: `${siteName}-backend`,
+        url: true,
+        format: props.format || "esm",
+        entrypoint: props.backend.entrypoint,
+        bundleOptions: props.backend.bundle,
+      });
+
+      // Add backend worker as a binding to the main worker
+      bindings.push({
+        name: "BACKEND_WORKER",
+        type: "service",
+        service: backendWorker.id,
+      });
+    }
+
     // Add any additional bindings
     if (props.additionalBindings) {
       bindings.push(...props.additionalBindings);
@@ -321,6 +368,16 @@ export class StaticSite extends Resource(
       Object.fromEntries(assetManifest.map((item) => [item.key, item.hash])),
     )};\n`;
 
+    const bundleOptions = {
+      ...props.bundle,
+      options: {
+        ...props.bundle?.options,
+        banner: {
+          js: assetManifestBanner,
+          ...props.bundle?.options?.banner,
+        },
+      },
+    };
     const worker = new Worker(
       "worker",
       {
@@ -332,17 +389,8 @@ export class StaticSite extends Resource(
         ...(props.workerScript
           ? { script: props.workerScript }
           : {
-              entrypoint: routerScriptPath,
-              bundleOptions: {
-                ...props.bundle,
-                options: {
-                  ...props.bundle?.options,
-                  banner: {
-                    js: assetManifestBanner,
-                    ...props.bundle?.options?.banner,
-                  },
-                },
-              },
+              entrypoint: path.resolve(__dirname, "static-site-router.ts"),
+              bundleOptions,
             }),
         bindings,
       },
@@ -350,16 +398,13 @@ export class StaticSite extends Resource(
       namespace.id,
     );
 
-    // Step 4: Create or update the worker
-    const { id: workerId, url } = await apply(worker);
-
     // Get current timestamp
     const now = Date.now();
 
     // Construct the output
-    const output: StaticSiteOutput = {
+    const output: Input<StaticSiteOutput> = {
       id: siteName,
-      workerId,
+      workerId: worker.id,
       name: siteName,
       directory: props.dir,
       routes: props.routes || [],
@@ -371,7 +416,8 @@ export class StaticSite extends Resource(
       updatedAt: now,
       domain: props.domain,
       production: props.production !== false,
-      url,
+      url: worker.url,
+      backend: backendWorker ? { workerId: backendWorker.id } : undefined,
     };
 
     return output;

@@ -60,6 +60,9 @@ export interface BundleOutput {
 
 export class Bundle extends Resource(
   "esbuild::Bundle",
+  {
+    alwaysUpdate: true,
+  },
   async (ctx, props: BundleProps): Promise<BundleOutput> => {
     // Determine output path
     const outputPath = getOutputPath(props);

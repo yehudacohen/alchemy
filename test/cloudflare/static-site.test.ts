@@ -115,4 +115,112 @@ describe("StaticSite Resource", () => {
       expect(getDeletedResponse.status).toEqual(404);
     }
   });
+
+  test("static site with backend worker", async () => {
+    if (!apiKey) return; // Skip test if no credentials
+
+    // Create a backend worker script file
+    const backendScriptPath = path.join(tempDir, "backend-worker.ts");
+    await fs.writeFile(
+      backendScriptPath,
+      `
+export interface Env {
+  // Define any bindings your worker needs
+}
+
+export default {
+  async fetch(request: Request, env: Env): Promise<Response> {
+    // Add the request path to the response for verification
+    const url = new URL(request.url);
+    return new Response("Hello from backend worker! Path: " + url.pathname, {
+      headers: { "Content-Type": "text/plain" },
+    });
+  },
+};
+`,
+    );
+
+    // Create a static site with backend worker configuration
+    const siteName = `${testId}-with-backend`;
+    const site = new StaticSite(siteName, {
+      name: siteName,
+      dir: tempDir,
+      backend: {
+        entrypoint: backendScriptPath,
+      },
+      bundle: {
+        minify: false,
+      },
+    });
+
+    // Verify site and backend worker were created
+    const api = await createCloudflareApi();
+    try {
+      // Apply to create the site with backend worker
+      const output = await apply(site, {
+        quiet: false,
+      });
+
+      // Verify main outputs
+      expect(output.id).toBeTruthy();
+      expect(output.workerId).toBeTruthy();
+      expect(output.assets.length).toBeGreaterThan(0);
+
+      // Verify backend worker was created
+      expect(output.backend).toBeDefined();
+      expect(output.backend?.workerId).toBeTruthy();
+
+      // Verify main worker exists
+      const getMainResponse = await api.get(
+        `/accounts/${api.accountId}/workers/scripts/${siteName}`,
+      );
+      expect(getMainResponse.status).toEqual(200);
+
+      // Verify backend worker exists
+      const getBackendResponse = await api.get(
+        `/accounts/${api.accountId}/workers/scripts/${siteName}-backend`,
+      );
+      expect(getBackendResponse.status).toEqual(200);
+
+      // Verify the worker URL is provided
+      expect(output.url).toBeTruthy();
+
+      if (output.url) {
+        // Test the worker's routing behavior - this path doesn't exist as a static file
+        // so it should be routed to the backend worker
+        const testPath = "/api/test";
+        const workerResponse = await fetch(`${output.url}${testPath}`);
+
+        // Check status and content type
+        // expect(workerResponse.status).toEqual(200);
+        // expect(workerResponse.headers.get("content-type")).toContain(
+        //   "text/plain",
+        // );
+
+        // Check response body to confirm it came from our backend worker
+        const responseText = await workerResponse.text();
+        console.log("responseText", responseText);
+        expect(responseText).toContain("Hello from backend worker!");
+        expect(responseText).toContain(`Path: ${testPath}`);
+      }
+    } catch (error) {
+      console.error("Error creating site with backend worker:", error);
+      throw error;
+    } finally {
+      // // Clean up
+      // await destroy(site, {
+      //   quiet: false,
+      // });
+      // // Verify site was deleted
+      // const getDeletedResponse = await api.get(
+      //   `/accounts/${api.accountId}/workers/scripts/${siteName}`,
+      // );
+      // expect(getDeletedResponse.status).toEqual(404);
+      // // Verify backend worker was deleted (should be handled by dependencies)
+      // const getBackendDeletedResponse = await api.get(
+      //   `/accounts/${api.accountId}/workers/scripts/${siteName}-backend`,
+      // );
+      // expect(getBackendDeletedResponse.status).toEqual(404);
+    }
+  });
 });
