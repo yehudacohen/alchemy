@@ -4,7 +4,7 @@ import type { DestroyOptions } from "./destroy";
 import { defaultStateStore, deletions, providers } from "./global";
 import type { Inputs, Input as input } from "./input";
 import { type Export, type Output, OutputChain, type Resolved } from "./output";
-import { Scope as IScope, getScope, pushScope } from "./scope";
+import { type Scope as IScope, getScope, pushScope } from "./scope";
 import type { State, StateStore } from "./state";
 
 export type ResourceID = string;
@@ -216,11 +216,17 @@ export function Resource<
         get(target: any, prop) {
           if (OrthogonalProperties.includes(prop as any)) {
             return target[prop];
+          } else if (prop === "apply") {
+            return target[Apply].bind(target);
           } else {
             return target[Apply]((value: Out) => value[prop as keyof Out]);
           }
         },
       });
+    }
+
+    public apply<U>(fn: (value: Out) => U): Output<U> {
+      return this[Apply](fn);
     }
 
     public [Apply]<U>(fn: (value: Out) => U): Output<U> {
@@ -400,8 +406,9 @@ export function Resource<
       inputs: Args,
       options: DestroyOptions,
     ) {
+      const { Scope } = await import("./scope");
       const resourceFQN = `${scope.getScopePath(stage)}/${resourceID}`;
-      const nestedScope = new IScope(resourceID, scope);
+      const nestedScope = new Scope(resourceID, scope);
 
       await alchemize({
         mode: "destroy",

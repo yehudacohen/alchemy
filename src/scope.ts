@@ -1,9 +1,7 @@
 import { AsyncLocalStorage } from "node:async_hooks";
 import path from "node:path";
-import { rootScope } from "./global";
+import type { Output } from "./output";
 import type { Provider, Resource, ResourceID } from "./resource";
-
-const scopeGlobal = new Map<string | null, Scope>();
 
 const scopeStorage = new AsyncLocalStorage<Scope>();
 
@@ -15,6 +13,8 @@ export class Scope {
       resource: Resource<any, any>;
     }
   >();
+
+  public readonly callbacks: Output<void>[] = [];
 
   constructor(
     public readonly scopeName: string | null = null,
@@ -29,21 +29,10 @@ export class Scope {
   }
 }
 
+export const rootScope = new Scope(null);
+
 export function getScope(): Scope {
   return scopeStorage.getStore() ?? rootScope;
-}
-
-export function withScope<T>(
-  scope: Scope,
-  fn: () => T | Promise<T>,
-): Promise<T> {
-  return scopeStorage.run(scope, async () => {
-    try {
-      return await fn();
-    } catch (error) {
-      throw error;
-    }
-  });
 }
 
 export function pushScope<T>(
@@ -51,6 +40,5 @@ export function pushScope<T>(
   scopeName: string,
   fn: () => T | Promise<T>,
 ): Promise<T> {
-  const newScope = new Scope(scopeName, parent);
-  return withScope(newScope, fn);
+  return scopeStorage.run(new Scope(scopeName, parent), async () => fn());
 }

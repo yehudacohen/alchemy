@@ -51,6 +51,7 @@ export async function alchemize(options?: AlchemizeOptions) {
   const stateStore = new (options?.stateStore ?? defaultStateStore)(
     scope.getScopePath(stage),
   );
+  const callbacks = scope.callbacks;
 
   if (nodes.size > 0) {
     await stateStore.init?.();
@@ -81,6 +82,17 @@ export async function alchemize(options?: AlchemizeOptions) {
     if (options?.destroyOrphans === false) {
       return;
     }
+
+    await Promise.all(
+      callbacks.map((callback) =>
+        evaluate(callback, {
+          stage,
+          scope,
+          stateStore,
+          quiet: options?.quiet,
+        }),
+      ),
+    );
   }
   const aliveIDs = new Set(
     mode === "up"

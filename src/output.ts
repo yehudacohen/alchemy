@@ -21,9 +21,10 @@ export class OutputChain<T, U> {
     public readonly fn: (value: T) => U,
   ) {}
 
-  public apply<V>(fn: (value: U) => V): Output<V> {
-    // @ts-expect-error - we know we are an "Output"
-    return new Output(this, fn);
+  public apply<V>(fn: (value: U) => Output<V>): Output<V>;
+  public apply<V>(fn: (value: U) => V): Output<V>;
+  public apply<V>(fn: (value: U) => any): Output<V> {
+    return new OutputChain(this, fn);
   }
 }
 

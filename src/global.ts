@@ -1,7 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
 import type { Provider, ResourceType } from "./resource";
-import { Scope } from "./scope";
 import { FileSystemStateStore } from "./state";
 
 export interface Config {
@@ -51,8 +50,6 @@ export const config: Config = _config ?? {
 export const defaultStage = config.defaultStage ?? _stage;
 
 export const defaultStateStore = config.stateStore ?? FileSystemStateStore;
-
-export const rootScope = new Scope(null);
 
 export const providers = new Map<
   ResourceType,

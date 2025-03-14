@@ -1,7 +1,7 @@
-import { defaultStage, defaultStateStore, rootScope } from "./global";
+import { defaultStage, defaultStateStore } from "./global";
 import type { Output } from "./output";
 import { Provider, ResourceID, isResource } from "./resource";
-import type { Scope } from "./scope";
+import { type Scope, rootScope } from "./scope";
 import type { State, StateStore } from "./state";
 
 export interface DestroyOptions {

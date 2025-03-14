@@ -3,6 +3,8 @@ import path from "node:path";
 import { $, alchemize } from "../../src";
 import { StaticSite, Worker } from "../../src/cloudflare";
 
+// const __dirname = path.dirname(import.meta.url);
+
 dotenv.config({
   path: path.join(__dirname, "..", "..", ".env"),
 });
@@ -18,15 +20,15 @@ const website = new StaticSite("Website", {
   build: {
     command: "bun run build",
   },
-  bundle: {
-    minify: false,
-  },
+  // bundle: {
+  //   minify: false,
+  // },
   routes: {
     "/api/*": api,
   },
 });
 
-$.print({
+$(console).log({
   url: website.url,
 });
 
@@ -44,5 +46,5 @@ $.print({
 
 await alchemize({
   mode: process.argv.includes("--destroy") ? "destroy" : "up",
-  quiet: true,
+  quiet: process.argv.includes("--verbose") ? false : true,
 });
