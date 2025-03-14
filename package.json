@@ -1,11 +1,11 @@
 {
   "name": "alchemy",
-  "version": "0.1.11",
+  "version": "0.1.12",
   "type": "module",
   "module": "./lib/index.js",
   "scripts": {
     "check": "tsc -b ./tsconfig.test.json",
-    "publish:npm": "cp ../README.md ./README.md && npm publish && rm ./README.md"
+    "publish:npm": "rm -rf ./lib && tsc -b && npm publish"
   },
   "files": ["lib", "src"],
   "exports": {
