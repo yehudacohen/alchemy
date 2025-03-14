@@ -241,7 +241,9 @@ export class Worker extends Resource(
         scriptContent = props.script;
       } else if (props.bundle) {
         // Use a pre-configured Bundle resource
-        const bundleOutput = await apply(props.bundle);
+        const bundleOutput = await apply(props.bundle, {
+          quiet: ctx.quiet,
+        });
         scriptContent = await fs.readFile(bundleOutput.path, "utf-8");
       } else if (props.entrypoint) {
         // Create and use a Bundle resource with worker-optimized configuration
@@ -268,7 +270,9 @@ export class Worker extends Resource(
         });
 
         // Get the bundled content
-        const bundleOutput = await apply(bundle);
+        const bundleOutput = await apply(bundle, {
+          quiet: ctx.quiet,
+        });
         try {
           scriptContent = await fs.readFile(bundleOutput.path, "utf-8");
         } catch (error) {

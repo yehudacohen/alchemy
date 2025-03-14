@@ -250,13 +250,15 @@ export class StaticSite extends Resource(
     // Run build command if provided
     if (props.build?.command) {
       try {
-        console.log(props.build.command);
+        if (!ctx.quiet) {
+          console.log(props.build.command);
+        }
         const execAsync = promisify(exec);
         const { stdout, stderr } = await execAsync(props.build.command, {
           cwd: process.cwd(),
         });
 
-        if (stdout) console.log(stdout);
+        if (stdout && !ctx.quiet) console.log(stdout);
       } catch (error: any) {
         // Log detailed error information
         console.error(`Build command failed with exit code ${error.code}`);
@@ -283,7 +285,9 @@ export class StaticSite extends Resource(
     });
 
     const [{ id: kvNamespaceId }, assetManifest] = await Promise.all([
-      apply(namespace),
+      apply(namespace, {
+        quiet: ctx.quiet,
+      }),
       generateAssetManifest(props.dir),
     ]);
 

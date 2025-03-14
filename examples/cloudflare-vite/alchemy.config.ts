@@ -1,6 +1,6 @@
 import dotenv from "dotenv";
 import path from "node:path";
-import { Print, alchemize } from "../../src";
+import { $, alchemize } from "../../src";
 import { StaticSite, Worker } from "../../src/cloudflare";
 
 dotenv.config({
@@ -26,7 +26,7 @@ const website = new StaticSite("Website", {
   },
 });
 
-new Print("print", {
+$.print({
   url: website.url,
 });
 
@@ -44,4 +44,5 @@ new Print("print", {
 
 await alchemize({
   mode: process.argv.includes("--destroy") ? "destroy" : "up",
+  quiet: true,
 });
