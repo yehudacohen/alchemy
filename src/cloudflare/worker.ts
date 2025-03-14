@@ -71,6 +71,19 @@ export interface WorkerProps {
    * @default false
    */
   url?: boolean;
+
+  /**
+   * Observability configuration for the worker
+   * Controls whether worker logs are enabled
+   * @default { enabled: true }
+   */
+  observability?: {
+    /**
+     * Whether to enable worker logs
+     * @default true
+     */
+    enabled?: boolean;
+  };
 }
 
 /**
@@ -101,6 +114,9 @@ export interface WorkerOutput extends Omit<WorkerProps, "url"> {
 
 export class Worker extends Resource(
   "cloudflare::Worker",
+  {
+    alwaysUpdate: true,
+  },
   async (ctx: Context<WorkerOutput>, props: WorkerProps) => {
     // Create Cloudflare API client with automatic account discovery
     const api = await createCloudflareApi();
@@ -207,13 +223,7 @@ export class Worker extends Resource(
       }
 
       // Return minimal output for deleted state
-      return {
-        ...props,
-        id: "",
-        createdAt: 0,
-        updatedAt: 0,
-        url: undefined,
-      };
+      return;
     } else {
       // Get the script content - either from props.script, or by bundling
       let scriptContent: string;
@@ -263,6 +273,9 @@ export class Worker extends Resource(
       // Prepare metadata with bindings
       const metadata: any = {
         bindings: [],
+        observability: {
+          enabled: props.observability?.enabled !== false,
+        },
       };
 
       // Convert bindings to the format expected by the API
@@ -511,7 +524,7 @@ export class Worker extends Resource(
             const subdomain = subdomainData.result?.subdomain;
 
             if (subdomain) {
-              workerUrl = `${workerName}.${subdomain}.workers.dev`;
+              workerUrl = `https://${workerName}.${subdomain}.workers.dev`;
 
               // Add a delay when the subdomain is first created.
               // This is to prevent an issue where a negative cache-hit
@@ -557,6 +570,7 @@ export class Worker extends Resource(
         routes: props.routes || [],
         bindings: props.bindings || [],
         production: props.production !== false,
+        observability: metadata.observability,
         createdAt: now,
         updatedAt: now,
         url: workerUrl,
