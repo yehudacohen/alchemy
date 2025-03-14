@@ -4,7 +4,7 @@
   "type": "module",
   "module": "./lib/index.js",
   "scripts": {
-    "check": "tsc -b ./tsconfig.test.json",
+    "check": "tsc -b ./tsconfig.all.json",
     "publish:npm": "rm -rf ./lib && tsc -b && npm publish"
   },
   "files": ["lib", "src"],
