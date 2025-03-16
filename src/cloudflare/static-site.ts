@@ -11,7 +11,6 @@ import type { WorkerBindingSpec } from "./bindings";
 import { generateAssetManifest } from "./generate-asset-manifest";
 import { KVNamespace } from "./kv-namespace";
 import { uploadAssetManifest } from "./upload-asset-manifest";
-import type { WorkerProps } from "./worker";
 import { Worker } from "./worker";
 
 const __dirname = import.meta.dirname;
@@ -91,11 +90,6 @@ export interface StaticSiteProps {
       contentType?: string;
     }[];
   };
-
-  /**
-   * Additional Worker bindings to include
-   */
-  additionalBindings?: WorkerProps["bindings"];
 
   /**
    * Whether the site should be deployed to production
@@ -331,11 +325,6 @@ export class StaticSite extends Resource(
           service: entrypoint.id,
         });
       }
-    }
-
-    // Add any additional bindings
-    if (props.additionalBindings) {
-      bindings.push(...props.additionalBindings);
     }
 
     // Create asset manifest banner for static site router

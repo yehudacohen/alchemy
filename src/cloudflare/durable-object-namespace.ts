@@ -5,7 +5,7 @@ export interface DurableObjectNamespaceInput {
   className: string;
   scriptName?: string | undefined;
   environment?: string | undefined;
-  useSqlite?: boolean | undefined;
+  sqlite?: boolean | undefined;
   namespaceId?: string | undefined;
 }
 
@@ -26,7 +26,7 @@ export class DurableObjectNamespace implements DurableObjectNamespaceInput {
   public readonly className: string;
   public readonly scriptName?: string | undefined;
   public readonly environment?: string | undefined;
-  public readonly useSqlite?: boolean | undefined;
+  public readonly sqlite?: boolean | undefined;
   public readonly namespaceId?: string | undefined;
 
   constructor(
@@ -38,6 +38,6 @@ export class DurableObjectNamespace implements DurableObjectNamespaceInput {
     this.className = input.className;
     this.scriptName = input.scriptName;
     this.environment = input.environment;
-    this.useSqlite = input.useSqlite;
+    this.sqlite = input.sqlite;
   }
 }

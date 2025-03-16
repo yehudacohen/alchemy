@@ -283,6 +283,8 @@ async function putWorker(
     scriptName,
   );
 
+  console.log("Script Metadata:", JSON.stringify(scriptMetadata, null, 2));
+
   // Add metadata as JSON
   formData.append(
     "metadata",
@@ -364,25 +366,22 @@ async function prepareWorkerMetadata(
         environment: bindingData.environment,
         namespace_id: bindingData.namespaceId,
       });
-      if (bindingData.useSqlite) {
-        // TODO: should we try and detect if it already exists and skip?
-        meta.migrations!.new_sqlite_classes!.push(className);
-      }
+
       const oldBinding: DurableObjectNamespace | undefined = oldBindings
         ?.filter(isDurableObjectNamespace)
         ?.find((b) => b.id === stableId);
 
       if (!oldBinding) {
-        meta.migrations!.new_classes!.push(className);
+        if (bindingData.sqlite) {
+          meta.migrations!.new_sqlite_classes!.push(className);
+        } else {
+          meta.migrations!.new_classes!.push(className);
+        }
       } else if (oldBinding.className !== className) {
         meta.migrations!.renamed_classes!.push({
           from: oldBinding.className,
           to: className,
         });
-      } else {
-        throw new Error(
-          `Transferred class not implemented: ${oldBinding.className} -> ${className}`,
-        );
       }
     } else {
       // For all other binding types, use as-is

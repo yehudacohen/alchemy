@@ -1,18 +1,19 @@
 import { $, alchemize } from "../../src";
 import { StaticSite, Worker } from "../../src/cloudflare";
+import { DurableObjectNamespace } from "../../src/cloudflare/durable-object-namespace";
 
 import "dotenv/config";
+
+const counter = new DurableObjectNamespace("COUNTER", {
+  bindingName: "COUNTER",
+  className: "Counter",
+  sqlite: true,
+});
 
 const api = new Worker("api", {
   name: "alchemy-example-vite-api",
   entrypoint: "./src/index.ts",
-  bindings: [
-    {
-      type: "durable_object_namespace",
-      class_name: "Counter",
-      name: "COUNTER",
-    },
-  ],
+  bindings: [counter],
 });
 
 const website = new StaticSite("Website", {
@@ -21,9 +22,6 @@ const website = new StaticSite("Website", {
   build: {
     command: "bun run build",
   },
-  // bundle: {
-  //   minify: false,
-  // },
   routes: {
     "/api/*": api,
   },
