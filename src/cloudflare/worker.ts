@@ -3,11 +3,11 @@ import { apply } from "../apply";
 import { Bundle, type BundleProps } from "../esbuild";
 import { type Context, Resource } from "../resource";
 import { type CloudflareApi, createCloudflareApi } from "./api";
-import type {
-  WorkerBinding,
-  WorkerBindingDurableObjectNamespace,
-} from "./bindings";
-
+import type { WorkerBinding, WorkerBindingSpec } from "./bindings";
+import type { DurableObjectNamespace } from "./durable-object-namespace";
+import { isDurableObjectNamespace } from "./durable-object-namespace";
+import type { WorkerScriptMetadata } from "./worker-metadata";
+import type { SingleStepMigration } from "./worker-migration";
 /**
  * Properties for creating or updating a Worker
  */
@@ -83,6 +83,11 @@ export interface WorkerProps {
      */
     enabled?: boolean;
   };
+
+  /**
+   * Migrations to apply to the worker
+   */
+  migrations?: SingleStepMigration;
 }
 
 /**
@@ -109,6 +114,11 @@ export interface WorkerOutput extends Omit<WorkerProps, "url"> {
    * Format: {name}.{subdomain}.workers.dev
    */
   url?: string;
+
+  /**
+   * The bindings that were created
+   */
+  bindings: WorkerBinding[];
 }
 
 export class Worker extends Resource(
@@ -130,19 +140,23 @@ export class Worker extends Resource(
 
     if (ctx.event === "delete") {
       return deleteWorker(ctx, api, workerName);
-    }
-    if (ctx.event === "create") {
+    } else if (ctx.event === "create") {
       await assertWorkerDoesNotExist(ctx, api, workerName);
     }
 
-    const scriptMetadata = prepareWorkerMetadata(ctx, props);
+    const oldBindings = await ctx.get<WorkerBinding[]>("bindings");
+
+    const scriptMetadata = await prepareWorkerMetadata(ctx, oldBindings, props);
 
     // Get the script content - either from props.script, or by bundling
     const scriptContent =
       props.script ?? (await bundleWorkerScript(ctx, props));
 
     // Upload the worker script
-    await uploadWorkerScript(api, workerName, scriptContent, scriptMetadata);
+    await putWorker(ctx, api, workerName, scriptContent, scriptMetadata);
+
+    // TODO: it is less than ideal that this can fail, resulting in state problem
+    await ctx.set("bindings", props.bindings);
 
     // Handle routes if requested
     await setupRoutes(api, workerName, props.routes || []);
@@ -176,370 +190,6 @@ export class Worker extends Resource(
     return output;
   },
 ) {}
-
-async function assertWorkerDoesNotExist(
-  ctx: Context<WorkerOutput>,
-  api: CloudflareApi,
-  workerName: string,
-) {
-  const response = await api.get(
-    `/accounts/${api.accountId}/workers/scripts/${workerName}`,
-  );
-  if (response.status === 404) {
-    return true;
-  }
-  if (response.status === 200) {
-    const metadata = await getWorkerScriptMetadata(api, workerName);
-
-    if (
-      metadata.default_environment?.script.tags.includes(
-        `alchemy:id:${ctx.resourceFQN}`,
-      )
-    ) {
-      return true;
-    }
-
-    throw new Error(
-      `Worker with name '${workerName}' already exists. Please use a unique name.`,
-    );
-  } else {
-    throw new Error(
-      `Error checking if worker exists: ${response.status} ${response.statusText}`,
-    );
-  }
-}
-
-/**
- * Worker script information
- */
-export interface WorkerScriptInfo {
-  /**
-   * Script creation timestamp
-   */
-  created_on: string;
-
-  /**
-   * Script last modification timestamp
-   */
-  modified_on: string;
-
-  /**
-   * Script ID
-   */
-  id: string;
-
-  /**
-   * Script tag
-   */
-  tag: string;
-
-  /**
-   * Script tags
-   */
-  tags: string[];
-
-  /**
-   * Deployment ID
-   */
-  deployment_id: string;
-
-  /**
-   * Tail consumers
-   */
-  tail_consumers: any;
-
-  /**
-   * Whether logpush is enabled
-   */
-  logpush: boolean;
-
-  /**
-   * Observability settings
-   */
-  observability: {
-    /**
-     * Whether observability is enabled
-     */
-    enabled: boolean;
-
-    /**
-     * Head sampling rate
-     */
-    head_sampling_rate: number | null;
-  };
-
-  /**
-   * Whether the script has assets
-   */
-  has_assets: boolean;
-
-  /**
-   * Whether the script has modules
-   */
-  has_modules: boolean;
-
-  /**
-   * Script etag
-   */
-  etag: string;
-
-  /**
-   * Script handlers
-   */
-  handlers: string[];
-
-  /**
-   * Where the script was last deployed from
-   */
-  last_deployed_from: string;
-
-  /**
-   * Script usage model
-   */
-  usage_model: string;
-}
-
-/**
- * Worker environment information
- */
-export interface WorkerEnvironment {
-  /**
-   * Environment name
-   */
-  environment: string;
-
-  /**
-   * Environment creation timestamp
-   */
-  created_on: string;
-
-  /**
-   * Environment last modification timestamp
-   */
-  modified_on: string;
-}
-
-/**
- * Default environment with script information
- */
-export interface WorkerDefaultEnvironment extends WorkerEnvironment {
-  /**
-   * Script information
-   */
-  script: WorkerScriptInfo;
-}
-
-/**
- * Metadata returned by Cloudflare API for a worker script
- */
-export interface WorkerScriptMetadata {
-  /**
-   * Worker ID
-   */
-  id: string;
-
-  /**
-   * Default environment information
-   */
-  default_environment?: WorkerDefaultEnvironment;
-
-  /**
-   * Worker creation timestamp
-   */
-  created_on: string;
-
-  /**
-   * Worker last modification timestamp
-   */
-  modified_on: string;
-
-  /**
-   * Worker usage model
-   */
-  usage_model: string;
-
-  /**
-   * Worker environments
-   */
-  environments?: WorkerEnvironment[];
-}
-
-async function getWorkerScriptMetadata(
-  api: CloudflareApi,
-  workerName: string,
-): Promise<WorkerScriptMetadata> {
-  const response = await api.get(
-    `/accounts/${api.accountId}/workers/services/${workerName}`,
-  );
-  if (!response.ok) {
-    throw new Error(
-      `Error getting worker script metadata: ${response.status} ${response.statusText}`,
-    );
-  }
-  return ((await response.json()) as any).result as WorkerScriptMetadata;
-}
-
-async function uploadWorkerScript(
-  api: CloudflareApi,
-  workerName: string,
-  scriptContent: string,
-  scriptMetadata: WorkerMetadataInput,
-) {
-  const scriptName = scriptMetadata.main_module ?? scriptMetadata.body_part!;
-
-  // Create FormData for the upload
-  const formData = new FormData();
-
-  // Add the actual script content as a named file part
-  formData.append(
-    scriptName,
-    new Blob([scriptContent], {
-      type: scriptMetadata.main_module
-        ? "application/javascript+module"
-        : "application/javascript",
-    }),
-    scriptName,
-  );
-
-  // Add metadata as JSON
-  formData.append(
-    "metadata",
-    new Blob([JSON.stringify(scriptMetadata)], {
-      type: "application/json",
-    }),
-  );
-
-  // Upload worker script with bindings
-  const uploadResponse = await api.put(
-    `/accounts/${api.accountId}/workers/scripts/${workerName}`,
-    formData,
-    {
-      headers: {
-        "Content-Type": "multipart/form-data",
-      },
-    },
-  );
-
-  // Check if the upload was successful
-  if (!uploadResponse.ok) {
-    const errorData: any = await uploadResponse
-      .json()
-      .catch(() => ({ errors: [{ message: uploadResponse.statusText }] }));
-    throw new Error(
-      `Error uploading worker script '${workerName}': ${errorData.errors?.[0]?.message || uploadResponse.statusText}`,
-    );
-  }
-
-  return formData;
-}
-
-interface WorkerMetadataInput {
-  bindings: WorkerBinding[];
-  observability: {
-    enabled: boolean;
-  };
-  migrations?: {
-    new_classes: string[];
-    deleted_classes: string[];
-    renamed_classes: string[];
-    new_sqlite_classes: string[];
-    updated_sqlite_classes: string[];
-    renamed_sqlite_classes: string[];
-  };
-  main_module?: string;
-  body_part?: string;
-  tags?: string[];
-}
-
-function prepareWorkerMetadata(
-  ctx: Context<WorkerOutput>,
-  props: WorkerProps,
-): WorkerMetadataInput {
-  // Prepare metadata with bindings
-  const metadata: WorkerMetadataInput = {
-    bindings: [],
-    observability: {
-      enabled: props.observability?.enabled !== false,
-    },
-    tags: [`alchemy:id:${ctx.resourceFQN}`],
-  };
-
-  // Convert bindings to the format expected by the API
-  for (const binding of props.bindings ?? []) {
-    // Create a copy of the binding to avoid modifying the original
-    const bindingData = { ...binding };
-
-    // Special handling for durable_object_namespace to remove use_sqlite
-    // which is not part of the API format but used internally
-    if (bindingData.type === "durable_object_namespace") {
-      // Remove the use_sqlite property if it exists
-      const { use_sqlite, ...doBinding } = bindingData;
-      metadata.bindings.push(doBinding);
-    } else {
-      // For all other binding types, use as-is
-      metadata.bindings.push(bindingData);
-    }
-  }
-
-  // Convert env variables to plain_text bindings
-  if (props.env) {
-    for (const [key, value] of Object.entries(props.env)) {
-      metadata.bindings.push({
-        name: key,
-        type: "plain_text",
-        text: value,
-      });
-    }
-  }
-
-  // Determine if we're using ESM or service worker format
-  const isEsModule = props.format !== "cjs"; // Default to ESM unless CJS is specified
-  const scriptName = isEsModule ? "worker.js" : "script";
-
-  // Add Durable Object migrations if there are any DO bindings
-  const durableObjectBindings = props.bindings?.filter(
-    (binding) => binding.type === "durable_object_namespace",
-  ) as WorkerBindingDurableObjectNamespace[] | undefined;
-
-  if (durableObjectBindings && durableObjectBindings.length > 0) {
-    // Filter for self-referencing DOs (ones defined in this script)
-    const selfReferencingDOs = durableObjectBindings.filter(
-      (binding) => binding.script_name === props.name || !binding.script_name,
-    );
-
-    if (selfReferencingDOs.length > 0) {
-      // Get class names for new classes
-      const newClasses = selfReferencingDOs.map(
-        (binding) => binding.class_name,
-      );
-
-      // Get class names for SQLite-enabled classes
-      const sqliteClasses = selfReferencingDOs
-        .filter((binding) => binding.use_sqlite === true)
-        .map((binding) => binding.class_name);
-
-      // Add migrations metadata for Durable Objects
-      metadata.migrations = {
-        new_classes: newClasses,
-        deleted_classes: [],
-        renamed_classes: [],
-        // Version 2 migrations for SQLite
-        new_sqlite_classes: sqliteClasses,
-        updated_sqlite_classes: [],
-        renamed_sqlite_classes: [],
-      };
-    }
-  }
-
-  if (isEsModule) {
-    // For ES modules format
-    metadata.main_module = scriptName;
-  } else {
-    // For service worker format (CJS)
-    metadata.body_part = scriptName;
-  }
-  return metadata;
-}
 
 async function deleteWorker(
   ctx: Context<WorkerOutput>,
@@ -608,6 +258,199 @@ async function deleteWorker(
 
   // Return minimal output for deleted state
   return;
+}
+
+async function putWorker(
+  ctx: Context<WorkerOutput>,
+  api: CloudflareApi,
+  workerName: string,
+  scriptContent: string,
+  scriptMetadata: WorkerMetadata,
+) {
+  const scriptName = scriptMetadata.main_module ?? scriptMetadata.body_part!;
+
+  // Create FormData for the upload
+  const formData = new FormData();
+
+  // Add the actual script content as a named file part
+  formData.append(
+    scriptName,
+    new Blob([scriptContent], {
+      type: scriptMetadata.main_module
+        ? "application/javascript+module"
+        : "application/javascript",
+    }),
+    scriptName,
+  );
+
+  // Add metadata as JSON
+  formData.append(
+    "metadata",
+    new Blob([JSON.stringify(scriptMetadata)], {
+      type: "application/json",
+    }),
+  );
+
+  // Upload worker script with bindings
+  const uploadResponse = await api.put(
+    `/accounts/${api.accountId}/workers/scripts/${workerName}`,
+    formData,
+    {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    },
+  );
+
+  // Check if the upload was successful
+  if (!uploadResponse.ok) {
+    const errorData: any = await uploadResponse
+      .json()
+      .catch(() => ({ errors: [{ message: uploadResponse.statusText }] }));
+    throw new Error(
+      `Error uploading worker script '${workerName}': ${errorData.errors?.[0]?.message || uploadResponse.statusText}`,
+    );
+  }
+
+  return formData;
+}
+
+interface WorkerMetadata {
+  bindings: WorkerBinding[];
+  observability: {
+    enabled: boolean;
+  };
+  migrations?: SingleStepMigration;
+  main_module?: string;
+  body_part?: string;
+  tags?: string[];
+}
+
+async function prepareWorkerMetadata(
+  ctx: Context<WorkerOutput>,
+  oldBindings: WorkerBinding[] | undefined,
+  props: WorkerProps,
+): Promise<WorkerMetadata> {
+  // Prepare metadata with bindings
+  const meta: WorkerMetadata = {
+    bindings: [] as WorkerBinding[],
+    observability: {
+      enabled: props.observability?.enabled !== false,
+    },
+    tags: [`alchemy:id:${ctx.resourceFQN}`],
+    migrations: {
+      new_classes: props.migrations?.new_classes ?? [],
+      deleted_classes: props.migrations?.deleted_classes ?? [],
+      renamed_classes: props.migrations?.renamed_classes ?? [],
+      transferred_classes: props.migrations?.transferred_classes ?? [],
+      new_sqlite_classes: props.migrations?.new_sqlite_classes ?? [],
+    },
+  };
+
+  // Convert bindings to the format expected by the API
+  for (const binding of props.bindings ?? []) {
+    // Create a copy of the binding to avoid modifying the original
+    const bindingData = { ...binding };
+
+    if (isDurableObjectNamespace(bindingData)) {
+      const stableId = bindingData.id;
+      const className = bindingData.className;
+
+      meta.bindings.push({
+        type: "durable_object_namespace",
+        name: bindingData.bindingName,
+        class_name: className,
+        script_name: bindingData.scriptName,
+        environment: bindingData.environment,
+        namespace_id: bindingData.namespaceId,
+      });
+      if (bindingData.useSqlite) {
+        // TODO: should we try and detect if it already exists and skip?
+        meta.migrations!.new_sqlite_classes!.push(className);
+      }
+      const oldBinding: DurableObjectNamespace | undefined = oldBindings
+        ?.filter(isDurableObjectNamespace)
+        ?.find((b) => b.id === stableId);
+
+      if (!oldBinding) {
+        meta.migrations!.new_classes!.push(className);
+      } else if (oldBinding.className !== className) {
+        meta.migrations!.renamed_classes!.push({
+          from: oldBinding.className,
+          to: className,
+        });
+      } else {
+        throw new Error(
+          `Transferred class not implemented: ${oldBinding.className} -> ${className}`,
+        );
+      }
+    } else {
+      // For all other binding types, use as-is
+      meta.bindings.push(bindingData as WorkerBindingSpec);
+    }
+  }
+
+  // Convert env variables to plain_text bindings
+  if (props.env) {
+    for (const [key, value] of Object.entries(props.env)) {
+      meta.bindings.push({
+        name: key,
+        type: "plain_text",
+        text: value,
+      });
+    }
+  }
+
+  // Determine if we're using ESM or service worker format
+  const isEsModule = props.format !== "cjs"; // Default to ESM unless CJS is specified
+  const scriptName = isEsModule ? "worker.js" : "script";
+
+  if (isEsModule) {
+    // For ES modules format
+    meta.main_module = scriptName;
+  } else {
+    // For service worker format (CJS)
+    meta.body_part = scriptName;
+  }
+  return meta;
+}
+
+async function assertWorkerDoesNotExist(
+  ctx: Context<WorkerOutput>,
+  api: CloudflareApi,
+  workerName: string,
+) {
+  const response = await api.get(
+    `/accounts/${api.accountId}/workers/scripts/${workerName}`,
+  );
+  if (response.status === 404) {
+    return true;
+  }
+  if (response.status === 200) {
+    const metadata = await getWorkerScriptMetadata(api, workerName);
+
+    if (!metadata) {
+      throw new Error(
+        `Worker exists but failed to fetch metadata: ${response.status} ${response.statusText}`,
+      );
+    }
+
+    if (
+      metadata.default_environment?.script.tags.includes(
+        `alchemy:id:${ctx.resourceFQN}`,
+      )
+    ) {
+      return true;
+    }
+
+    throw new Error(
+      `Worker with name '${workerName}' already exists. Please use a unique name.`,
+    );
+  } else {
+    throw new Error(
+      `Error checking if worker exists: ${response.status} ${response.statusText}`,
+    );
+  }
 }
 
 async function bundleWorkerScript(
@@ -773,4 +616,52 @@ async function configureURL(
     }
   }
   return workerUrl;
+}
+
+async function getWorkerScriptMetadata(
+  api: CloudflareApi,
+  workerName: string,
+): Promise<WorkerScriptMetadata | undefined> {
+  const response = await api.get(
+    `/accounts/${api.accountId}/workers/services/${workerName}`,
+  );
+  if (response.status === 404) {
+    return undefined;
+  }
+  if (!response.ok) {
+    throw new Error(
+      `Error getting worker script metadata: ${response.status} ${response.statusText}`,
+    );
+  }
+  return ((await response.json()) as any).result as WorkerScriptMetadata;
+}
+
+async function getWorkerBindings(
+  api: CloudflareApi,
+  workerName: string,
+  environment = "production",
+) {
+  const response = await api.get(
+    `/accounts/${api.accountId}/workers/services/${workerName}/environments/${environment}/bindings`,
+    {
+      headers: {
+        Authorization: `Bearer ${process.env.CLOUDFLARE_API_TOKEN}`,
+        "Content-Type": "application/json",
+      },
+    },
+  );
+
+  if (response.status === 404) {
+    return undefined;
+  }
+
+  if (!response.ok) {
+    throw new Error(
+      `Failed to fetch bindings: ${response.status} ${response.statusText}`,
+    );
+  }
+
+  const data: any = await response.json();
+
+  return data.result;
 }

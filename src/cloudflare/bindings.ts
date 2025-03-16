@@ -3,11 +3,17 @@
  * Based on Cloudflare API documentation:
  * https://developers.cloudflare.com/api/resources/workers/subresources/scripts/methods/update/
  */
+import type { DurableObjectNamespace } from "./durable-object-namespace";
 
 /**
- * Union type for all Worker binding types
+ * Union type for all Worker binding types (Alchemy abstraction)
  */
-export type WorkerBinding =
+export type WorkerBinding = WorkerBindingSpec | DurableObjectNamespace;
+
+/**
+ * Union type for all Worker binding types (API spec)
+ */
+export type WorkerBindingSpec =
   | WorkerBindingAI
   | WorkerBindingAnalyticsEngine
   | WorkerBindingAssets
@@ -102,6 +108,11 @@ export interface WorkerBindingDispatchNamespace {
  * Durable Object Namespace binding type
  */
 export interface WorkerBindingDurableObjectNamespace {
+  /**
+   * The stable ID of the binding
+   * @internal
+   */
+  stableId?: string;
   /** The name of the binding */
   name: string;
   /** Type identifier for Durable Object Namespace binding */
@@ -114,8 +125,6 @@ export interface WorkerBindingDurableObjectNamespace {
   environment?: string;
   /** Namespace ID */
   namespace_id?: string;
-  /** Enable SQLite storage for this Durable Object */
-  use_sqlite?: boolean;
 }
 
 /**

@@ -121,7 +121,7 @@ export class KVNamespace extends Resource(
             errors: [{ message: createResponse.statusText }],
           }));
           throw new Error(
-            `Error creating KV namespace: ${errorData.errors?.[0]?.message || createResponse.statusText}`,
+            `Error creating KV namespace '${props.title}': ${errorData.errors?.[0]?.message || createResponse.statusText}`,
           );
         }
 

@@ -6,6 +6,7 @@ import type {
   WorkerBindingKVNamespace,
   WorkerBindingSecretText,
 } from "../../src/cloudflare/bindings";
+import { DurableObjectNamespace } from "../../src/cloudflare/durable-object-namespace";
 import { Worker } from "../../src/cloudflare/worker";
 import { destroy } from "../../src/destroy";
 
@@ -18,6 +19,9 @@ describe("Worker Resource", () => {
   const kvBindingTestName = "test-worker-kv-binding";
   const multiBindingsTestName = "test-worker-multi-bindings";
   const envVarsTestName = "test-worker-env-vars";
+
+  // Add a new test name for DO migration
+  const doMigrationTestName = "test-worker-do-migration";
 
   // Sample worker script (CJS style)
   const workerScript = `
@@ -149,6 +153,60 @@ describe("Worker Resource", () => {
         }
         
         return new Response('Hello with environment variables!', { status: 200 });
+      }
+    };
+  `;
+
+  // Sample ESM worker script with original Counter class
+  const doMigrationWorkerScriptV1 = `
+    export class Counter {
+      constructor(state, env) {
+        this.state = state;
+        this.env = env;
+        this.counter = 0;
+      }
+
+      async fetch(request) {
+        this.counter++;
+        return new Response('Counter V1: ' + this.counter, { status: 200 });
+      }
+    }
+
+    export default {
+      async fetch(request, env, ctx) {
+        if (request.url.includes('/counter')) {
+          const id = env.COUNTER.idFromName('default');
+          const stub = env.COUNTER.get(id);
+          return stub.fetch(request);
+        }
+        return new Response('Hello with Counter V1!', { status: 200 });
+      }
+    };
+  `;
+
+  // Sample ESM worker script with renamed CounterV2 class
+  const doMigrationWorkerScriptV2 = `
+    export class CounterV2 {
+      constructor(state, env) {
+        this.state = state;
+        this.env = env;
+        this.counter = 0;
+      }
+
+      async fetch(request) {
+        this.counter++;
+        return new Response('Counter V2: ' + this.counter, { status: 200 });
+      }
+    }
+
+    export default {
+      async fetch(request, env, ctx) {
+        if (request.url.includes('/counter')) {
+          const id = env.COUNTER.idFromName('default');
+          const stub = env.COUNTER.get(id);
+          return stub.fetch(request);
+        }
+        return new Response('Hello with Counter V2!', { status: 200 });
       }
     };
   `;
@@ -345,6 +403,9 @@ describe("Worker Resource", () => {
         script: durableObjectWorkerScript,
         format: "esm",
         bindings: [doBinding],
+        migrations: {
+          new_classes: ["Counter"],
+        },
       });
 
       // Apply the update with the binding
@@ -608,6 +669,76 @@ describe("Worker Resource", () => {
           `/accounts/${api.accountId}/workers/scripts/${envVarsTestName}`,
         );
         expect(response.status).toEqual(404);
+      }
+    }
+  });
+
+  test("migrate durable object by renaming class", async () => {
+    let initialWorker: Worker | undefined = undefined;
+    try {
+      // First create the worker with the original Counter class
+      initialWorker = new Worker(doMigrationTestName, {
+        name: doMigrationTestName,
+        script: doMigrationWorkerScriptV1,
+        format: "esm",
+      });
+
+      // Apply to create the worker first
+      const initialOutput = await apply(initialWorker);
+      expect(initialOutput.id).toBeTruthy();
+      expect(initialOutput.name).toEqual(doMigrationTestName);
+
+      // Create a stable DO namespace with the original Counter class
+      const counterNamespace = new DurableObjectNamespace(
+        "test-counter-namespace",
+        {
+          bindingName: "COUNTER",
+          className: "Counter",
+          scriptName: doMigrationTestName,
+        },
+      );
+
+      const workerWithBinding = new Worker(doMigrationTestName, {
+        name: doMigrationTestName,
+        script: doMigrationWorkerScriptV1,
+        format: "esm",
+        bindings: [counterNamespace],
+      });
+
+      // Apply the binding
+      const outputWithBinding = await apply(workerWithBinding);
+      expect(outputWithBinding.bindings).toHaveLength(1);
+      const createdBinding = outputWithBinding
+        .bindings?.[0] as DurableObjectNamespace;
+      expect(createdBinding.bindingName).toEqual("COUNTER");
+      expect(createdBinding.className).toEqual("Counter");
+
+      // Now update the namespace to use CounterV2 class
+      const updatedNamespace = new DurableObjectNamespace(
+        "test-counter-namespace",
+        {
+          bindingName: "COUNTER",
+          className: "CounterV2",
+          scriptName: doMigrationTestName,
+        },
+      );
+
+      const workerWithMigration = new Worker(doMigrationTestName, {
+        name: doMigrationTestName,
+        script: doMigrationWorkerScriptV2,
+        format: "esm",
+        bindings: [updatedNamespace],
+      });
+
+      // Apply the migration
+      const migratedOutput = await apply(workerWithMigration);
+      const migratedBinding = migratedOutput
+        .bindings?.[0] as DurableObjectNamespace;
+      expect(migratedBinding.bindingName).toEqual("COUNTER");
+      expect(migratedBinding.className).toEqual("CounterV2");
+    } finally {
+      if (initialWorker) {
+        await destroy(initialWorker);
       }
     }
   });

@@ -7,7 +7,7 @@ import type { BundleProps } from "../esbuild";
 import type { Input } from "../input";
 import { type Context, Resource } from "../resource";
 import { createCloudflareApi } from "./api";
-import type { WorkerBinding } from "./bindings";
+import type { WorkerBindingSpec } from "./bindings";
 import { generateAssetManifest } from "./generate-asset-manifest";
 import { KVNamespace } from "./kv-namespace";
 import { uploadAssetManifest } from "./upload-asset-manifest";
@@ -297,7 +297,7 @@ export class StaticSite extends Resource(
     await uploadAssetManifest(api, kvNamespaceId, assetManifest);
 
     // Prepare the bindings for the worker
-    const bindings: Input<WorkerBinding>[] = [
+    const bindings: Input<WorkerBindingSpec>[] = [
       {
         name: "ASSETS",
         type: "kv_namespace",
