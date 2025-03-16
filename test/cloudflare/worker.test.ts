@@ -304,13 +304,17 @@ describe("Worker Resource", () => {
       format: "cjs",
     });
 
-    // Expect the apply call to throw an error about duplicate worker
-    await expect(apply(duplicateWorker)).rejects.toThrow(
-      `Worker with name '${duplicateTestName}' already exists. Please use a unique name.`,
-    );
+    try {
+      // Expect the apply call to throw an error about duplicate worker
+      await expect(apply(duplicateWorker)).rejects.toThrow(
+        `Worker with name '${duplicateTestName}' already exists. Please use a unique name.`,
+      );
+    } finally {
+      await destroy(duplicateWorker);
 
-    // Clean up by deleting the first worker
-    await destroy(firstWorker);
+      // Clean up by deleting the first worker
+      await destroy(firstWorker);
+    }
   });
 
   test("create and delete worker with Durable Object binding", async () => {

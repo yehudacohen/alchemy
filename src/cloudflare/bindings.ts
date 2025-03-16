@@ -5,6 +5,32 @@
  */
 
 /**
+ * Union type for all Worker binding types
+ */
+export type WorkerBinding =
+  | WorkerBindingAI
+  | WorkerBindingAnalyticsEngine
+  | WorkerBindingAssets
+  | WorkerBindingBrowserRendering
+  | WorkerBindingD1
+  | WorkerBindingDispatchNamespace
+  | WorkerBindingDurableObjectNamespace
+  | WorkerBindingHyperdrive
+  | WorkerBindingJson
+  | WorkerBindingKVNamespace
+  | WorkerBindingMTLSCertificate
+  | WorkerBindingPlainText
+  | WorkerBindingQueue
+  | WorkerBindingR2Bucket
+  | WorkerBindingSecretText
+  | WorkerBindingService
+  | WorkerBindingStaticContent
+  | WorkerBindingTailConsumer
+  | WorkerBindingVectorize
+  | WorkerBindingVersionMetadata
+  | WorkerBindingWasmModule;
+
+/**
  * AI binding type
  */
 export interface WorkerBindingAI {
@@ -88,6 +114,8 @@ export interface WorkerBindingDurableObjectNamespace {
   environment?: string;
   /** Namespace ID */
   namespace_id?: string;
+  /** Enable SQLite storage for this Durable Object */
+  use_sqlite?: boolean;
 }
 
 /**
@@ -258,29 +286,3 @@ export interface WorkerBindingStaticContent {
   /** Type identifier for Static Content binding */
   type: "static_content";
 }
-
-/**
- * Union type for all Worker binding types
- */
-export type WorkerBinding =
-  | WorkerBindingAI
-  | WorkerBindingAnalyticsEngine
-  | WorkerBindingAssets
-  | WorkerBindingBrowserRendering
-  | WorkerBindingD1
-  | WorkerBindingDispatchNamespace
-  | WorkerBindingDurableObjectNamespace
-  | WorkerBindingHyperdrive
-  | WorkerBindingJson
-  | WorkerBindingKVNamespace
-  | WorkerBindingMTLSCertificate
-  | WorkerBindingPlainText
-  | WorkerBindingQueue
-  | WorkerBindingR2Bucket
-  | WorkerBindingSecretText
-  | WorkerBindingService
-  | WorkerBindingStaticContent
-  | WorkerBindingTailConsumer
-  | WorkerBindingVectorize
-  | WorkerBindingVersionMetadata
-  | WorkerBindingWasmModule;

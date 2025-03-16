@@ -8,9 +8,12 @@ import { type Scope as IScope, getScope, pushScope } from "./scope";
 import type { State, StateStore } from "./state";
 
 export type ResourceID = string;
+export type ResourceFQN = string;
 export type ResourceType = string;
 
 export const ResourceID = Symbol.for("ResourceID");
+export const ResourceFQN = Symbol.for("ResourceFQN");
+export const ResourceHandle = Symbol.for("ResourceHandle");
 export const Provider = Symbol.for("Provider");
 export const Input = Symbol.for("Input");
 export const Value = Symbol.for("Value");
@@ -22,6 +25,8 @@ export const Options = Symbol.for("Options");
 // properties that pierce through the Proxy
 const OrthogonalProperties = [
   ResourceID,
+  ResourceFQN,
+  ResourceHandle,
   Provider,
   Input,
   Value,
@@ -57,6 +62,7 @@ export interface BaseContext {
   quiet: boolean;
   stage: string;
   resourceID: ResourceID;
+  resourceFQN: ResourceFQN;
   scope: IScope;
   get<T>(key: string): Promise<T | undefined>;
   set<T>(key: string, value: T): Promise<void>;
@@ -119,6 +125,12 @@ export function isResource(value: any): value is Resource {
   return value?.[ResourceID] !== undefined;
 }
 
+const applied = new Map<Object, any>();
+
+const destroyed = new WeakMap<Resource<any, any>, Promise<void>>();
+
+const i = 0;
+
 export function Resource<
   // const Type extends ResourceType,
   Args extends any[],
@@ -172,6 +184,8 @@ export function Resource<
 
   interface Resource {
     [ResourceID]: ResourceID;
+    [ResourceFQN]: string;
+    [ResourceHandle]: Object;
     [Provider]: Provider<Type, Args, Out>;
     [Input]: Inputs<Args>;
     [Value]?: Out;
@@ -196,7 +210,12 @@ export function Resource<
       }
       scope.nodes.set(id, node as any);
 
+      // const resourceFQN = scope.getScopePath(id) + "/" + id;
+
       this[ResourceID] = id;
+      this[ResourceHandle] = new Object();
+      // this[ResourceFQN] = resourceFQN;
+      // this[ResourceFQN] = i++;
       this[Provider] = Resource as any;
       this[Input] = input;
       this[Value] = undefined;
@@ -270,132 +289,146 @@ export function Resource<
     ): Promise<Awaited<Out | void>> {
       // const stack = resource[ResourceStack];
       const resourceID = resource[ResourceID];
-
-      let resourceState: State | undefined = await stateStore.get(resourceID);
-      if (resourceState === undefined) {
-        resourceState = {
-          provider: type,
-          status: "creating",
-          data: {},
-          output: undefined,
-          deps: [...deps],
-          inputs,
-        };
-        await stateStore.set(resourceID, resourceState);
-      }
-
       const resourceFQN = `${resource[Scope].getScopePath(stage)}/${resourceID}`;
+      const cacheKey = resource[ResourceHandle];
+      if (!applied.has(cacheKey)) {
+        let res, rej;
+        const promise = new Promise<Awaited<Out | void>>((resolve, reject) => {
+          res = resolve;
+          rej = reject;
+        });
+        applied.set(cacheKey, promise);
+        update().then(res).catch(rej);
+        return promise;
+      }
+      return await applied.get(cacheKey);
 
-      // Skip update if inputs haven't changed and resource is in a stable state
-      if (
-        resourceState.status === "created" ||
-        resourceState.status === "updated"
-      ) {
-        if (
-          JSON.stringify(resourceState.inputs) === JSON.stringify(inputs) &&
-          !resource[Options].alwaysUpdate
-        ) {
-          if (!options?.quiet) {
-            console.log(`Skip:    ${resourceFQN} (no changes)`);
-          }
-          if (resourceState.output !== undefined) {
-            resource[Provide](resourceState.output);
-          }
-          return resourceState.output;
+      async function update(): Promise<Awaited<Out | void>> {
+        let resourceState: State | undefined = await stateStore.get(resourceID);
+        if (resourceState === undefined) {
+          resourceState = {
+            provider: type,
+            status: "creating",
+            data: {},
+            output: undefined,
+            deps: [...deps],
+            inputs,
+          };
+          await stateStore.set(resourceID, resourceState);
         }
-      }
 
-      const event = resourceState.status === "creating" ? "create" : "update";
-      resourceState.status = event === "create" ? "creating" : "updating";
-      resourceState.oldInputs = resourceState.inputs;
-      resourceState.inputs = inputs;
-
-      if (!options?.quiet) {
-        console.log(
-          `${event === "create" ? "Create" : "Update"}:  ${resourceFQN}`,
-        );
-      }
-
-      await stateStore.set(resourceID, resourceState);
-
-      let isReplaced = false;
-
-      const quiet = options.quiet ?? false;
-
-      const evaluated = await pushScope(
-        resource[Scope],
-        resourceID,
-        async () => {
-          const result = await func(
-            {
-              stage,
-              resourceID,
-              event,
-              scope: getScope(),
-              output: resourceState.output,
-              replace: () => {
-                if (isReplaced) {
-                  console.warn(
-                    `Resource ${type} ${resourceFQN} is already marked as REPLACE`,
-                  );
-                  return;
-                }
-                isReplaced = true;
-                deletions.push({
-                  id: resourceID,
-                  data: {
-                    ...resourceState!.data,
-                  },
-                  inputs: inputs,
-                });
-              },
-              get: (key) => resourceState!.data[key],
-              set: async (key, value) => {
-                resourceState!.data[key] = value;
-                await stateStore.set(resourceID, resourceState!);
-              },
-              delete: async (key) => {
-                const value = resourceState!.data[key];
-                delete resourceState!.data[key];
-                await stateStore.set(resourceID, resourceState!);
-                return value;
-              },
-              quiet,
-            },
-            ...inputs,
-          );
-
-          if (result === undefined) {
-            return undefined;
+        // Skip update if inputs haven't changed and resource is in a stable state
+        if (
+          resourceState.status === "created" ||
+          resourceState.status === "updated"
+        ) {
+          if (
+            JSON.stringify(resourceState.inputs) === JSON.stringify(inputs) &&
+            !resource[Options].alwaysUpdate
+          ) {
+            if (!options?.quiet) {
+              console.log(`Skip:    ${resourceFQN} (no changes)`);
+            }
+            if (resourceState.output !== undefined) {
+              resource[Provide](resourceState.output);
+            }
+            return resourceState.output;
           }
+        }
 
-          const evaluated = await apply(result as Out, {
-            stage,
-            scope: getScope(),
-            quiet,
-          });
+        const event = resourceState.status === "creating" ? "create" : "update";
+        resourceState.status = event === "create" ? "creating" : "updating";
+        resourceState.oldInputs = resourceState.inputs;
+        resourceState.inputs = inputs;
 
-          return evaluated;
-        },
-      );
+        if (!options?.quiet) {
+          console.log(
+            `${event === "create" ? "Create" : "Update"}:  ${resourceFQN}`,
+          );
+        }
 
-      if (!options?.quiet) {
-        console.log(
-          `${event === "create" ? "Created" : "Updated"}: ${resourceFQN}`,
+        await stateStore.set(resourceID, resourceState);
+
+        let isReplaced = false;
+
+        const quiet = options.quiet ?? false;
+
+        const evaluated = await pushScope(
+          resource[Scope],
+          resourceID,
+          async () => {
+            const result = await func(
+              {
+                stage,
+                resourceID,
+                resourceFQN,
+                event,
+                scope: getScope(),
+                output: resourceState.output,
+                replace: () => {
+                  if (isReplaced) {
+                    console.warn(
+                      `Resource ${type} ${resourceFQN} is already marked as REPLACE`,
+                    );
+                    return;
+                  }
+                  isReplaced = true;
+                  deletions.push({
+                    id: resourceID,
+                    data: {
+                      ...resourceState!.data,
+                    },
+                    inputs: inputs,
+                  });
+                },
+                get: (key) => resourceState!.data[key],
+                set: async (key, value) => {
+                  resourceState!.data[key] = value;
+                  await stateStore.set(resourceID, resourceState!);
+                },
+                delete: async (key) => {
+                  const value = resourceState!.data[key];
+                  delete resourceState!.data[key];
+                  await stateStore.set(resourceID, resourceState!);
+                  return value;
+                },
+                quiet,
+              },
+              ...inputs,
+            );
+
+            if (result === undefined) {
+              return undefined;
+            }
+
+            const evaluated = await apply(result as Out, {
+              stage,
+              scope: getScope(),
+              quiet,
+            });
+
+            return evaluated;
+          },
         );
+
+        if (!options?.quiet) {
+          console.log(
+            `${event === "create" ? "Created" : "Updated"}: ${resourceFQN}`,
+          );
+        }
+        await stateStore.set(resourceID, {
+          provider: type,
+          data: resourceState.data,
+          status: event === "create" ? "created" : "updated",
+          output: evaluated,
+          inputs,
+          deps: [...deps],
+        });
+        if (evaluated !== undefined) {
+          resource[Provide](evaluated as Out);
+        }
+        return evaluated as Awaited<Out>;
       }
-      await stateStore.set(resourceID, {
-        provider: type,
-        data: resourceState.data,
-        status: event === "create" ? "created" : "updated",
-        output: evaluated,
-        inputs,
-        deps: [...deps],
-      });
-      if (evaluated !== undefined) {
-        resource[Provide](evaluated as Out);
-      }
-      return evaluated as Awaited<Out>;
     }
 
     static async delete(
@@ -428,6 +461,7 @@ export function Resource<
           stage,
           scope,
           resourceID: resourceID,
+          resourceFQN: resourceFQN,
           event: "delete",
           output: state.output,
           replace() {

@@ -14,6 +14,8 @@ import { uploadAssetManifest } from "./upload-asset-manifest";
 import type { WorkerProps } from "./worker";
 import { Worker } from "./worker";
 
+const __dirname = import.meta.dirname;
+
 /**
  * Idea of using KV with timeout inspired by SST: https://github.com/sst/sst/blob/dev/platform/src/components/cloudflare/static-site.ts
  */
@@ -362,7 +364,7 @@ export class StaticSite extends Resource(
           ? { script: props.workerScript }
           : {
               entrypoint: path.resolve(__dirname, "static-site-router.ts"),
-              bundleOptions,
+              bundle: bundleOptions,
             }),
         bindings,
         env: {

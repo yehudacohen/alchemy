@@ -1,13 +1,7 @@
-import dotenv from "dotenv";
-import path from "node:path";
 import { $, alchemize } from "../../src";
 import { StaticSite, Worker } from "../../src/cloudflare";
 
-// const __dirname = path.dirname(import.meta.url);
-
-dotenv.config({
-  path: path.join(__dirname, "..", "..", ".env"),
-});
+import "dotenv/config";
 
 const api = new Worker("api", {
   name: "alchemy-example-vite-api",

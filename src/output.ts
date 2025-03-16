@@ -16,10 +16,25 @@ export interface Output<T> {
 }
 
 export class OutputChain<T, U> {
+  public readonly fn: (value: T) => U;
   constructor(
     public readonly parent: Output<T>,
-    public readonly fn: (value: T) => U,
-  ) {}
+    fn: (value: T) => U,
+  ) {
+    let result:
+      | {
+          value: U;
+        }
+      | undefined;
+    this.fn = (value: T) => {
+      if (result === undefined) {
+        result = {
+          value: fn(value),
+        };
+      }
+      return result.value as U;
+    };
+  }
 
   public apply<V>(fn: (value: U) => Output<V>): Output<V>;
   public apply<V>(fn: (value: U) => V): Output<V>;

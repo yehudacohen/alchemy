@@ -184,6 +184,12 @@ export class CloudflareApi {
   }
 
   /**
+   * Helper for HEAD requests
+   */
+  async head(path: string, init: RequestInit = {}): Promise<Response> {
+    return this.fetch(path, { ...init, method: "HEAD" });
+  }
+  /**
    * Helper for POST requests
    */
   async post(

@@ -35,6 +35,13 @@ export function getScope(): Scope {
   return scopeStorage.getStore() ?? rootScope;
 }
 
+export function withScope<T>(
+  scope: Scope,
+  fn: () => T | Promise<T>,
+): Promise<T> {
+  return scopeStorage.run(scope, async () => fn());
+}
+
 export function pushScope<T>(
   parent: Scope,
   scopeName: string,
