@@ -710,4 +710,81 @@ describe("Worker Resource", () => {
       }
     }
   });
+
+  test("add environment variables to worker with durable object", async () => {
+    // Add a new test name for DO with env vars
+    const doWithEnvVarsTestName = `${BRANCH_PREFIX}-test-worker-do-with-env`;
+
+    let worker: Worker | undefined = undefined;
+    try {
+      // First create a worker with a Durable Object but no env vars
+      worker = new Worker(doWithEnvVarsTestName, {
+        name: doWithEnvVarsTestName,
+        script: durableObjectWorkerScript,
+        format: "esm",
+      });
+
+      // Apply to create the worker
+      const initialOutput = await apply(worker);
+      expect(initialOutput.id).toBeTruthy();
+      expect(initialOutput.name).toEqual(doWithEnvVarsTestName);
+
+      // Create a Durable Object namespace
+      const counterNamespace = new DurableObjectNamespace(
+        "test-counter-env-namespace",
+        {
+          className: "Counter",
+          scriptName: doWithEnvVarsTestName,
+        },
+      );
+
+      // Update the worker with the DO binding
+      worker = new Worker(doWithEnvVarsTestName, {
+        name: doWithEnvVarsTestName,
+        script: durableObjectWorkerScript,
+        format: "esm",
+        bindings: {
+          COUNTER: counterNamespace,
+        },
+      });
+
+      // Apply the worker with binding
+      const outputWithBinding = await apply(worker);
+      expect(outputWithBinding.bindings).toBeDefined();
+      expect(outputWithBinding.env).toBeUndefined();
+
+      // Now update the worker by adding environment variables
+      worker = new Worker(doWithEnvVarsTestName, {
+        name: doWithEnvVarsTestName,
+        script: durableObjectWorkerScript,
+        format: "esm",
+        bindings: {
+          COUNTER: counterNamespace,
+        },
+        env: {
+          API_SECRET: "test-secret-123",
+          DEBUG_MODE: "true",
+        },
+      });
+
+      // Apply the worker with binding and env vars
+      const finalOutput = await apply(worker);
+      expect(finalOutput.bindings).toBeDefined();
+      expect(finalOutput.env).toBeDefined();
+      expect(finalOutput.env?.API_SECRET).toEqual("test-secret-123");
+      expect(finalOutput.env?.DEBUG_MODE).toEqual("true");
+    } finally {
+      if (worker) {
+        // Clean up
+        await destroy(worker);
+
+        // Verify the worker was deleted
+        const api = await createCloudflareApi();
+        const response = await api.get(
+          `/accounts/${api.accountId}/workers/scripts/${doWithEnvVarsTestName}`,
+        );
+        expect(response.status).toEqual(404);
+      }
+    }
+  });
 });
