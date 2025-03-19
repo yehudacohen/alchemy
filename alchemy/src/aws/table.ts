@@ -3,6 +3,7 @@ import {
   DeleteTableCommand,
   DescribeTableCommand,
   DynamoDBClient,
+  InternalServerError,
   type KeySchemaElement,
   ResourceInUseException,
   ResourceNotFoundException,
@@ -53,7 +54,9 @@ export class Table extends Resource(
             ),
           );
         },
-        (error) => error instanceof ResourceInUseException,
+        (error) =>
+          error instanceof ResourceInUseException ||
+          error instanceof InternalServerError,
         10, // Max attempts
         200, // Initial delay in ms
       );

@@ -6,7 +6,7 @@
   "module": "./lib/index.js",
   "scripts": {
     "check": "tsc -b ./tsconfig.json",
-    "publish:npm": "rm -rf ./lib && tsc -b && npm publish"
+    "publish:npm": "bun run --filter alchemy publish:npm"
   },
   "workspaces": ["alchemy", "examples/*"],
   "devDependencies": {
