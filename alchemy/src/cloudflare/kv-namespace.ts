@@ -1,5 +1,6 @@
 import type { Resolved } from "../output";
 import { type Context, Resource } from "../resource";
+import { withExponentialBackoff } from "../utils/retry";
 import { createCloudflareApi } from "./api";
 
 /**
@@ -86,7 +87,6 @@ export class KVNamespace extends Resource(
     if (ctx.event === "delete") {
       // For delete operations, we need to check if the namespace ID exists in the output
       const namespaceId = ctx.output?.id;
-
       if (namespaceId) {
         // Delete KV namespace
         const deleteResponse = await api.delete(
@@ -97,9 +97,8 @@ export class KVNamespace extends Resource(
           const errorData: any = await deleteResponse.json().catch(() => ({
             errors: [{ message: deleteResponse.statusText }],
           }));
-          console.error(
-            "Error deleting KV namespace:",
-            errorData.errors?.[0]?.message || deleteResponse.statusText,
+          throw new Error(
+            `Error deleting KV namespace '${props.title}': ${errorData.errors?.[0]?.message || deleteResponse.statusText}`,
           );
         }
       }
@@ -172,18 +171,38 @@ export class KVNamespace extends Resource(
             return item;
           });
 
-          const bulkResponse = await api.put(
-            `/accounts/${api.accountId}/storage/kv/namespaces/${namespaceId}/bulk`,
-            bulkPayload,
-          );
+          try {
+            await withExponentialBackoff(
+              async () => {
+                const bulkResponse = await api.put(
+                  `/accounts/${api.accountId}/storage/kv/namespaces/${namespaceId}/bulk`,
+                  bulkPayload,
+                );
 
-          if (!bulkResponse.ok) {
-            const errorData: any = await bulkResponse.json().catch(() => ({
-              errors: [{ message: bulkResponse.statusText }],
-            }));
-            console.warn(
-              `Error writing KV batch: ${errorData.errors?.[0]?.message || bulkResponse.statusText}`,
+                if (!bulkResponse.ok) {
+                  const errorData: any = await bulkResponse
+                    .json()
+                    .catch(() => ({
+                      errors: [{ message: bulkResponse.statusText }],
+                    }));
+                  const errorMessage =
+                    errorData.errors?.[0]?.message || bulkResponse.statusText;
+
+                  // Throw error to trigger retry
+                  throw new Error(`Error writing KV batch: ${errorMessage}`);
+                }
+
+                return bulkResponse;
+              },
+              (error) => {
+                // Retry on "namespace not found" errors as they're likely propagation delays
+                return error.message?.includes("not found");
+              },
+              5, // 5 retry attempts
+              1000, // Start with 1 second delay
             );
+          } catch (error: any) {
+            console.warn(error.message);
           }
         }
       }

@@ -3,6 +3,7 @@ import { apply } from "../apply";
 import { Bundle, type BundleProps } from "../esbuild";
 import type { Resolved } from "../output";
 import { type Context, Resource } from "../resource";
+import { withExponentialBackoff } from "../utils/retry";
 import { type CloudflareApi, createCloudflareApi } from "./api";
 import type { Bindings, WorkerBindingSpec } from "./bindings";
 import type { DurableObjectNamespace } from "./durable-object-namespace";
@@ -276,54 +277,78 @@ async function putWorker(
   scriptContent: string,
   scriptMetadata: WorkerMetadata,
 ) {
-  const scriptName = scriptMetadata.main_module ?? scriptMetadata.body_part!;
+  return withExponentialBackoff(
+    async () => {
+      const scriptName =
+        scriptMetadata.main_module ?? scriptMetadata.body_part!;
 
-  // Create FormData for the upload
-  const formData = new FormData();
+      // Create FormData for the upload
+      const formData = new FormData();
 
-  // Add the actual script content as a named file part
-  formData.append(
-    scriptName,
-    new Blob([scriptContent], {
-      type: scriptMetadata.main_module
-        ? "application/javascript+module"
-        : "application/javascript",
-    }),
-    scriptName,
-  );
+      // Add the actual script content as a named file part
+      formData.append(
+        scriptName,
+        new Blob([scriptContent], {
+          type: scriptMetadata.main_module
+            ? "application/javascript+module"
+            : "application/javascript",
+        }),
+        scriptName,
+      );
 
-  // console.log("Script Metadata:", JSON.stringify(scriptMetadata, null, 2));
+      // console.log("Script Metadata:", JSON.stringify(scriptMetadata, null, 2));
 
-  // Add metadata as JSON
-  formData.append(
-    "metadata",
-    new Blob([JSON.stringify(scriptMetadata)], {
-      type: "application/json",
-    }),
-  );
+      // Add metadata as JSON
+      formData.append(
+        "metadata",
+        new Blob([JSON.stringify(scriptMetadata)], {
+          type: "application/json",
+        }),
+      );
 
-  // Upload worker script with bindings
-  const uploadResponse = await api.put(
-    `/accounts/${api.accountId}/workers/scripts/${workerName}`,
-    formData,
-    {
-      headers: {
-        "Content-Type": "multipart/form-data",
-      },
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+
+      // Upload worker script with bindings
+      const uploadResponse = await api.put(
+        `/accounts/${api.accountId}/workers/scripts/${workerName}`,
+        formData,
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+        },
+      );
+
+      // Check if the upload was successful
+      if (!uploadResponse.ok) {
+        const errorData: any = await uploadResponse
+          .json()
+          .catch(() => ({ errors: [{ message: uploadResponse.statusText }] }));
+
+        const errorMessage = `Error (HTTP ${uploadResponse.status}) uploading worker script '${workerName}': ${errorData.errors?.[0]?.message || uploadResponse.statusText}`;
+
+        if (
+          uploadResponse.status === 400 &&
+          errorMessage.includes("not found")
+        ) {
+          throw new NotFoundError(errorMessage);
+        }
+        throw new Error(errorMessage);
+      }
+
+      return formData;
     },
+    (err) => err instanceof NotFoundError,
+    10,
+    100,
   );
+}
 
-  // Check if the upload was successful
-  if (!uploadResponse.ok) {
-    const errorData: any = await uploadResponse
-      .json()
-      .catch(() => ({ errors: [{ message: uploadResponse.statusText }] }));
-    throw new Error(
-      `Error uploading worker script '${workerName}': ${errorData.errors?.[0]?.message || uploadResponse.statusText}`,
-    );
+class NotFoundError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "NotFoundError";
   }
-
-  return formData;
 }
 
 interface WorkerMetadata {
