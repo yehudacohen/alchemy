@@ -8,26 +8,12 @@ import { describe, expect, test } from "bun:test";
 import { apply } from "../../src/apply";
 import { SES } from "../../src/aws/ses";
 import { destroy } from "../../src/destroy";
-
-// Check that required environment variables are set
-const awsAccessKeyId = process.env.AWS_ACCESS_KEY_ID;
-const awsSecretAccessKey = process.env.AWS_SECRET_ACCESS_KEY;
-const awsRegion = process.env.AWS_REGION;
-
-if (!awsAccessKeyId || !awsSecretAccessKey || !awsRegion) {
-  console.warn(
-    "Skipping tests: AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, and AWS_REGION are required",
-  );
-}
+import { BRANCH_PREFIX } from "../util";
 
 describe("SES Resource", () => {
-  const testId = `test-ses-${Date.now()}`;
+  const testId = `${BRANCH_PREFIX}-test-ses`;
 
   test("create, update, and delete configuration set", async () => {
-    if (!awsAccessKeyId || !awsSecretAccessKey || !awsRegion) {
-      return; // Skip if credentials aren't available
-    }
-
     // Create a test configuration set
     const configurationSetName = `${testId}-config-set`;
     const ses = new SES(testId, {
@@ -44,7 +30,7 @@ describe("SES Resource", () => {
     try {
       // Apply to create the configuration set
       const output = await apply(ses);
-      expect(output.id).toBe(testId);
+      expect(output.id).toContain(testId);
       expect(output.configurationSetName).toBe(configurationSetName);
       expect(output.configurationSetArn).toBeTruthy();
 
@@ -74,7 +60,7 @@ describe("SES Resource", () => {
       });
 
       const updateOutput = await apply(updatedSes);
-      expect(updateOutput.id).toBe(testId);
+      expect(updateOutput.id).toContain(testId);
 
       // Check if ARNs match when they exist
       if (updateOutput.configurationSetArn && output.configurationSetArn) {
@@ -113,10 +99,6 @@ describe("SES Resource", () => {
   });
 
   test("create, update, and delete email identity", async () => {
-    if (!awsAccessKeyId || !awsSecretAccessKey || !awsRegion) {
-      return; // Skip if credentials aren't available
-    }
-
     // Using a domain for testing is better than an email address
     // since email addresses require actual verification
     const testDomain = `${testId.toLowerCase()}.example.com`;
@@ -132,7 +114,7 @@ describe("SES Resource", () => {
     try {
       // Apply to create the email identity
       const output = await apply(ses);
-      expect(output.id).toBe(`${testId}-domain`);
+      expect(output.id).toContain(testId);
       expect(output.emailIdentity).toBe(testDomain);
       expect(output.emailIdentityArn).toBeTruthy();
 

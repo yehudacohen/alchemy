@@ -3,14 +3,15 @@ import { apply } from "../../src/apply";
 import { createCloudflareApi } from "../../src/cloudflare/api";
 import { KVNamespace } from "../../src/cloudflare/kv-namespace";
 import { destroy } from "../../src/destroy";
+import { BRANCH_PREFIX } from "../util";
 
 describe("KV Namespace Resource", () => {
-  const testId = `test-kv`;
+  const testId = `${BRANCH_PREFIX}-test-kv`;
 
   test("create, update, and delete KV namespace", async () => {
     // Create a KV namespace
     const kvNamespace = new KVNamespace(testId, {
-      title: `Test Namespace ${testId}`,
+      title: `${BRANCH_PREFIX}-Test Namespace ${testId}`,
       values: [
         {
           key: "test-key-1",
@@ -26,7 +27,7 @@ describe("KV Namespace Resource", () => {
     // Apply to create the KV namespace
     const output = await apply(kvNamespace);
     expect(output.id).toBeTruthy();
-    expect(output.title).toEqual(`Test Namespace ${testId}`);
+    expect(output.title).toEqual(`${BRANCH_PREFIX}-Test Namespace ${testId}`);
 
     // Verify KV values were set by reading them back
     await verifyKVValue(output.id, "test-key-1", "test-value-1");
@@ -35,7 +36,7 @@ describe("KV Namespace Resource", () => {
 
     // Update the KV namespace with new values
     const updatedKVNamespace = new KVNamespace(testId, {
-      title: `Test Namespace ${testId}`,
+      title: `${BRANCH_PREFIX}-Test Namespace ${testId}`,
       values: [
         {
           key: "test-key-1",
@@ -51,7 +52,9 @@ describe("KV Namespace Resource", () => {
     const updateOutput = await apply(updatedKVNamespace);
     expect(updateOutput.id).toEqual(output.id);
 
-    await new Promise((resolve) => setTimeout(resolve, 1000));
+    // for some reason 1s was not enough ... eventual consistency?
+    // TODO(sam): can we read strongly consistent?
+    await new Promise((resolve) => setTimeout(resolve, 3000));
 
     // Verify updated values
     await verifyKVValue(output.id, "test-key-1", "updated-value-1");
