@@ -71,14 +71,14 @@ interface CloudflareBucketResponse {
   messages: string[];
 }
 
-export function isBucket(resource: any): resource is Resolved<Bucket> {
+export function isBucket(resource: any): resource is Resolved<R2Bucket> {
   return (
     resource && typeof resource === "object" && resource.id && resource.location
   );
 }
 
-export class Bucket extends Resource(
-  "cloudflare::Bucket",
+export class R2Bucket extends Resource(
+  "cloudflare::R2Bucket",
   async (ctx: Context<BucketOutput>, props: BucketProps) => {
     // Create Cloudflare API client with automatic account discovery
     const api = await createCloudflareApi();

@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { apply } from "../../src/apply";
 import { createCloudflareApi } from "../../src/cloudflare/api";
-import { Bucket } from "../../src/cloudflare/bucket";
+import { R2Bucket } from "../../src/cloudflare/bucket";
 import { destroy } from "../../src/destroy";
 import { BRANCH_PREFIX } from "../util";
 
@@ -35,7 +35,7 @@ describe("R2 Bucket Resource", () => {
   test("create, update, and delete bucket", async () => {
     let bucketOutput;
     // Create a test bucket
-    const bucket = new Bucket(testId, {
+    const bucket = new R2Bucket(testId, {
       name: testId,
       locationHint: "wnam", // West North America
     });
@@ -58,7 +58,7 @@ describe("R2 Bucket Resource", () => {
       expect(responseData.result.name).toEqual(testId);
 
       // Update the bucket to enable public access
-      const updatedBucket = new Bucket(testId, {
+      const updatedBucket = new R2Bucket(testId, {
         name: testId,
         allowPublicAccess: true,
       });
@@ -92,7 +92,7 @@ describe("R2 Bucket Resource", () => {
 
   test("bucket with jurisdiction", async () => {
     const euBucketName = `${testId}-eu`;
-    const euBucket = new Bucket(euBucketName, {
+    const euBucket = new R2Bucket(euBucketName, {
       name: euBucketName,
       jurisdiction: "eu",
     });

@@ -1,8 +1,8 @@
 import { $, alchemize } from "alchemy";
 import {
-  Bucket,
   DurableObjectNamespace,
   KVNamespace,
+  R2Bucket,
   StaticSite,
   Worker,
 } from "alchemy/cloudflare";
@@ -19,7 +19,7 @@ const authStore = new KVNamespace("AUTH_STORE", {
 });
 
 // Create an R2 bucket
-const storage = new Bucket("storage", {
+const storage = new R2Bucket("storage", {
   name: "alchemy-example-storage",
   allowPublicAccess: false,
 });

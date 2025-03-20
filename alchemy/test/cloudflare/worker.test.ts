@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { apply } from "../../src/apply";
 import { createCloudflareApi } from "../../src/cloudflare/api";
-import { Bucket } from "../../src/cloudflare/bucket";
+import { R2Bucket } from "../../src/cloudflare/bucket";
 import { DurableObjectNamespace } from "../../src/cloudflare/durable-object-namespace";
 import { KVNamespace } from "../../src/cloudflare/kv-namespace";
 import { Worker } from "../../src/cloudflare/worker";
@@ -829,7 +829,7 @@ describe("Worker Resource", () => {
     const workerName = `${r2BindingTestName}-r2-1`;
 
     // Create a test R2 bucket
-    const testBucket = new Bucket("test-bucket", {
+    const testBucket = new R2Bucket("test-bucket", {
       name: `${BRANCH_PREFIX.toLowerCase()}-test-r2-bucket`,
       allowPublicAccess: false,
     });

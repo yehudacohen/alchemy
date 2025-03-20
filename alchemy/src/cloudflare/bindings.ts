@@ -3,7 +3,7 @@
  * Based on Cloudflare API documentation:
  * https://developers.cloudflare.com/api/resources/workers/subresources/scripts/methods/update/
  */
-import type { Bucket } from "./bucket";
+import type { R2Bucket } from "./bucket";
 import type { DurableObjectNamespace } from "./durable-object-namespace";
 import type { KVNamespace } from "./kv-namespace";
 import type { Worker } from "./worker";
@@ -19,7 +19,7 @@ export type Binding =
   | DurableObjectNamespace
   | KVNamespace
   | Worker
-  | Bucket
+  | R2Bucket
   | string;
 
 /**
