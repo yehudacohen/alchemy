@@ -379,7 +379,7 @@ export class StaticSite extends Resource(
       updatedAt: now,
       domain: props.domain,
       production: props.production !== false,
-      url: worker.url,
+      url: worker.url as Input<string | undefined>,
       routes,
     };
 

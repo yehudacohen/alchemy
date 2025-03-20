@@ -1,10 +1,10 @@
 {
   "name": "alchemy",
-  "version": "0.1.17",
+  "version": "0.1.18",
   "type": "module",
   "module": "./lib/index.js",
   "scripts": {
-    "publish:npm": "rm -rf ./lib && tsc -b && npm publish"
+    "publish:npm": "rm -rf ./*.tsbuildinfo && rm -rf ./lib && tsc -b && npm publish"
   },
   "files": ["lib", "src"],
   "exports": {
