@@ -2,7 +2,6 @@
   "files": [],
   "references": [
     { "path": "./alchemy/tsconfig.json" },
-    { "path": "./alchemy/tsconfig.test.json" },
     { "path": "./examples/aws-app/tsconfig.json" },
     { "path": "./examples/cloudflare-vite/tsconfig.json" }
   ]

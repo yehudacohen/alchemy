@@ -1,3 +1,6 @@
+// we don't use node in ./src/**, only here for alchemy to bootstrap CloudFlare
+import "@types/node";
+
 import { $, alchemize, secret } from "alchemy";
 import {
   DurableObjectNamespace,

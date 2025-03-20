@@ -3,6 +3,7 @@ import { apply } from "../../src/apply";
 import { destroy } from "../../src/destroy";
 import { createGitHubClient } from "../../src/github/client";
 import { GitHubSecret } from "../../src/github/secret";
+import { secret } from "../../src/secret";
 import { BRANCH_PREFIX } from "../util";
 
 // Optional environment variable overrides
@@ -21,11 +22,11 @@ describe("GitHubSecret Resource", () => {
 
       // Use a hardcoded secret name instead of timestamps for repeatability
       const secretName = `${BRANCH_PREFIX.toUpperCase()}_TEST_SECRET_1`;
-      const secretValue = "this-is-a-test-secret-value";
-      const updatedSecretValue = "this-is-an-updated-test-secret-value";
+      const secretValue = secret("this-is-a-test-secret-value");
+      const updatedSecretValue = secret("this-is-an-updated-test-secret-value");
 
       // Create a test secret
-      const secret = new GitHubSecret(testId, {
+      const ghSecret = new GitHubSecret(testId, {
         owner,
         repository,
         name: secretName,
@@ -36,7 +37,7 @@ describe("GitHubSecret Resource", () => {
         console.log(`Creating secret: ${secretName}`);
 
         // Apply to create the secret - resource will handle authentication
-        const output = await apply(secret);
+        const output = await apply(ghSecret);
         expect(output.id).toBeTruthy();
         expect(output.owner).toEqual(owner);
         expect(output.repository).toEqual(repository);
@@ -84,7 +85,7 @@ describe("GitHubSecret Resource", () => {
         console.error(`Test error: ${error.message}`);
         throw error;
       } finally {
-        await destroy(secret);
+        await destroy(ghSecret);
       }
     },
   );

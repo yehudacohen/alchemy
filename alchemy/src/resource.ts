@@ -94,11 +94,11 @@ export type Context<Outputs> =
   | UpdateContext<Outputs>
   | DeleteContext<Outputs>;
 
-export type Provider<
+export interface Provider<
   Type extends ResourceType = ResourceType,
   In extends any[] = any[],
   Out = any,
-> = {
+> {
   type: Type;
   update(
     stage: string,
@@ -116,10 +116,9 @@ export type Provider<
     inputs: Inputs<In>,
     options: DestroyOptions,
   ): Promise<void>;
-} & (new (
-  id: string,
-  ...inputs: [...Inputs<In>, ...any[]]
-) => Resource<In, Out>);
+
+  new (id: string, ...inputs: [...Inputs<In>, ...any[]]): Resource<In, Out>;
+}
 
 export function isResource(value: any): value is Resource {
   return value?.[ResourceID] !== undefined;
