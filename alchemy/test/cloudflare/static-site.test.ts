@@ -11,6 +11,8 @@ import { BRANCH_PREFIX } from "../util";
 
 const test = alchemy.test(import.meta);
 
+const api = await createCloudflareApi();
+
 describe("StaticSite Resource", () => {
   let tempDir: string;
 
@@ -55,6 +57,7 @@ describe("StaticSite Resource", () => {
       // quiet: true,
     },
     async (scope) => {
+      console.log("RUN TEST");
       const siteName = `${BRANCH_PREFIX}-test-static-site`;
 
       try {
@@ -68,8 +71,6 @@ describe("StaticSite Resource", () => {
         expect(site.workerId).toBeTruthy();
         expect(site.assets.length).toBeGreaterThan(0);
 
-        // Verify with Cloudflare API directly
-        const api = await createCloudflareApi();
         const response = await api.get(
           `/accounts/${api.accountId}/workers/scripts/${siteName}`,
         );
@@ -98,12 +99,16 @@ describe("StaticSite Resource", () => {
             "javascript",
           );
         }
+      } catch (err) {
+        console.log("error", err);
+        throw err;
       } finally {
+        console.log("DESTROY", Array.from(scope.resources.keys()));
         // Clean up
         await destroy(scope);
 
         // Verify site was deleted
-        const api = await createCloudflareApi();
+
         const response = await api.get(
           `/accounts/${api.accountId}/workers/scripts/${siteName}`,
         );
@@ -130,9 +135,6 @@ describe("StaticSite Resource", () => {
     );
 
     const siteName = `${BRANCH_PREFIX}-test-static-site-with-backend`;
-
-    // Verify site and backend worker were created
-    const api = await createCloudflareApi();
 
     try {
       const backend = await Worker(`${siteName}-backend`, {

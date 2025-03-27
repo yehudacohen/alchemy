@@ -30,10 +30,19 @@ export async function apply<Out extends Resource>(
   }
   if (state === undefined) {
     state = {
-      provider: PROVIDERS.get(resource.ID)!,
+      kind: resource.Kind,
+      id: resource.ID,
+      fqn: resource.FQN,
+      seq: resource.Seq,
       status: "creating",
       data: {},
-      output: undefined!,
+      output: {
+        ID: resource.ID,
+        FQN: resource.FQN,
+        Kind: resource.Kind,
+        Scope: scope,
+        Seq: resource.Seq,
+      },
       // deps: [...deps],
       props,
     };
@@ -80,6 +89,7 @@ export async function apply<Out extends Resource>(
     kind: resource.Kind,
     id: resource.ID,
     fqn: resource.FQN,
+    seq: resource.Seq,
     state,
     replace: () => {
       if (isReplaced) {
@@ -103,7 +113,10 @@ export async function apply<Out extends Resource>(
   }
 
   await scope.state.set(resource.ID, {
-    provider: resource.Kind,
+    kind: resource.Kind,
+    id: resource.ID,
+    fqn: resource.FQN,
+    seq: resource.Seq,
     data: state.data,
     status: phase === "create" ? "created" : "updated",
     output,

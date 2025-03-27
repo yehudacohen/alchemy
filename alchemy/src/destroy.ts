@@ -80,6 +80,7 @@ export async function destroy<Type extends string>(
       kind: instance.Kind,
       id: instance.ID,
       fqn: instance.FQN,
+      seq: instance.Seq,
       state,
       replace: () => {
         throw new Error("Cannot replace a resource that is being deleted");
@@ -119,7 +120,8 @@ export async function destroy<Type extends string>(
 export namespace destroy {
   export async function all(resources: Resource[], options?: DestroyOptions) {
     if (options?.strategy !== "parallel") {
-      for (const resource of resources.sort((a, b) => b.Seq - a.Seq)) {
+      const sorted = resources.sort((a, b) => b.Seq - a.Seq);
+      for (const resource of sorted) {
         await destroy(resource);
       }
     } else {

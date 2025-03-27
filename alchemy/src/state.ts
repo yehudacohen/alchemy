@@ -6,6 +6,7 @@ import { ignore } from "./util/ignore";
 import { deserialize, serialize } from "./util/serde";
 
 export interface State<
+  Kind extends string = string,
   Props extends ResourceProps = ResourceProps,
   Out extends Resource = Resource,
 > {
@@ -16,7 +17,10 @@ export interface State<
     | `updated`
     | `deleting`
     | `deleted`;
-  provider: string;
+  kind: Kind;
+  id: string;
+  fqn: string;
+  seq: number;
   data: Record<string, any>;
   // deps: string[];
   props: Props;
