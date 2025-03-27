@@ -1,5 +1,5 @@
 import Stripe from "stripe";
-import type { Context } from "../resource";
+import type { Context } from "../context";
 import { Resource } from "../resource";
 
 export type EnabledEvent = Stripe.WebhookEndpointUpdateParams.EnabledEvent;
@@ -47,7 +47,9 @@ export interface WebhookEndpointProps {
 /**
  * Output from the Stripe webhook endpoint
  */
-export interface WebhookEndpointOutput extends WebhookEndpointProps {
+export interface WebhookEndpoint
+  extends Resource<"stripe::WebhookEndpoint">,
+    WebhookEndpointProps {
   /**
    * The ID of the webhook
    */
@@ -84,9 +86,13 @@ export interface WebhookEndpointOutput extends WebhookEndpointProps {
   status: string;
 }
 
-export class WebhookEndpoint extends Resource(
+export const WebhookEndpoint = Resource(
   "stripe::WebhookEndpoint",
-  async (ctx: Context<WebhookEndpointOutput>, props: WebhookEndpointProps) => {
+  async function (
+    this: Context<WebhookEndpoint>,
+    id: string,
+    props: WebhookEndpointProps,
+  ) {
     // Get Stripe API key from context or environment
     const apiKey = process.env.STRIPE_API_KEY;
     if (!apiKey) {
@@ -96,34 +102,25 @@ export class WebhookEndpoint extends Resource(
     // Initialize Stripe client
     const stripe = new Stripe(apiKey);
 
-    if (ctx.event === "delete") {
+    if (this.phase === "delete") {
       try {
         // Get the webhook ID from the stored output
-        if (ctx.event === "delete" && ctx.output?.id) {
-          await stripe.webhookEndpoints.del(ctx.output.id);
+        if (this.phase === "delete" && this.output?.id) {
+          await stripe.webhookEndpoints.del(this.output.id);
         }
       } catch (error) {
         // Ignore if the webhook doesn't exist
         console.error("Error deleting webhook:", error);
       }
 
-      // Return a minimal output for deleted state
-      return {
-        ...props,
-        id: "",
-        secret: "",
-        createdAt: 0,
-        updatedAt: 0,
-        livemode: false,
-        status: "deleted",
-      };
+      return this.destroy();
     } else {
       try {
         let webhook: Stripe.WebhookEndpoint;
 
-        if (ctx.event === "update" && ctx.output?.id) {
+        if (this.phase === "update" && this.output?.id) {
           // Update existing webhook
-          webhook = await stripe.webhookEndpoints.update(ctx.output.id, {
+          webhook = await stripe.webhookEndpoints.update(this.output.id, {
             url: props.url,
             enabled_events: props.enabledEvents,
             description: props.description,
@@ -152,12 +149,11 @@ export class WebhookEndpoint extends Resource(
         let secret = "";
         if (webhook.secret) {
           secret = webhook.secret;
-        } else if (ctx.event === "update" && ctx.output?.secret) {
-          secret = ctx.output.secret;
+        } else if (this.phase === "update" && this.output?.secret) {
+          secret = this.output.secret;
         }
 
-        // Map Stripe API response to our output format
-        const output: WebhookEndpointOutput = {
+        return this({
           id: webhook.id,
           url: webhook.url,
           enabledEvents: webhook.enabled_events as EnabledEvent[],
@@ -172,13 +168,11 @@ export class WebhookEndpoint extends Resource(
           livemode: webhook.livemode,
           updatedAt: webhook.created, // Using created timestamp as updated
           status: webhook.status,
-        };
-
-        return output;
+        });
       } catch (error) {
         console.error("Error creating/updating webhook:", error);
         throw error;
       }
     }
   },
-) {}
+);

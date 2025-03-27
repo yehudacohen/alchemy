@@ -1,5 +1,5 @@
 import Stripe from "stripe";
-import type { Context } from "../resource";
+import type { Context } from "../context";
 import { Resource } from "../resource";
 
 type ProductType = Stripe.Product.Type;
@@ -67,7 +67,7 @@ export interface ProductProps {
 /**
  * Output from the Stripe product
  */
-export interface ProductOutput extends ProductProps {
+export interface Product extends Resource<"stripe::Product">, ProductProps {
   /**
    * The ID of the product
    */
@@ -99,9 +99,13 @@ export interface ProductOutput extends ProductProps {
   };
 }
 
-export class Product extends Resource(
+export const Product = Resource(
   "stripe::Product",
-  async (ctx: Context<ProductOutput>, props: ProductProps) => {
+  async function (
+    this: Context<Product>,
+    id: string,
+    props: ProductProps,
+  ): Promise<Product> {
     // Get Stripe API key from context or environment
     const apiKey = process.env.STRIPE_API_KEY;
     if (!apiKey) {
@@ -111,10 +115,10 @@ export class Product extends Resource(
     // Initialize Stripe client
     const stripe = new Stripe(apiKey);
 
-    if (ctx.event === "delete") {
+    if (this.phase === "delete") {
       try {
-        if (ctx.event === "delete" && ctx.output?.id) {
-          await stripe.products.update(ctx.output.id, { active: false });
+        if (this.phase === "delete" && this.output?.id) {
+          await stripe.products.update(this.output.id, { active: false });
         }
       } catch (error) {
         // Ignore if the product doesn't exist
@@ -122,20 +126,14 @@ export class Product extends Resource(
       }
 
       // Return a minimal output for deleted state
-      return {
-        ...props,
-        id: "",
-        createdAt: 0,
-        updatedAt: 0,
-        livemode: false,
-      };
+      return this.destroy();
     } else {
       try {
         let product: Stripe.Product;
 
-        if (ctx.event === "update" && ctx.output?.id) {
+        if (this.phase === "update" && this.output?.id) {
           // Update existing product
-          product = await stripe.products.update(ctx.output.id, {
+          product = await stripe.products.update(this.output.id, {
             name: props.name,
             description: props.description,
             active: props.active,
@@ -162,8 +160,7 @@ export class Product extends Resource(
           });
         }
 
-        // Map Stripe API response to our output format
-        const output: ProductOutput = {
+        return this({
           id: product.id,
           name: product.name,
           description: product.description || undefined,
@@ -181,13 +178,11 @@ export class Product extends Resource(
           livemode: product.livemode,
           updatedAt: product.updated,
           packageDimensions: product.package_dimensions || undefined,
-        };
-
-        return output;
+        });
       } catch (error) {
         console.error("Error creating/updating product:", error);
         throw error;
       }
     }
   },
-) {}
+);

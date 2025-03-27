@@ -12,8 +12,9 @@ import {
 } from "@aws-sdk/client-lambda";
 import fs from "node:fs";
 import path from "node:path";
-import { ignore } from "../error";
-import { type Context, Resource } from "../resource";
+import type { Context } from "../context";
+import { Resource } from "../resource";
+import { ignore } from "../util/ignore";
 
 async function resolveRegion(client: LambdaClient): Promise<string> {
   const region = client.config.region;
@@ -47,8 +48,7 @@ export interface FunctionProps {
   };
 }
 
-export interface FunctionOutput extends FunctionProps {
-  id: string; // Same as functionName
+export interface Function extends Resource<"lambda::Function">, FunctionProps {
   arn: string;
   lastModified: string;
   version: string;
@@ -71,15 +71,15 @@ export interface FunctionOutput extends FunctionProps {
   signingJobArn?: string;
 }
 
-export class Function extends Resource(
+export const Function = Resource(
   "lambda::Function",
-  async (ctx: Context<FunctionOutput>, props: FunctionProps) => {
+  async function (this: Context<Function>, id: string, props: FunctionProps) {
     const client = new LambdaClient({});
     const region = await resolveRegion(client);
 
     const code = await zipCode(props.zipPath);
 
-    if (ctx.event === "delete") {
+    if (this.phase === "delete") {
       await ignore(ResourceNotFoundException.name, () =>
         client.send(
           new DeleteFunctionCommand({
@@ -88,34 +88,17 @@ export class Function extends Resource(
         ),
       );
 
-      // Return a minimal FunctionOutput for deleted state
-      return {
-        ...props,
-        id: props.functionName,
-        arn: `arn:aws:lambda:${region}:${process.env.AWS_ACCOUNT_ID}:function:${props.functionName}`,
-        lastModified: new Date().toISOString(),
-        version: "$LATEST",
-        qualifiedArn: `arn:aws:lambda:${region}:${process.env.AWS_ACCOUNT_ID}:function:${props.functionName}:$LATEST`,
-        invokeArn: `arn:aws:apigateway:${region}:lambda:path/2015-03-31/functions/arn:aws:lambda:${region}:${process.env.AWS_ACCOUNT_ID}:function:${props.functionName}/invocations`,
-        sourceCodeHash: "",
-        sourceCodeSize: 0,
-        architectures: props.architecture
-          ? [props.architecture]
-          : [Architecture.x86_64],
-        revisionId: "",
-        state: "Inactive",
-        packageType: "Zip",
-      };
+      return this.destroy();
     } else {
       try {
         // Check if function exists
-        const func = await client.send(
+        await client.send(
           new GetFunctionCommand({
             FunctionName: props.functionName,
           }),
         );
 
-        if (ctx.event === "update") {
+        if (this.phase === "update") {
           // Wait for function to stabilize
           await waitForFunctionStabilization(client, props.functionName);
 
@@ -228,9 +211,8 @@ export class Function extends Resource(
         ),
       ]);
 
-      const output: FunctionOutput = {
+      return this({
         ...props,
-        id: props.functionName,
         arn: config.FunctionArn!,
         lastModified: config.LastModified!,
         version: config.Version!,
@@ -251,12 +233,10 @@ export class Function extends Resource(
         packageType: config.PackageType!,
         signingProfileVersionArn: config.SigningProfileVersionArn,
         signingJobArn: config.SigningJobArn,
-      };
-
-      return output;
+      });
     }
   },
-) {}
+);
 
 // Helper to wait for function to stabilize
 async function waitForFunctionStabilization(

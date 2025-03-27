@@ -1,17 +1,15 @@
 import {
-  AttachRolePolicyCommand,
   CreatePolicyCommand,
   CreatePolicyVersionCommand,
   DeletePolicyCommand,
   DeletePolicyVersionCommand,
-  DetachRolePolicyCommand,
   GetPolicyCommand,
   GetPolicyVersionCommand,
   IAMClient,
   ListPolicyVersionsCommand,
   NoSuchEntityException,
 } from "@aws-sdk/client-iam";
-import { ignore } from "../error";
+import type { Context } from "../context";
 import { Resource } from "../resource";
 
 // Type-safe policy document types
@@ -43,8 +41,7 @@ export interface PolicyProps {
   tags?: Record<string, string>;
 }
 
-export interface PolicyOutput extends PolicyProps {
-  id: string; // Same as policyName
+export interface Policy extends Resource<"iam::Policy">, PolicyProps {
   arn: string;
   defaultVersionId: string;
   attachmentCount: number;
@@ -53,13 +50,17 @@ export interface PolicyOutput extends PolicyProps {
   isAttachable: boolean;
 }
 
-export class Policy extends Resource(
+export const Policy = Resource(
   "iam::Policy",
-  async (ctx, props: PolicyProps): Promise<PolicyOutput> => {
+  async function (
+    this: Context<Policy>,
+    id: string,
+    props: PolicyProps,
+  ): Promise<Policy> {
     const client = new IAMClient({});
     const policyArn = `arn:aws:iam::${process.env.AWS_ACCOUNT_ID}:policy${props.path || "/"}${props.policyName}`;
 
-    if (ctx.event === "delete") {
+    if (this.phase === "delete") {
       try {
         // List and delete all non-default versions first
         const versions = await client.send(
@@ -90,16 +91,7 @@ export class Policy extends Resource(
           throw error;
         }
       }
-      return {
-        ...props,
-        id: props.policyName,
-        arn: policyArn,
-        defaultVersionId: "v1",
-        attachmentCount: 0,
-        createDate: new Date(),
-        updateDate: new Date(),
-        isAttachable: true,
-      };
+      return this.destroy();
     } else {
       try {
         // Check if policy exists
@@ -164,16 +156,15 @@ export class Policy extends Resource(
           }),
         );
 
-        return {
+        return this({
           ...props,
-          id: props.policyName,
           arn: policy.Policy!.Arn!,
           defaultVersionId: policy.Policy!.DefaultVersionId!,
           attachmentCount: policy.Policy!.AttachmentCount!,
           createDate: policy.Policy!.CreateDate!,
           updateDate: policy.Policy!.UpdateDate!,
           isAttachable: policy.Policy!.IsAttachable!,
-        };
+        });
       } catch (error: any) {
         if (error.name === "NoSuchEntity") {
           // Create new policy
@@ -192,54 +183,18 @@ export class Policy extends Resource(
             }),
           );
 
-          return {
+          return this({
             ...props,
-            id: props.policyName,
             arn: newPolicy.Policy!.Arn!,
             defaultVersionId: newPolicy.Policy!.DefaultVersionId!,
             attachmentCount: newPolicy.Policy!.AttachmentCount!,
             createDate: newPolicy.Policy!.CreateDate!,
             updateDate: newPolicy.Policy!.UpdateDate!,
             isAttachable: newPolicy.Policy!.IsAttachable!,
-          };
+          });
         }
         throw error;
       }
     }
   },
-) {}
-
-// PolicyAttachment resource
-export interface PolicyAttachmentProps {
-  policyArn: string;
-  roleName: string;
-}
-
-export interface PolicyAttachmentOutput extends PolicyAttachmentProps {}
-
-export class PolicyAttachment extends Resource(
-  "iam::PolicyAttachment",
-  async (ctx, props: PolicyAttachmentProps) => {
-    const client = new IAMClient({});
-
-    if (ctx.event === "delete") {
-      await ignore(NoSuchEntityException.name, () =>
-        client.send(
-          new DetachRolePolicyCommand({
-            PolicyArn: props.policyArn,
-            RoleName: props.roleName,
-          }),
-        ),
-      );
-    } else {
-      await client.send(
-        new AttachRolePolicyCommand({
-          PolicyArn: props.policyArn,
-          RoleName: props.roleName,
-        }),
-      );
-    }
-
-    return props;
-  },
-) {}
+);

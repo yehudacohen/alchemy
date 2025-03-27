@@ -1,5 +1,6 @@
 import sodium from "libsodium-wrappers";
-import { type Context, Resource } from "../resource";
+import type { Context } from "../context";
+import { Resource } from "../resource";
 import type { Secret } from "../secret";
 import { createGitHubClient, verifyGitHubAuth } from "./client";
 /**
@@ -35,7 +36,9 @@ export interface GitHubSecretProps {
 /**
  * Output returned after Secret creation/update
  */
-export interface GitHubSecretOutput extends Omit<GitHubSecretProps, "value"> {
+export interface GitHubSecretOutput
+  extends Resource<"github::Secret">,
+    Omit<GitHubSecretProps, "value"> {
   /**
    * The ID of the resource
    */
@@ -50,22 +53,24 @@ export interface GitHubSecretOutput extends Omit<GitHubSecretProps, "value"> {
 /**
  * Resource for managing GitHub repository secrets
  */
-export class GitHubSecret extends Resource(
+export const GitHubSecret = Resource(
   "github::Secret",
-  async (
-    ctx: Context<GitHubSecretOutput>,
+  async function (
+    this: Context<GitHubSecretOutput>,
+    id: string,
     props: GitHubSecretProps,
-  ): Promise<GitHubSecretOutput | void> => {
+  ): Promise<GitHubSecretOutput> {
     // Create authenticated Octokit client - will automatically handle token resolution
+    /// TODO: use fetch
     const octokit = await createGitHubClient({ token: props.token });
 
     // Verify authentication and permissions
-    if (!ctx.quiet) {
+    if (!this.quiet) {
       await verifyGitHubAuth(octokit, props.owner, props.repository);
     }
 
-    if (ctx.event === "delete") {
-      if (ctx.output?.id) {
+    if (this.phase === "delete") {
+      if (this.output?.id) {
         try {
           // Delete the secret
           await octokit.rest.actions.deleteRepoSecret({
@@ -84,7 +89,7 @@ export class GitHubSecret extends Resource(
       }
 
       // Return void (a deleted resource has no content)
-      return undefined;
+      return this.destroy();
     } else {
       try {
         // Get the repository's public key for encrypting secrets
@@ -102,7 +107,7 @@ export class GitHubSecret extends Resource(
         );
 
         // Create or update the secret with the encrypted value and key_id
-        const response = await octokit.rest.actions.createOrUpdateRepoSecret({
+        await octokit.rest.actions.createOrUpdateRepoSecret({
           owner: props.owner,
           repo: props.repository,
           secret_name: props.name,
@@ -111,16 +116,14 @@ export class GitHubSecret extends Resource(
         });
 
         // GitHub doesn't return the secret details on create/update, so we need to construct it
-        const output: GitHubSecretOutput = {
+        return this({
           id: `${props.owner}/${props.repository}/${props.name}`,
           owner: props.owner,
           repository: props.repository,
           name: props.name,
           token: props.token,
           updatedAt: new Date().toISOString(),
-        };
-
-        return output;
+        });
       } catch (error: any) {
         if (
           error.status === 403 &&
@@ -142,7 +145,7 @@ export class GitHubSecret extends Resource(
       }
     }
   },
-) {}
+);
 
 /**
  * Encrypt a value for GitHub using libsodium

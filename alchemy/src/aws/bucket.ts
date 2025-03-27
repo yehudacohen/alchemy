@@ -10,16 +10,16 @@ import {
   PutBucketTaggingCommand,
   S3Client,
 } from "@aws-sdk/client-s3";
-import { ignore } from "../error";
+import type { Context } from "../context";
 import { Resource } from "../resource";
+import { ignore } from "../util/ignore";
 
 export interface BucketProps {
   bucketName: string;
   tags?: Record<string, string>;
 }
 
-export interface BucketOutput extends BucketProps {
-  id: string; // Same as bucketName for AWS
+export interface Bucket extends Resource<"s3::Bucket">, BucketProps {
   arn: string;
   bucketDomainName: string; // Format: bucket-name.s3.amazonaws.com
   bucketRegionalDomainName?: string; // Format: bucket-name.s3.region.amazonaws.com
@@ -31,12 +31,12 @@ export interface BucketOutput extends BucketProps {
   acl?: string;
 }
 
-export class Bucket extends Resource(
+export const Bucket = Resource(
   "s3::Bucket",
-  async (ctx, props: BucketProps) => {
+  async function (this: Context<Bucket>, id: string, props: BucketProps) {
     const client = new S3Client({});
 
-    if (ctx.event === "delete") {
+    if (this.phase === "delete") {
       await ignore(NoSuchBucket.name, () =>
         client.send(
           new DeleteBucketCommand({
@@ -44,7 +44,7 @@ export class Bucket extends Resource(
           }),
         ),
       );
-      return props;
+      return this.destroy();
     } else {
       try {
         // Check if bucket exists
@@ -55,7 +55,7 @@ export class Bucket extends Resource(
         );
 
         // Update tags if they changed and bucket exists
-        if (ctx.event === "update" && props.tags) {
+        if (this.phase === "update" && props.tags) {
           await client.send(
             new PutBucketTaggingCommand({
               Bucket: props.bucketName,
@@ -121,9 +121,8 @@ export class Bucket extends Resource(
         }
       }
 
-      const output: BucketOutput = {
+      return this({
         bucketName: props.bucketName,
-        id: props.bucketName,
         arn: `arn:aws:s3:::${props.bucketName}`,
         bucketDomainName: `${props.bucketName}.s3.amazonaws.com`,
         bucketRegionalDomainName: `${props.bucketName}.s3.${region}.amazonaws.com`,
@@ -132,12 +131,10 @@ export class Bucket extends Resource(
         versioningEnabled: versioningResponse.Status === "Enabled",
         acl: aclResponse.Grants?.[0]?.Permission?.toLowerCase(),
         ...(tags && { tags }),
-      };
-
-      return output;
+      });
     }
   },
-) {}
+);
 
 // Helper function to get S3 hosted zone IDs by region
 function getHostedZoneId(region: string): string {

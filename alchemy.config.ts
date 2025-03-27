@@ -1,11 +1,19 @@
-import { alchemize, secret } from "./alchemy/src";
+import alchemy from "./alchemy/src";
 import { Role, getAccountId } from "./alchemy/src/aws";
 import { GitHubOIDCProvider } from "./alchemy/src/aws/oidc";
 import { GitHubSecret } from "./alchemy/src/github";
 
+await using _ = alchemy("github:alchemy", {
+  stage: "prod",
+  phase: process.argv.includes("--destroy") ? "destroy" : "up",
+  // pass the password in (you can get it from anywhere, e.g. stdin)
+  password: process.env.SECRET_PASSPHRASE,
+  quiet: process.argv.includes("--verbose") ? false : true,
+});
+
 const accountId = await getAccountId();
 
-const githubRole = new Role("github-oidc-role", {
+const githubRole = await Role("github-oidc-role", {
   roleName: "alchemy-github-oidc-role",
   assumeRolePolicy: {
     Version: "2012-10-17",
@@ -33,12 +41,6 @@ const githubRole = new Role("github-oidc-role", {
   managedPolicyArns: ["arn:aws:iam::aws:policy/AdministratorAccess"],
 });
 
-new GitHubOIDCProvider("github-oidc", {
-  owner: "sam-goodwin",
-  repository: "alchemy",
-  roleArn: githubRole.arn,
-});
-
 const githubSecrets = {
   AWS_ROLE_ARN: githubRole.arn,
   CLOUDFLARE_API_KEY: process.env.CLOUDFLARE_API_KEY,
@@ -46,21 +48,18 @@ const githubSecrets = {
   STRIPE_API_KEY: process.env.STRIPE_API_KEY,
 };
 
-for (const [name, value] of Object.entries(githubSecrets)) {
-  if (value) {
-    new GitHubSecret(`github-secret-${name}`, {
+await Promise.all([
+  GitHubOIDCProvider("github-oidc", {
+    owner: "sam-goodwin",
+    repository: "alchemy",
+    roleArn: githubRole.arn,
+  }),
+  ...Object.entries(githubSecrets).map(([name, value]) =>
+    GitHubSecret(`github-secret-${name}`, {
       owner: "sam-goodwin",
       repository: "alchemy",
       name,
-      value: secret(value),
-    });
-  }
-}
-
-alchemize({
-  stage: "github:alchemy",
-  mode: process.argv.includes("--destroy") ? "destroy" : "up",
-  // pass the password in (you can get it from anywhere, e.g. stdin)
-  password: process.env.SECRET_PASSPHRASE,
-  quiet: process.argv.includes("--verbose") ? false : true,
-});
+      value: alchemy.secret(value),
+    }),
+  ),
+]);

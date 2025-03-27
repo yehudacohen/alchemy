@@ -1,5 +1,5 @@
-import type { Resolved } from "../output";
-import { type Context, Resource } from "../resource";
+import type { Context } from "../context";
+import { Resource } from "../resource";
 import { createCloudflareApi } from "./api";
 
 /**
@@ -11,7 +11,7 @@ export interface BucketProps {
    * Names can only contain lowercase letters (a-z), numbers (0-9), and hyphens (-)
    * Cannot begin or end with a hyphen
    */
-  name?: string;
+  name: string;
 
   /**
    * Optional location hint for the bucket
@@ -35,11 +35,13 @@ export interface BucketProps {
 /**
  * Output returned after R2 Bucket creation/update
  */
-export interface BucketOutput extends BucketProps {
+export interface R2Bucket
+  extends Resource<"cloudflare::R2Bucket">,
+    BucketProps {
   /**
-   * The ID of the bucket (same as name)
+   * Resource type identifier
    */
-  id: string;
+  type: "r2_bucket";
 
   /**
    * Location of the bucket
@@ -50,44 +52,23 @@ export interface BucketOutput extends BucketProps {
    * Time at which the bucket was created (Unix timestamp in seconds)
    */
   creationDate: number;
-
-  /**
-   * Resource type identifier
-   */
-  type: "r2_bucket";
 }
 
-/**
- * Cloudflare R2 bucket API response
- */
-interface CloudflareBucketResponse {
-  result: {
-    name: string;
-    location?: string;
-    creation_date: string;
-  };
-  success: boolean;
-  errors: Array<{ code: number; message: string }>;
-  messages: string[];
-}
-
-export function isBucket(resource: any): resource is Resolved<R2Bucket> {
-  return (
-    resource && typeof resource === "object" && resource.id && resource.location
-  );
-}
-
-export class R2Bucket extends Resource(
+export const R2Bucket = Resource(
   "cloudflare::R2Bucket",
-  async (ctx: Context<BucketOutput>, props: BucketProps) => {
+  async function (
+    this: Context<R2Bucket>,
+    id: string,
+    props: BucketProps,
+  ): Promise<R2Bucket> {
     // Create Cloudflare API client with automatic account discovery
     const api = await createCloudflareApi();
 
     // Resource ID defaults to bucket name if provided
-    const bucketName = props.name || ctx.resourceID;
+    const bucketName = props.name || this.id;
 
-    if (ctx.event === "delete") {
-      if (ctx.output?.id) {
+    if (this.phase === "delete") {
+      if (this.output?.name) {
         // Delete R2 bucket
         const headers: Record<string, string> = {};
         if (props.jurisdiction && props.jurisdiction !== "default") {
@@ -95,7 +76,7 @@ export class R2Bucket extends Resource(
         }
 
         const deleteResponse = await api.delete(
-          `/accounts/${api.accountId}/r2/buckets/${ctx.output.id}`,
+          `/accounts/${api.accountId}/r2/buckets/${this.output.name}`,
           { headers },
         );
 
@@ -110,12 +91,25 @@ export class R2Bucket extends Resource(
       }
 
       // Return void (a deleted bucket has no content)
-      return;
+      return this.destroy();
     } else {
+      /**
+       * Cloudflare R2 bucket API response
+       */
+      interface CloudflareBucketResponse {
+        result: {
+          name: string;
+          location?: string;
+          creation_date: string;
+        };
+        success: boolean;
+        errors: Array<{ code: number; message: string }>;
+        messages: string[];
+      }
       try {
-        let bucketOutput: BucketOutput;
+        let bucketOutput: R2Bucket;
 
-        if (ctx.event === "update" && ctx.output?.id) {
+        if (this.phase === "update" && this.output?.name) {
           // Get bucket details to verify it exists
           const headers: Record<string, string> = {};
           if (props.jurisdiction && props.jurisdiction !== "default") {
@@ -137,8 +131,7 @@ export class R2Bucket extends Resource(
           }
 
           const result = (await getResponse.json()) as CloudflareBucketResponse;
-          bucketOutput = {
-            id: result.result.name,
+          bucketOutput = this({
             name: result.result.name,
             location: result.result.location || "default",
             creationDate: Math.floor(
@@ -146,7 +139,7 @@ export class R2Bucket extends Resource(
             ),
             jurisdiction: props.jurisdiction || "default",
             type: "r2_bucket",
-          };
+          });
 
           // Update public access setting if it has changed
           if (props.allowPublicAccess !== undefined) {
@@ -184,8 +177,7 @@ export class R2Bucket extends Resource(
 
           const result =
             (await createResponse.json()) as CloudflareBucketResponse;
-          bucketOutput = {
-            id: result.result.name,
+          bucketOutput = this({
             name: result.result.name,
             location: result.result.location || "default",
             creationDate: Math.floor(
@@ -193,7 +185,7 @@ export class R2Bucket extends Resource(
             ),
             jurisdiction: props.jurisdiction || "default",
             type: "r2_bucket",
-          };
+          });
 
           // Set public access if requested
           if (props.allowPublicAccess) {
@@ -208,7 +200,7 @@ export class R2Bucket extends Resource(
       }
     }
   },
-) {}
+);
 
 /**
  * Helper function to update the public access setting for a bucket

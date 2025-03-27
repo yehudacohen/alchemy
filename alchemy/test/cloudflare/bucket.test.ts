@@ -1,9 +1,11 @@
-import { describe, expect, test } from "bun:test";
-import { apply } from "../../src/apply";
+import { describe, expect } from "bun:test";
+import { alchemy } from "../../src/alchemy";
 import { createCloudflareApi } from "../../src/cloudflare/api";
 import { R2Bucket } from "../../src/cloudflare/bucket";
-import { destroy } from "../../src/destroy";
+import "../../src/test/bun";
 import { BRANCH_PREFIX } from "../util";
+
+const test = alchemy.test(import.meta);
 
 /**
  * Type definitions for API responses
@@ -32,19 +34,16 @@ describe("R2 Bucket Resource", () => {
   // Bucket names must be lowercase, so transform the prefix
   const testId = `${BRANCH_PREFIX.toLowerCase()}-test-bucket`;
 
-  test("create, update, and delete bucket", async () => {
-    let bucketOutput;
+  test("create, update, and delete bucket", async (scope) => {
     // Create a test bucket
-    const bucket = new R2Bucket(testId, {
-      name: testId,
-      locationHint: "wnam", // West North America
-    });
+    let bucket: R2Bucket | undefined = undefined;
 
     try {
-      // Apply to create the bucket
-      bucketOutput = await apply(bucket);
-      expect(bucketOutput.id).toEqual(testId);
-      expect(bucketOutput.name).toEqual(testId);
+      bucket = await R2Bucket(testId, {
+        name: testId,
+        locationHint: "wnam", // West North America
+      });
+      expect(bucket.name).toEqual(testId);
 
       // Verify bucket was created by querying the API directly
       const api = await createCloudflareApi();
@@ -58,13 +57,10 @@ describe("R2 Bucket Resource", () => {
       expect(responseData.result.name).toEqual(testId);
 
       // Update the bucket to enable public access
-      const updatedBucket = new R2Bucket(testId, {
+      bucket = await R2Bucket(testId, {
         name: testId,
         allowPublicAccess: true,
       });
-
-      const updateOutput = await apply(updatedBucket);
-      expect(updateOutput.id).toEqual(testId);
 
       // Verify public access was enabled
       const publicAccessResponse = await api.get(
@@ -74,34 +70,26 @@ describe("R2 Bucket Resource", () => {
         (await publicAccessResponse.json()) as CloudflareResponse<PublicAccessInfo>;
       expect(publicAccessData.result.enabled).toEqual(true);
     } finally {
-      // Always clean up, even if test assertions fail
-      await destroy(bucket).catch((e) =>
-        console.error("Error cleaning up bucket:", e),
-      );
+      await alchemy.destroy(scope);
 
       // Verify bucket was deleted
-      if (bucketOutput) {
-        const api = await createCloudflareApi();
-        const getDeletedResponse = await api.get(
-          `/accounts/${api.accountId}/r2/buckets/${testId}`,
-        );
-        expect(getDeletedResponse.status).toEqual(404);
+      if (bucket) {
+        await assertBucketDeleted(bucket);
       }
     }
   });
 
-  test("bucket with jurisdiction", async () => {
+  test("bucket with jurisdiction", async (scope) => {
     const euBucketName = `${testId}-eu`;
-    const euBucket = new R2Bucket(euBucketName, {
+    const euBucket = await R2Bucket(euBucketName, {
       name: euBucketName,
       jurisdiction: "eu",
     });
 
     try {
       // Create a bucket with EU jurisdiction
-      const bucketOutput = await apply(euBucket);
-      expect(bucketOutput.id).toEqual(euBucketName);
-      expect(bucketOutput.jurisdiction).toEqual("eu");
+      expect(euBucket.name).toEqual(euBucketName);
+      expect(euBucket.jurisdiction).toEqual("eu");
 
       // Verify the jurisdiction setting
       const api = await createCloudflareApi();
@@ -112,10 +100,16 @@ describe("R2 Bucket Resource", () => {
       );
       expect(getResponse.status).toEqual(200);
     } finally {
-      // Clean up
-      await destroy(euBucket).catch((e) =>
-        console.error("Error cleaning up EU bucket:", e),
-      );
+      await alchemy.destroy(scope);
+      await assertBucketDeleted(euBucket);
     }
   });
 });
+
+async function assertBucketDeleted(bucket: R2Bucket) {
+  const api = await createCloudflareApi();
+  const getDeletedResponse = await api.get(
+    `/accounts/${api.accountId}/r2/buckets/${bucket.name}`,
+  );
+  expect(getDeletedResponse.status).toEqual(404);
+}

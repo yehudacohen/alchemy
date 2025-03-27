@@ -1,5 +1,5 @@
 import Stripe from "stripe";
-import type { Context } from "../resource";
+import type { Context } from "../context";
 import { Resource } from "../resource";
 
 /**
@@ -98,7 +98,7 @@ export interface PriceProps {
 /**
  * Output from the Stripe price
  */
-export interface PriceOutput extends PriceProps {
+export interface Price extends Resource<"stripe::Price">, PriceProps {
   /**
    * The ID of the price
    */
@@ -125,9 +125,13 @@ export interface PriceOutput extends PriceProps {
   lookupKey?: string;
 }
 
-export class Price extends Resource(
+export const Price = Resource(
   "stripe::Price",
-  async (ctx: Context<PriceOutput>, props: PriceProps) => {
+  async function (
+    this: Context<Price>,
+    id: string,
+    props: PriceProps,
+  ): Promise<Price> {
     // Get Stripe API key from context or environment
     const apiKey = process.env.STRIPE_API_KEY;
     if (!apiKey) {
@@ -137,32 +141,25 @@ export class Price extends Resource(
     // Initialize Stripe client
     const stripe = new Stripe(apiKey);
 
-    if (ctx.event === "delete") {
+    if (this.phase === "delete") {
       try {
-        if (ctx.event === "delete" && ctx.output?.id) {
+        if (this.phase === "delete" && this.output?.id) {
           // Prices can't be deleted, only deactivated
-          await stripe.prices.update(ctx.output.id, { active: false });
+          await stripe.prices.update(this.output.id, { active: false });
         }
       } catch (error) {
         // Ignore if the price doesn't exist
         console.error("Error deactivating price:", error);
       }
 
-      // Return a minimal output for deleted state
-      return {
-        ...props,
-        id: "",
-        createdAt: 0,
-        livemode: false,
-        type: (props.recurring ? "recurring" : "one_time") as Stripe.Price.Type,
-      };
+      return this.destroy();
     } else {
       try {
         let price: Stripe.Price;
 
-        if (ctx.event === "update" && ctx.output?.id) {
+        if (this.phase === "update" && this.output?.id) {
           // Update existing price (limited properties can be updated)
-          price = await stripe.prices.update(ctx.output.id, {
+          price = await stripe.prices.update(this.output.id, {
             active: props.active,
             metadata: props.metadata,
             nickname: props.nickname,
@@ -213,7 +210,7 @@ export class Price extends Resource(
           : undefined;
 
         // Map Stripe API response to our output format
-        const output: PriceOutput = {
+        return this({
           id: price.id,
           product:
             typeof price.product === "string"
@@ -232,13 +229,11 @@ export class Price extends Resource(
           livemode: price.livemode,
           type: price.type as Stripe.Price.Type,
           lookupKey: price.lookup_key || undefined,
-        };
-
-        return output;
+        });
       } catch (error) {
         console.error("Error creating/updating price:", error);
         throw error;
       }
     }
   },
-) {}
+);

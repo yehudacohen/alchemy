@@ -1,5 +1,3 @@
-import type { Input } from "../../input";
-import { isOutput } from "../../output";
 import { OIDCProvider, type OIDCProviderProps } from "./oidc-provider";
 
 /**
@@ -13,22 +11,19 @@ export interface GitHubOIDCProviderProps
   extends Omit<OIDCProviderProps, "thumbprint"> {
   owner: string;
   repository: string;
-  thumbprint?: string;
 }
+export type GitHubOIDCProvider = ReturnType<typeof GitHubOIDCProvider>;
 
-export class GitHubOIDCProvider extends OIDCProvider {
-  constructor(id: string, props: Input<GitHubOIDCProviderProps>) {
-    super(
-      id,
-      isOutput<GitHubOIDCProviderProps>(props)
-        ? props.apply((props) => ({
-            ...props,
-            thumbprint: props.thumbprint ?? DEFAULT_GITHUB_THUMBPRINT,
-          }))
-        : ({
-            ...props,
-            thumbprint: props.thumbprint ?? DEFAULT_GITHUB_THUMBPRINT,
-          } as Input<OIDCProviderProps>),
-    );
-  }
-}
+export const GitHubOIDCProvider = async (
+  id: string,
+  props: GitHubOIDCProviderProps,
+) => {
+  return OIDCProvider(id, {
+    owner: props.owner,
+    repository: props.repository,
+    roleArn: props.roleArn,
+    branches: props.branches,
+    environments: props.environments,
+    thumbprint: DEFAULT_GITHUB_THUMBPRINT,
+  });
+};

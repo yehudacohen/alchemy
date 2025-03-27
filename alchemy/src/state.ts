@@ -1,9 +1,14 @@
 import fs from "node:fs";
 import path from "node:path";
-import { ignore } from "./error";
-import { deserialize, serialize } from "./serde";
+import type { Resource, ResourceProps } from "./resource";
+import type { Scope } from "./scope";
+import { ignore } from "./util/ignore";
+import { deserialize, serialize } from "./util/serde";
 
-export interface State {
+export interface State<
+  Props extends ResourceProps = ResourceProps,
+  Out extends Resource = Resource,
+> {
   status:
     | `creating`
     | `created`
@@ -13,11 +18,13 @@ export interface State {
     | `deleted`;
   provider: string;
   data: Record<string, any>;
-  deps: string[];
-  inputs: any[];
-  oldInputs?: any[];
-  output: any;
+  // deps: string[];
+  props: Props;
+  oldProps?: Props;
+  output: Out;
 }
+
+export type StateStoreType = new (scope: Scope) => StateStore;
 
 export interface StateStore {
   /** Initialize the state container if one is required */
@@ -35,23 +42,21 @@ export interface StateStore {
   delete(key: string): Promise<void>;
 }
 
-const stateFile = path.join(process.cwd(), ".alchemy");
-
-export type StateStoreType = new (dir: string) => StateStore;
+const stateRootDir = path.join(process.cwd(), ".alchemy");
 
 export class FileSystemStateStore implements StateStore {
-  public readonly path: string;
-  constructor(dir: string) {
-    this.path = path.join(stateFile, dir);
+  public readonly dir: string;
+  constructor(public readonly scope: Scope) {
+    this.dir = path.join(stateRootDir, ...scope.chain);
   }
 
   async init(): Promise<void> {
-    await fs.promises.mkdir(stateFile, { recursive: true });
-    await fs.promises.mkdir(this.path, { recursive: true });
+    await fs.promises.mkdir(stateRootDir, { recursive: true });
+    await fs.promises.mkdir(this.dir, { recursive: true });
   }
 
   async deinit(): Promise<void> {
-    await ignore("ENOENT", () => fs.promises.rmdir(this.path));
+    await ignore("ENOENT", () => fs.promises.rmdir(this.dir));
   }
 
   async count(): Promise<number> {
@@ -60,7 +65,7 @@ export class FileSystemStateStore implements StateStore {
 
   async list(): Promise<string[]> {
     try {
-      const files = await fs.promises.readdir(this.path, {
+      const files = await fs.promises.readdir(this.dir, {
         withFileTypes: true,
       });
       return files
@@ -80,7 +85,7 @@ export class FileSystemStateStore implements StateStore {
         await this.getPath(key),
         "utf8",
       );
-      return (await deserialize(JSON.parse(content))) as State;
+      return (await deserialize(this.scope, JSON.parse(content))) as State;
     } catch (error: any) {
       if (error.code === "ENOENT") {
         return undefined;
@@ -92,7 +97,7 @@ export class FileSystemStateStore implements StateStore {
   async set(key: string, value: State): Promise<void> {
     return fs.promises.writeFile(
       await this.getPath(key),
-      JSON.stringify(await serialize(value), null, 2),
+      JSON.stringify(await serialize(this.scope, value), null, 2),
     );
   }
 
@@ -121,7 +126,7 @@ export class FileSystemStateStore implements StateStore {
   }
 
   private async getPath(key: string): Promise<string> {
-    const file = path.join(this.path, `${key}.json`);
+    const file = path.join(this.dir, `${key}.json`);
     const dir = path.dirname(file);
     await fs.promises.mkdir(dir, { recursive: true });
     return file;

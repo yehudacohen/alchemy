@@ -1,51 +1,116 @@
 import { AsyncLocalStorage } from "node:async_hooks";
-import path from "node:path";
-import type { Output } from "./output";
-import type { Provider, Resource, ResourceID } from "./resource";
+import type { PendingResource, ResourceID } from "./resource";
+import {
+  FileSystemStateStore,
+  type StateStore,
+  type StateStoreType,
+} from "./state";
 
 const scopeStorage = new AsyncLocalStorage<Scope>();
 
+export type ScopeOptions = {
+  appName?: string;
+  stage: string;
+  parent?: Scope;
+  scopeName?: string;
+  password?: string;
+  stateStore?: StateStoreType;
+  quiet?: boolean;
+};
+
 export class Scope {
-  public readonly nodes = new Map<
-    ResourceID,
-    {
-      provider: Provider<any, any[], any>;
-      resource: Resource<any, any>;
-    }
-  >();
-
-  public readonly callbacks: Output<void>[] = [];
-
-  constructor(
-    public readonly scopeName: string | null = null,
-    public readonly parent: Scope | undefined = undefined,
-  ) {}
-
-  public getScopePath(root: string): string {
-    // First, compute the parent's scope path
-    const parentPath = this.parent ? this.parent.getScopePath(root) : root;
-    // Then join the current scope name (if any) onto the parent's path
-    return this.scopeName ? path.join(parentPath, this.scopeName) : parentPath;
+  public static get(): Scope | undefined {
+    return scopeStorage.getStore();
   }
-}
 
-export const rootScope = new Scope(null);
+  public static get current(): Scope {
+    const scope = Scope.get();
+    if (!scope) {
+      throw new Error("Not running within an Alchemy Scope");
+    }
+    return scope;
+  }
 
-export function getScope(): Scope {
-  return scopeStorage.getStore() ?? rootScope;
-}
+  public readonly resources = new Map<ResourceID, PendingResource>();
+  public readonly appName: string | undefined;
+  public readonly stage: string;
+  public readonly scopeName: string | null;
+  public readonly parent: Scope | undefined;
+  public readonly password: string | undefined;
+  public readonly state: StateStore;
+  public readonly quiet: boolean;
 
-export function withScope<T>(
-  scope: Scope,
-  fn: () => T | Promise<T>,
-): Promise<T> {
-  return scopeStorage.run(scope, async () => fn());
-}
+  constructor(options: ScopeOptions) {
+    this.appName = options.appName;
+    this.stage = options.stage;
+    this.scopeName = options.scopeName ?? null;
+    this.parent = options.parent ?? Scope.get();
+    this.quiet = options.quiet ?? this.parent?.quiet ?? false;
+    if (this.parent && !this.scopeName) {
+      throw new Error("Scope name is required when creating a child scope");
+    }
+    this.password = options.password;
+    this.state = new (options.stateStore ?? FileSystemStateStore)(this);
+  }
 
-export function pushScope<T>(
-  parent: Scope,
-  scopeName: string,
-  fn: () => T | Promise<T>,
-): Promise<T> {
-  return scopeStorage.run(new Scope(scopeName, parent), async () => fn());
+  public async delete(resourceID: ResourceID) {
+    await this.state.delete(resourceID);
+    this.resources.delete(resourceID);
+  }
+
+  private _seq = 0;
+
+  public seq() {
+    return this._seq++;
+  }
+
+  public get chain(): string[] {
+    const thisScope = this.scopeName ? [this.scopeName] : [];
+    const app = this.appName ? [this.appName] : [];
+    if (this.parent) {
+      return [...this.parent.chain, ...thisScope];
+    } else {
+      return [...app, this.stage, ...thisScope];
+    }
+  }
+
+  public enter() {
+    scopeStorage.enterWith(this);
+  }
+
+  public async init() {
+    await this.state.init?.();
+  }
+
+  public async deinit() {
+    await this.state.deinit?.();
+  }
+
+  public fqn(resourceID: ResourceID): string {
+    return [...this.chain, resourceID].join("/");
+  }
+
+  public async finalize() {
+    // TODO
+  }
+
+  public async run<T>(fn: (scope: Scope) => Promise<T>): Promise<T> {
+    return scopeStorage.run(this, () => fn(this));
+  }
+
+  [Symbol.asyncDispose]() {
+    return this.finalize();
+  }
+
+  /**
+   * Returns a string representation of the scope.
+   */
+  toString() {
+    return `Scope(
+  chain=${this.chain.join("/")},
+  resources=[${Array.from(this.resources.values())
+    .map((r) => r.ID)
+    .join(",\n  ")}]
+)`;
+  }
 }

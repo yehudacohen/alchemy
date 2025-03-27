@@ -1,7 +1,13 @@
-import type { Resolved } from "../output";
-import { type Context, Resource } from "../resource";
-import { withExponentialBackoff } from "../utils/retry";
+import type { Context } from "../context";
+import { Resource } from "../resource";
+import { withExponentialBackoff } from "../util/retry";
 import { createCloudflareApi } from "./api";
+
+export function isKVNamespace(resource: any): resource is KVNamespace {
+  return (
+    resource && typeof resource === "object" && resource.type === "kv_namespace"
+  );
+}
 
 /**
  * Properties for creating or updating a KV Namespace
@@ -52,12 +58,14 @@ export interface KVPair {
 /**
  * Output returned after KV Namespace creation/update
  */
-export interface KVNamespaceOutput extends KVNamespaceProps {
+export interface KVNamespace
+  extends Resource<"cloudflare::KVNamespace">,
+    KVNamespaceProps {
   type: "kv_namespace";
   /**
    * The ID of the namespace
    */
-  id: string;
+  namespaceId: string;
 
   /**
    * Time at which the namespace was created
@@ -70,23 +78,19 @@ export interface KVNamespaceOutput extends KVNamespaceProps {
   modifiedAt: number;
 }
 
-export function isKVNamespace(
-  resource: any,
-): resource is Resolved<KVNamespace> {
-  return (
-    resource && typeof resource === "object" && resource.type === "kv_namespace"
-  );
-}
-
-export class KVNamespace extends Resource(
+export const KVNamespace = Resource(
   "cloudflare::KVNamespace",
-  async (ctx: Context<KVNamespaceOutput>, props: KVNamespaceProps) => {
+  async function (
+    this: Context<KVNamespace>,
+    id: string,
+    props: KVNamespaceProps,
+  ) {
     // Create Cloudflare API client with automatic account discovery
     const api = await createCloudflareApi();
 
-    if (ctx.event === "delete") {
+    if (this.phase === "delete") {
       // For delete operations, we need to check if the namespace ID exists in the output
-      const namespaceId = ctx.output?.id;
+      const namespaceId = this.output?.namespaceId;
       if (namespaceId) {
         // Delete KV namespace
         const deleteResponse = await api.delete(
@@ -104,17 +108,18 @@ export class KVNamespace extends Resource(
       }
 
       // Return minimal output for deleted state
-      return;
+      return this.destroy();
     } else {
       // For create or update operations
-      // If ctx.event is "update", we expect ctx.output to exist
-      let namespaceId = ctx.event === "update" ? ctx.output?.id || "" : "";
+      // If this.phase is "update", we expect this.output to exist
+      let namespaceId =
+        this.phase === "update" ? this.output?.namespaceId || "" : "";
       let createdAt =
-        ctx.event === "update"
-          ? ctx.output?.createdAt || Date.now()
+        this.phase === "update"
+          ? this.output?.createdAt || Date.now()
           : Date.now();
 
-      if (ctx.event === "update" && namespaceId) {
+      if (this.phase === "update" && namespaceId) {
         // Can't update a KV namespace title directly, just work with existing ID
       } else {
         // Create new KV namespace
@@ -207,19 +212,14 @@ export class KVNamespace extends Resource(
         }
       }
 
-      const now = Date.now();
-
-      // Construct the output
-      const output: KVNamespaceOutput = {
+      return this({
         type: "kv_namespace",
-        id: namespaceId,
+        namespaceId: namespaceId,
         title: props.title,
         values: props.values,
         createdAt: createdAt,
-        modifiedAt: now,
-      };
-
-      return output;
+        modifiedAt: Date.now(),
+      });
     }
   },
-) {}
+);

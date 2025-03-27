@@ -15,8 +15,9 @@ import {
   UpdateAssumeRolePolicyCommand,
   UpdateRoleCommand,
 } from "@aws-sdk/client-iam";
-import { ignore } from "../error";
-import { type Context, Resource } from "../resource";
+import type { Context } from "../context";
+import { Resource } from "../resource";
+import { ignore } from "../util/ignore";
 import type { PolicyDocument } from "./policy";
 
 export interface RoleProps {
@@ -34,20 +35,23 @@ export interface RoleProps {
   tags?: Record<string, string>;
 }
 
-export interface RoleOutput extends RoleProps {
-  id: string; // Same as roleName
+export interface Role extends Resource<"iam::Role">, RoleProps {
   arn: string;
   uniqueId: string; // Unique identifier for the role
   roleId: string; // The stable and unique string identifying the role
   createDate: Date;
 }
 
-export class Role extends Resource(
+export const Role = Resource(
   "iam::Role",
-  async (ctx: Context<RoleOutput>, props: RoleProps): Promise<RoleOutput> => {
+  async function (
+    this: Context<Role>,
+    id: string,
+    props: RoleProps,
+  ): Promise<Role> {
     const client = new IAMClient({});
 
-    if (ctx.event === "delete") {
+    if (this.phase === "delete") {
       // Delete any inline policies first
       if (props.policies) {
         for (const policy of props.policies) {
@@ -95,21 +99,14 @@ export class Role extends Resource(
           }),
         ),
       );
-      return {
-        ...props,
-        id: props.roleName,
-        arn: `arn:aws:iam::${process.env.AWS_ACCOUNT_ID}:role/${props.roleName}`,
-        uniqueId: "",
-        roleId: "",
-        createDate: new Date(),
-      };
+      return this.destroy();
     }
 
     const assumeRolePolicyDocument = JSON.stringify(props.assumeRolePolicy);
     let role;
 
     try {
-      if (ctx.event === "create") {
+      if (this.phase === "create") {
         // Try to create the role
         await client.send(
           new CreateRoleCommand({
@@ -126,11 +123,11 @@ export class Role extends Resource(
               })),
               {
                 Key: "alchemy_stage",
-                Value: ctx.stage,
+                Value: this.stage,
               },
               {
                 Key: "alchemy_resource",
-                Value: ctx.resourceID,
+                Value: this.id,
               },
             ],
           }),
@@ -139,7 +136,7 @@ export class Role extends Resource(
     } catch (error: any) {
       if (
         error instanceof EntityAlreadyExistsException &&
-        ctx.event === "create"
+        this.phase === "create"
       ) {
         // Check if we were the ones who created it
         const existingRole = await client.send(
@@ -157,8 +154,8 @@ export class Role extends Resource(
           ) || {};
 
         if (
-          roleTags.alchemy_stage !== ctx.stage ||
-          roleTags.alchemy_resource !== ctx.resourceID
+          roleTags.alchemy_stage !== this.stage ||
+          roleTags.alchemy_resource !== this.id
         ) {
           throw error;
         }
@@ -201,8 +198,8 @@ export class Role extends Resource(
     // Update tags
     const newTags = {
       ...props.tags,
-      alchemy_stage: ctx.stage,
-      alchemy_resource: ctx.resourceID,
+      alchemy_stage: this.stage,
+      alchemy_resource: this.id,
     };
     const tags: Tag[] = Object.entries(newTags).map(([Key, Value]) => ({
       Key,
@@ -217,7 +214,7 @@ export class Role extends Resource(
 
     // Handle policy changes
     const previousPolicies =
-      ctx.event === "update" ? ctx.output.policies || [] : [];
+      this.phase === "update" ? this.output!.policies || [] : [];
     const currentPolicies = props.policies || [];
 
     // Delete policies that were removed
@@ -302,13 +299,13 @@ export class Role extends Resource(
       throw new Error(`Failed to create or update role ${props.roleName}`);
     }
 
-    return {
+    return this({
       ...props,
-      id: props.roleName,
       arn: role.Role.Arn!,
       uniqueId: role.Role.RoleId!,
       roleId: role.Role.RoleId!,
+      roleName: role.Role.RoleName ?? props.roleName,
       createDate: role.Role.CreateDate!,
-    };
+    });
   },
-) {}
+);

@@ -1,10 +1,13 @@
-import { describe, expect, test } from "bun:test";
-import { apply } from "../../src/apply";
+import { describe, expect } from "bun:test";
+import { alchemy } from "../../src/alchemy";
 import { destroy } from "../../src/destroy";
 import { createGitHubClient } from "../../src/github/client";
 import { GitHubSecret } from "../../src/github/secret";
 import { secret } from "../../src/secret";
+import "../../src/test/bun";
 import { BRANCH_PREFIX } from "../util";
+
+const test = alchemy.test(import.meta);
 
 // Optional environment variable overrides
 const owner = process.env.GITHUB_OWNER || "sam-goodwin";
@@ -16,7 +19,7 @@ describe("GitHubSecret Resource", () => {
 
   test.skipIf(!!process.env.CI)(
     "create, update, and delete secret",
-    async () => {
+    async (scope) => {
       // Create an authenticated client for testing - will use the same auth as the resource
       const octokit = await createGitHubClient();
 
@@ -26,22 +29,20 @@ describe("GitHubSecret Resource", () => {
       const updatedSecretValue = secret("this-is-an-updated-test-secret-value");
 
       // Create a test secret
-      const ghSecret = new GitHubSecret(testId, {
-        owner,
-        repository,
-        name: secretName,
-        value: secretValue,
-      });
 
       try {
-        console.log(`Creating secret: ${secretName}`);
+        const ghSecret = await GitHubSecret(testId, {
+          owner,
+          repository,
+          name: secretName,
+          value: secretValue,
+        });
 
         // Apply to create the secret - resource will handle authentication
-        const output = await apply(ghSecret);
-        expect(output.id).toBeTruthy();
-        expect(output.owner).toEqual(owner);
-        expect(output.repository).toEqual(repository);
-        expect(output.name).toEqual(secretName);
+        expect(ghSecret.id).toBeTruthy();
+        expect(ghSecret.owner).toEqual(owner);
+        expect(ghSecret.repository).toEqual(repository);
+        expect(ghSecret.name).toEqual(secretName);
 
         // Try to verify with the API
         try {
@@ -56,10 +57,6 @@ describe("GitHubSecret Resource", () => {
             (s) => s.name === secretName,
           );
           expect(secretInfo).toBeDefined();
-
-          if (secretInfo) {
-            console.log(`Secret created successfully: ${secretName}`);
-          }
         } catch (error: any) {
           // If we get a permission error, log it but don't fail the test
           if (error.status === 403) {
@@ -69,23 +66,19 @@ describe("GitHubSecret Resource", () => {
           }
         }
 
-        // Update the secret
-        console.log(`Updating secret: ${secretName}`);
-
-        const updatedSecret = new GitHubSecret(testId, {
+        const updatedSecret = await GitHubSecret(testId, {
           owner,
           repository,
           name: secretName,
           value: updatedSecretValue,
         });
 
-        const updateOutput = await apply(updatedSecret);
-        expect(updateOutput.id).toEqual(output.id);
+        expect(updatedSecret.id).toEqual(ghSecret.id);
       } catch (error: any) {
         console.error(`Test error: ${error.message}`);
         throw error;
       } finally {
-        await destroy(ghSecret);
+        await destroy(scope);
       }
     },
   );

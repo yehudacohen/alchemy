@@ -2,10 +2,9 @@ import { exec } from "child_process";
 import { promises as fs } from "fs";
 import path from "path";
 import { promisify } from "util";
-import { apply } from "../apply";
-import type { BundleProps } from "../esbuild";
-import type { Input } from "../input";
-import { type Context, Resource } from "../resource";
+import type { Context } from "../context";
+import type { BundleProps } from "../esbuild/bundle";
+import { Resource } from "../resource";
 import { createCloudflareApi } from "./api";
 import type { Bindings } from "./bindings";
 import { generateAssetManifest } from "./generate-asset-manifest";
@@ -131,12 +130,7 @@ export interface StaticSiteProps {
 /**
  * Output returned after StaticSite creation/update
  */
-export interface StaticSiteOutput {
-  /**
-   * The ID of the site
-   */
-  id: string;
-
+export interface StaticSite extends Resource<"cloudflare::StaticSite"> {
   /**
    * The ID of the worker
    */
@@ -208,16 +202,20 @@ export interface StaticSiteOutput {
   routes?: Record<string, string>;
 }
 
-export class StaticSite extends Resource(
+export const StaticSite = Resource(
   "cloudflare::StaticSite",
   {
     alwaysUpdate: true,
   },
-  async (ctx: Context<StaticSiteOutput>, props: StaticSiteProps) => {
-    if (ctx.event === "delete") {
+  async function (
+    this: Context<StaticSite>,
+    id: string,
+    props: StaticSiteProps,
+  ) {
+    if (this.phase === "delete") {
       // For delete operations, we'll rely on the Worker delete to clean up
       // Return empty output for deleted state
-      return;
+      return this.destroy();
     }
 
     // Validate that a name is provided
@@ -246,7 +244,7 @@ export class StaticSite extends Resource(
     // Run build command if provided
     if (props.build?.command) {
       try {
-        if (!ctx.quiet) {
+        if (!this.quiet) {
           console.log(props.build.command);
         }
         const execAsync = promisify(exec);
@@ -254,7 +252,7 @@ export class StaticSite extends Resource(
           cwd: process.cwd(),
         });
 
-        if (stdout && !ctx.quiet) console.log(stdout);
+        if (stdout && !this.quiet) console.log(stdout);
       } catch (error: any) {
         // Log detailed error information
         console.error(`Build command failed with exit code ${error.code}`);
@@ -276,22 +274,18 @@ export class StaticSite extends Resource(
     const api = await createCloudflareApi();
 
     // Step 1: Create or get the KV namespace for assets
-    const kv = new KVNamespace("assets", {
-      title: `${siteName}-assets`,
-    });
-
-    const [{ id: kvNamespaceId }, assetManifest] = await Promise.all([
-      apply(kv, {
-        quiet: ctx.quiet,
+    const [kv, assetManifest] = await Promise.all([
+      KVNamespace("assets", {
+        title: `${siteName}-assets`,
       }),
       generateAssetManifest(props.dir),
     ]);
 
     // Step 3: Upload assets to KV
-    await uploadAssetManifest(api, kvNamespaceId, assetManifest);
+    await uploadAssetManifest(api, kv.namespaceId, assetManifest);
 
     // Prepare the bindings for the worker
-    const bindings: Input<Bindings> = {
+    const bindings: Bindings = {
       ASSETS: kv,
       INDEX_PAGE: indexPage,
       // Add error page binding if specified
@@ -335,39 +329,31 @@ export class StaticSite extends Resource(
       // TypeScript file doesn't exist, use JavaScript (default)
     }
 
-    const worker = new Worker(
-      "worker",
-      {
-        name: siteName,
-        url: true,
-        format: props.format || "esm",
-        // If a custom worker script is provided, use it, otherwise use the entrypoint from router
-        ...(props.workerScript
-          ? { script: props.workerScript }
-          : {
-              entrypoint: path.resolve(__dirname, entrypointFile),
-              bundle: bundleOptions,
-            }),
-        bindings,
-        env: {
-          ...Object.fromEntries(
-            Object.entries(routes).map(([key, value]) => [
-              `__ROUTE_${value}`,
-              key,
-            ]),
-          ),
-        },
+    const worker = await Worker("worker", {
+      name: siteName,
+      url: true,
+      format: props.format || "esm",
+      // If a custom worker script is provided, use it, otherwise use the entrypoint from router
+      ...(props.workerScript
+        ? { script: props.workerScript }
+        : {
+            entrypoint: path.resolve(__dirname, entrypointFile),
+            bundle: bundleOptions as any,
+          }),
+      bindings,
+      env: {
+        ...Object.fromEntries(
+          Object.entries(routes).map(([key, value]) => [
+            `__ROUTE_${value}`,
+            key,
+          ]),
+        ),
       },
-      // place a dependency on the namespace
-      kv.id,
-    );
+    });
 
-    // Get current timestamp
     const now = Date.now();
 
-    // Construct the output
-    const output: Input<StaticSiteOutput> = {
-      id: siteName,
+    return this({
       workerId: worker.id,
       name: siteName,
       directory: props.dir,
@@ -375,14 +361,12 @@ export class StaticSite extends Resource(
       errorPage: props.errorPage,
       indexPage,
       assets: assetManifest.map((item) => item.key),
-      createdAt: ctx.output?.createdAt || now,
+      createdAt: this.output?.createdAt || now,
       updatedAt: now,
       domain: props.domain,
       production: props.production !== false,
-      url: worker.url as Input<string | undefined>,
+      url: worker.url,
       routes,
-    };
-
-    return output;
+    });
   },
-) {}
+);

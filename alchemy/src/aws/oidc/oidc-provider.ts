@@ -7,7 +7,8 @@ import {
   type Tag,
   UpdateAssumeRolePolicyCommand,
 } from "@aws-sdk/client-iam";
-import { type Context, Resource } from "../../resource";
+import type { Context } from "../../context";
+import { Resource } from "../../resource";
 import { getAccountId } from "../account-id";
 
 /**
@@ -60,7 +61,9 @@ export interface OIDCProviderProps {
 /**
  * Output returned after OIDC provider configuration
  */
-export interface OIDCProviderOutput extends OIDCProviderProps {
+export interface OIDCProvider
+  extends Resource<"aws::OIDCProvider">,
+    OIDCProviderProps {
   /**
    * The ARN of the OIDC provider
    */
@@ -81,16 +84,20 @@ const TRUST_POLICY_SID = "GitHubOIDCTrust";
 /**
  * Resource for configuring AWS OIDC provider for GitHub Actions
  */
-export class OIDCProvider extends Resource(
+export const OIDCProvider = Resource(
   "aws::OIDCProvider",
-  async (ctx: Context<OIDCProviderOutput>, props: OIDCProviderProps) => {
+  async function (
+    this: Context<OIDCProvider>,
+    id: string,
+    props: OIDCProviderProps,
+  ) {
     // Initialize AWS SDK client
     const client = new IAMClient({
       region: props.region,
     });
 
-    if (ctx.event === "delete") {
-      if (ctx.output?.providerArn) {
+    if (this.phase === "delete") {
+      if (this.output?.providerArn) {
         try {
           // First, remove our trust policy statement from the role
           const getRole = await client.send(
@@ -120,7 +127,7 @@ export class OIDCProvider extends Resource(
           // Then delete the OIDC provider if we're the last user
           const provider = await client.send(
             new GetOpenIDConnectProviderCommand({
-              OpenIDConnectProviderArn: ctx.output.providerArn,
+              OpenIDConnectProviderArn: this.output.providerArn,
             }),
           );
 
@@ -128,7 +135,7 @@ export class OIDCProvider extends Resource(
           if (provider && (!provider.Tags || provider.Tags.length === 0)) {
             await client.send(
               new DeleteOpenIDConnectProviderCommand({
-                OpenIDConnectProviderArn: ctx.output.providerArn,
+                OpenIDConnectProviderArn: this.output.providerArn,
               }),
             );
           }
@@ -137,7 +144,7 @@ export class OIDCProvider extends Resource(
           console.error("Error during cleanup:", error);
         }
       }
-      return;
+      return this.destroy();
     }
 
     try {
@@ -240,14 +247,14 @@ export class OIDCProvider extends Resource(
         }),
       );
 
-      return {
+      return this({
         ...props,
         providerArn,
         createdAt: Date.now(),
-      };
+      });
     } catch (error) {
       console.error("Error configuring OIDC provider:", error);
       throw error;
     }
   },
-) {}
+);

@@ -5,6 +5,7 @@ import {
   GetQueueUrlCommand,
   SQSClient,
 } from "@aws-sdk/client-sqs";
+import type { Context } from "../context";
 import { Resource } from "../resource";
 
 export interface QueueProps {
@@ -37,15 +38,18 @@ export interface QueueProps {
   tags?: Record<string, string>;
 }
 
-export interface QueueOutput extends QueueProps {
-  id: string; // Same as queueName
+export interface Queue extends Resource<"sqs::Queue">, QueueProps {
   arn: string;
   url: string;
 }
 
-export class Queue extends Resource(
+export const Queue = Resource(
   "sqs::Queue",
-  async (ctx, props: QueueProps) => {
+  async function (
+    this: Context<Queue>,
+    id: string,
+    props: QueueProps,
+  ): Promise<Queue> {
     const client = new SQSClient({});
     // Don't automatically add .fifo suffix - user must include it in queueName
     const queueName = props.queueName;
@@ -55,7 +59,7 @@ export class Queue extends Resource(
       throw new Error("FIFO queue names must end with .fifo suffix");
     }
 
-    if (ctx.event === "delete") {
+    if (this.phase === "delete") {
       try {
         // Get queue URL first
         const urlResponse = await client.send(
@@ -96,12 +100,7 @@ export class Queue extends Resource(
         }
       }
 
-      return {
-        ...props,
-        id: props.queueName,
-        arn: `arn:aws:sqs:${client.config.region}:${process.env.AWS_ACCOUNT_ID}:${queueName}`,
-        url: "",
-      };
+      return this.destroy();
     } else {
       // Create queue with attributes
       const attributes: Record<string, string> = {};
@@ -164,12 +163,11 @@ export class Queue extends Resource(
           }),
         );
 
-        return {
+        return this({
           ...props,
-          id: props.queueName,
           arn: attributesResponse.Attributes!.QueueArn!,
           url: createResponse.QueueUrl!,
-        };
+        });
       } catch (error: any) {
         if (error.name === "QueueAlreadyExists") {
           // Get existing queue URL
@@ -187,12 +185,11 @@ export class Queue extends Resource(
             }),
           );
 
-          return {
+          return this({
             ...props,
-            id: props.queueName,
             arn: attributesResponse.Attributes!.QueueArn!,
             url: urlResponse.QueueUrl!,
-          };
+          });
         } else if (error.name === "QueueDeletedRecently") {
           // Queue was recently deleted, wait and retry
           const maxRetries = 3;
@@ -220,12 +217,11 @@ export class Queue extends Resource(
                 }),
               );
 
-              return {
+              return this({
                 ...props,
-                id: props.queueName,
                 arn: attributesResponse.Attributes!.QueueArn!,
                 url: createResponse.QueueUrl!,
-              };
+              });
             } catch (retryError: any) {
               if (
                 retryError.name !== "QueueDeletedRecently" ||
@@ -241,4 +237,4 @@ export class Queue extends Resource(
       }
     }
   },
-) {}
+);

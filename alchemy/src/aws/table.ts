@@ -8,9 +8,10 @@ import {
   ResourceInUseException,
   ResourceNotFoundException,
 } from "@aws-sdk/client-dynamodb";
-import { ignore } from "../error";
-import { type Context, Resource } from "../resource";
-import { withExponentialBackoff } from "../utils/retry";
+import type { Context } from "../context";
+import { Resource } from "../resource";
+import { ignore } from "../util/ignore";
+import { withExponentialBackoff } from "../util/retry";
 
 export interface TableProps {
   tableName: string;
@@ -28,22 +29,22 @@ export interface TableProps {
   tags?: Record<string, string>;
 }
 
-export interface TableOutput extends TableProps {
-  id: string; // Same as tableName
+export interface Table extends Resource<"dynamo::Table">, TableProps {
   arn: string;
   streamArn?: string;
   tableId: string;
 }
 
-export class Table extends Resource(
+export const Table = Resource(
   "dynamo::Table",
-  async (
-    ctx: Context<TableOutput>,
+  async function (
+    this: Context<Table>,
+    id: string,
     props: TableProps,
-  ): Promise<TableOutput | void> => {
+  ): Promise<Table> {
     const client = new DynamoDBClient({});
 
-    if (ctx.event === "delete") {
+    if (this.phase === "delete") {
       await withExponentialBackoff(
         async () => {
           await ignore(ResourceNotFoundException.name, () =>
@@ -93,7 +94,7 @@ export class Table extends Resource(
         );
       }
 
-      return;
+      return this.destroy();
     } else {
       // Setup for table creation
       const attributeDefinitions = [
@@ -213,13 +214,12 @@ export class Table extends Resource(
         );
       }
 
-      return {
+      return this({
         ...props,
-        id: props.tableName,
         arn: tableDescription!.TableArn!,
         streamArn: tableDescription!.LatestStreamArn,
         tableId: tableDescription!.TableId!,
-      };
+      });
     }
   },
-) {}
+);
