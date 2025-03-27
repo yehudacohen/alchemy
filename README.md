@@ -452,7 +452,18 @@ await destroy(role); // will delete Role and then Function
 
 ### Destroy a Scope
 
-It is
+You can destroy all Resources in a Scope with a single `destroy` call:
+
+```ts
+const scope = alchemy.scope("scope");
+try {
+  await Role("role");
+  await Worker("worker");
+} finally {
+  // destroy them all!
+  await destroy(scope);
+}
+```
 
 ### Destroy the App
 
@@ -477,6 +488,9 @@ await using _ = alchemy({
 > ```
 
 ## Test Resources
+
+> [!NOTE]
+> TODO
 
 ## Physical Names
 
