@@ -2,7 +2,9 @@
 
 Alchemy is a embeddable, zero-dependency, TypeScript-native Infrastructure-as-Code (IaC) library for modeling Resources that are Created, Updated and Deleted automatically.
 
-Unlike similar tools like Pulumi, Terraform, and CloudFormation, Alchemy is implemented in pure ESM-native TypeScript code with zero dependencies. Resources are simple memoized async functions that can run in any JavaScript runtime, including the browser, serverless functions and durable workflows.
+Unlike similar tools like Pulumi, Terraform, and CloudFormation, Alchemy is implemented in pure ESM-native TypeScript code with zero dependencies.
+
+Resources are simple memoized async functions that can run in any JavaScript runtime, including the browser, serverless functions and durable workflows.
 
 ```ts
 import alchemy from "alchemy";
