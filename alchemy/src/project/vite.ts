@@ -73,7 +73,8 @@ export const ViteProject = Resource(
     if (this.phase === "delete") {
       try {
         if (await fs.exists(props.name)) {
-          await fs.rm(props.name, { recursive: true, force: true });
+          // TODO: OS agnostic - fs.rm is slow to delete node_modules/
+          await execAsync("rm -rf " + props.name);
         }
       } catch (error) {
         console.error(`Error deleting project ${id}:`, error);
@@ -112,17 +113,19 @@ import { defineConfig } from "vite";
 
 // https://vite.dev/config/
 export default defineConfig({
-plugins: [react(), tailwindcss()],
+  plugins: [react(), tailwindcss()],
 });`,
     );
 
     // Add Tailwind CSS import to index.css
     const indexCssPath = path.join(props.name, "src", "index.css");
     const currentCss = await fs.readFile(indexCssPath, "utf-8");
-    await fs.writeFile(
-      indexCssPath,
-      currentCss + '\n\n@import "tailwindcss";\n',
-    );
+    if (!currentCss.includes('@import "tailwindcss";')) {
+      await fs.writeFile(
+        indexCssPath,
+        '@import "tailwindcss";\n\n' + currentCss,
+      );
+    }
   }
 
   await Promise.all([

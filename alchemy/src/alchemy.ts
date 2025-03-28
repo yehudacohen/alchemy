@@ -1,4 +1,4 @@
-import { destroy } from "./destroy";
+import { DestroyedSignal, destroy } from "./destroy";
 import { Scope } from "./scope";
 import { secret } from "./secret";
 import type { StateStoreType } from "./state";
@@ -116,5 +116,12 @@ async function run<T>(
           (this: Scope, scope: Scope) => Promise<T>,
         ]);
   await using scope = alchemy.scope(id, options);
-  return await fn.bind(scope)(scope);
+  try {
+    return await fn.bind(scope)(scope);
+  } catch (error) {
+    if (!(error instanceof DestroyedSignal)) {
+      scope.fail();
+    }
+    throw error;
+  }
 }
