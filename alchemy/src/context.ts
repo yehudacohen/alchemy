@@ -9,24 +9,33 @@ import type {
 import type { Scope } from "./scope";
 import type { State } from "./state";
 
-export type Context<Out extends Resource> =
-  | CreateContext<Out>
-  | UpdateContext<Out>
-  | DeleteContext<Out>;
+export type Context<
+  Out extends Resource,
+  Props extends ResourceProps = ResourceProps,
+> = CreateContext<Out> | UpdateContext<Out, Props> | DeleteContext<Out, Props>;
 
 export interface CreateContext<Out extends Resource> extends BaseContext<Out> {
   phase: "create";
   output?: undefined;
+  props?: undefined;
 }
 
-export interface UpdateContext<Out extends Resource> extends BaseContext<Out> {
+export interface UpdateContext<
+  Out extends Resource,
+  Props extends ResourceProps = ResourceProps,
+> extends BaseContext<Out> {
   phase: "update";
   output: Out;
+  props: Props;
 }
 
-export interface DeleteContext<Out extends Resource> extends BaseContext<Out> {
+export interface DeleteContext<
+  Out extends Resource,
+  Props extends ResourceProps = ResourceProps,
+> extends BaseContext<Out> {
   phase: "delete";
   output: Out;
+  props: Props;
 }
 
 export interface BaseContext<Out extends Resource> {
@@ -43,7 +52,6 @@ export interface BaseContext<Out extends Resource> {
    * This will cause the resource to be deleted at the end of the stack's CREATE phase.
    */
   replace(): void;
-
   /**
    * Terminate the resource lifecycle handler and destroy the resource.
    *
@@ -60,12 +68,13 @@ export interface BaseContext<Out extends Resource> {
   /**
    * Create the Resource envelope (with Alchemy + User properties)
    */
+  (id: string, props: Omit<Out, keyof Resource>): Out;
   (props: Omit<Out, keyof Resource>): Out;
 }
 
 export function context<
   Kind extends string,
-  Props extends ResourceProps,
+  Props extends ResourceProps | undefined,
   Out extends Resource,
 >({
   scope,
@@ -83,14 +92,24 @@ export function context<
   id: ResourceID;
   fqn: ResourceFQN;
   seq: number;
+  props: Props;
   state: State<Kind, Props, Out>;
   replace: () => void;
 }): Context<Out> {
-  function create(props: Omit<Out, "Kind" | "ID" | "Scope">): Out {
+  function create(props: Omit<Out, "Kind" | "ID" | "Scope">): Out;
+  function create(id: string, props: Omit<Out, "Kind" | "ID" | "Scope">): Out;
+  function create(
+    ...args:
+      | [props: Omit<Out, "Kind" | "ID" | "Scope">]
+      | [id: string, props: Omit<Out, "Kind" | "ID" | "Scope">]
+  ): Out {
+    const [ID, props] =
+      typeof args[0] === "string" ? (args as [string, any]) : [id, args[0]];
+
     return {
       ...props,
       Kind: kind,
-      ID: id,
+      ID,
       FQN: fqn,
       Scope: scope,
       Seq: seq,
@@ -103,6 +122,7 @@ export function context<
     fqn: fqn,
     phase,
     output: state.output,
+    props: state.props,
     replace,
     get: (key: string) => state.data[key],
     set: async (key: string, value: any) => {

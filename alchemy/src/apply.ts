@@ -7,6 +7,7 @@ import {
   type Resource,
   type ResourceProps,
 } from "./resource";
+import { Secret } from "./secret";
 import type { State } from "./state";
 import { serialize } from "./util/serde";
 
@@ -17,12 +18,12 @@ export interface ApplyOptions {
 
 export async function apply<Out extends Resource>(
   resource: PendingResource<Out>,
-  props: ResourceProps,
+  props: ResourceProps | undefined,
   options?: ApplyOptions,
 ): Promise<Awaited<Out>> {
   const scope = resource.Scope;
   try {
-    const quiet = props.quiet ?? scope.quiet;
+    const quiet = props?.quiet ?? scope.quiet;
     await scope.init();
     let state: State | undefined = (await scope.state.get(resource.ID))!;
     const provider: Provider = PROVIDERS.get(resource.Kind);
@@ -55,17 +56,27 @@ export async function apply<Out extends Resource>(
 
     // Skip update if inputs haven't changed and resource is in a stable state
     if (state.status === "created" || state.status === "updated") {
-      if (
-        JSON.stringify(state.props) ===
-          JSON.stringify(await serialize(scope, props)) &&
-        alwaysUpdate !== true
-      ) {
+      const oldProps = JSON.stringify(
+        state.props,
+        (_, value) =>
+          value instanceof Secret
+            ? {
+                "@secret": value.unencrypted,
+              }
+            : value,
+        2,
+      );
+      const newProps = JSON.stringify(
+        await serialize(scope, props, {
+          encrypt: false,
+        }),
+        null,
+        2,
+      );
+      if (oldProps === newProps && alwaysUpdate !== true) {
         if (!quiet) {
           console.log(`Skip:    "${resource.FQN}" (no changes)`);
         }
-        // if (resourceState.output !== undefined) {
-        //   resource[Provide](resourceState.output);
-        // }
         return state.output as Awaited<Out>;
       }
     }
@@ -92,6 +103,7 @@ export async function apply<Out extends Resource>(
       id: resource.ID,
       fqn: resource.FQN,
       seq: resource.Seq,
+      props: state.oldProps,
       state,
       replace: () => {
         if (isReplaced) {
@@ -104,9 +116,9 @@ export async function apply<Out extends Resource>(
       },
     });
 
-    const output = await alchemy.run(resource.ID, async () => {
-      return provider.handler.bind(ctx)(resource.ID, props);
-    });
+    const output = await alchemy.run(resource.ID, async () =>
+      provider.handler.bind(ctx)(resource.ID, props),
+    );
 
     if (!quiet) {
       console.log(

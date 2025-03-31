@@ -23,12 +23,15 @@ export async function destroy<Type extends string>(
     | [resource: Resource<Type> | undefined | null, options?: DestroyOptions]
 ): Promise<void> {
   if (isScopeArgs(args)) {
-    const [scope, options] = args;
-    const strategy = options?.strategy ?? "sequential";
+    const [scope] = args;
+    const options = {
+      strategy: "sequential",
+      ...(args[1] ?? {}),
+    } satisfies DestroyOptions;
+
     // destroy all active resources
-    await destroy.all(Array.from(scope.resources.values()), {
-      strategy,
-    });
+    await destroy.all(Array.from(scope.resources.values()), options);
+
     // then detect orphans and destroy them
     const orphans = await scope.state.all();
     await destroy.all(
@@ -67,10 +70,9 @@ export async function destroy<Type extends string>(
       console.log(`Delete:  "${instance.FQN}"`);
     }
 
-    const state = (await scope.state.get(instance.ID))!;
+    const state = await scope.state.get(instance.ID);
 
     if (state === undefined) {
-      console.warn(`Resource "${instance.FQN}" not found`);
       return;
     }
 
@@ -81,6 +83,7 @@ export async function destroy<Type extends string>(
       id: instance.ID,
       fqn: instance.FQN,
       seq: instance.Seq,
+      props: state.props,
       state,
       replace: () => {
         throw new Error("Cannot replace a resource that is being deleted");
