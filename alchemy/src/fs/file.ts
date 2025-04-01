@@ -5,43 +5,54 @@ import { Resource } from "../resource";
 import { ignore } from "../util/ignore";
 
 import { alchemy } from "../alchemy";
+import type { FileCollection } from "./file-collection";
+import type { FileRef } from "./file-ref";
 
 declare module "../alchemy" {
   interface Alchemy {
+    /**
+     * Creates a reference to a file in the filesystem.
+     * Used in template string interpolation to include file contents,
+     * commonly for documentation generation.
+     *
+     * @param path Path to the file
+     * @returns Promise resolving to a FileRef
+     *
+     * @example
+     * // Include a file in documentation generation
+     * await Document("api-docs", {
+     *   prompt: await alchemy`
+     *     Generate docs using the contents of:
+     *     ${alchemy.file("./README.md")}
+     *   `
+     * });
+     */
     file(path: string): Promise<FileRef>;
+
+    /**
+     * Creates a collection of files with their contents.
+     * Used in template string interpolation to include multiple file contents,
+     * commonly for bulk documentation generation.
+     *
+     * @param paths Array of file paths to include in collection
+     * @returns Promise resolving to a FileCollection
+     *
+     * @example
+     * // Include multiple source files in documentation generation
+     * await Document("provider-docs", {
+     *   prompt: await alchemy`
+     *     Generate comprehensive docs for these files:
+     *     ${alchemy.files([
+     *       "src/types.ts",
+     *       "src/resource.ts",
+     *       "src/provider.ts"
+     *     ])}
+     *   `
+     * });
+     */
     files(paths: string[]): Promise<FileCollection>;
     files(path: string, ...paths: string[]): Promise<FileCollection>;
   }
-}
-
-export type FileRef = {
-  kind: "fs::FileRef";
-  path: string;
-};
-
-export function isFileRef(value: unknown): value is FileRef {
-  return (
-    typeof value === "object" &&
-    value !== null &&
-    "kind" in value &&
-    value.kind === "fs::FileRef"
-  );
-}
-
-export type FileCollection = {
-  type: "fs::FileCollection";
-  files: {
-    [relativePath: string]: string;
-  };
-};
-
-export function isFileCollection(value: unknown): value is FileCollection {
-  return (
-    typeof value === "object" &&
-    value !== null &&
-    "type" in value &&
-    value.type === "fs::FileCollection"
-  );
 }
 
 alchemy.file = async (path: string) => ({
@@ -67,11 +78,40 @@ alchemy.files = async (
   };
 };
 
+/**
+ * Base file resource type
+ */
 export interface File extends Resource<"fs::File"> {
+  /**
+   * Path to the file
+   */
   path: string;
+  /**
+   * Content of the file
+   */
   content: string;
 }
 
+/**
+ * File Resource
+ *
+ * Creates and manages files in the filesystem with automatic directory creation
+ * and proper cleanup on deletion.
+ *
+ * @example
+ * // Create a simple text file
+ * const config = await File("config.txt", {
+ *   path: "config.txt",
+ *   content: "some configuration data"
+ * });
+ *
+ * @example
+ * // Create a file in a nested directory
+ * const log = await File("logs/app.log", {
+ *   path: "logs/app.log",
+ *   content: "application log entry"
+ * });
+ */
 export const File = Resource(
   "fs::File",
   async function (
@@ -98,50 +138,3 @@ export const File = Resource(
     });
   },
 );
-
-export type JsonFile = File;
-
-export function JsonFile(id: string, content: any): Promise<JsonFile> {
-  return File(id, {
-    path: id,
-    content: JSON.stringify(content, null, 2),
-  });
-}
-
-export type TextFile = File;
-
-export function TextFile(id: string, content: string): Promise<TextFile> {
-  return File(id, {
-    path: id,
-    content,
-  });
-}
-
-export type YamlFile = File;
-
-export async function YamlFile(id: string, content: any): Promise<YamlFile> {
-  const yaml = await import("yaml");
-  return File(id, {
-    path: id,
-    content: yaml.stringify(content),
-  });
-}
-
-export type TypeScriptFile = File;
-
-export async function TypeScriptFile(
-  id: string,
-  content: string,
-): Promise<TypeScriptFile> {
-  const prettier = await import("prettier");
-  return File(id, {
-    path: id,
-    content: await prettier.format(content, {
-      parser: "typescript",
-      editor: {
-        tabWidth: 2,
-        indentWidth: 2,
-      },
-    }),
-  });
-}
