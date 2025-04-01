@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "module": "./lib/index.js",
+  "license": "Apache-2.0",
   "scripts": {
     "docs:dev": "bun run --filter alchemy-web docs:dev",
     "docs:gen": "bun run --filter alchemy-web docs:gen",
