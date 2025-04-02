@@ -3,6 +3,7 @@ import "./alchemy/src/ai";
 import "./alchemy/src/aws";
 import "./alchemy/src/aws/oidc";
 import "./alchemy/src/cloudflare";
+import "./alchemy/src/dns";
 import "./alchemy/src/fs";
 import "./alchemy/src/stripe";
 import "./alchemy/src/vite";
@@ -11,9 +12,9 @@ import "./alchemy/src/vitepress";
 import alchemy from "./alchemy/src";
 import { Role, getAccountId } from "./alchemy/src/aws";
 import { GitHubOIDCProvider } from "./alchemy/src/aws/oidc";
-import { StaticSite, Zone } from "./alchemy/src/cloudflare";
+import { DnsRecords, Zone } from "./alchemy/src/cloudflare";
+import { ImportDnsRecords } from "./alchemy/src/dns";
 import { GitHubSecret } from "./alchemy/src/github";
-import { AlchemyDocs } from "./alchemy/src/internal/docs";
 
 const app = alchemy("github:alchemy", {
   stage: "prod",
@@ -82,25 +83,31 @@ const zone = await Zone("alchemy.run", {
   type: "full",
 });
 
+const { records } = await ImportDnsRecords("dns-records", {
+  domain: "alchemy.run",
+  bump: 2,
+});
+
+await DnsRecords("transfer-dns-records", {
+  zoneId: zone.id,
+  records: records.filter(
+    (r) =>
+      // cloudflare doesn't support SOA
+      // @see https://developers.cloudflare.com/api/operations/dns-records-for-a-zone-create-dns-record
+      r.type !== "SOA",
+  ),
+});
+
 console.log("nameservers:", zone.nameservers);
 
-// generate the Alchemy docs from source
-await AlchemyDocs({
-  docs: true,
-});
-
-const site = await StaticSite("alchemy.run site", {
-  name: "alchemy",
-  dir: "alchemy-web/.vitepress/dist",
-  domain: "alchemy.run",
-  build: {
-    command: "bun run --filter alchemy-web docs:build",
-  },
-});
-
-console.log({
-  url: site.url,
-});
+// const site = await StaticSite("alchemy.run site", {
+//   name: "alchemy",
+//   dir: "alchemy-web/.vitepress/dist",
+//   domain: "alchemy.run",
+//   build: {
+//     command: "bun run --filter alchemy-web docs:build",
+//   },
+// });
 
 await app.finalize();
 

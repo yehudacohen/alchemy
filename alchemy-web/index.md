@@ -2,8 +2,9 @@
 layout: home
 hero:
   name: Alchemy
-  text: Materialize all the things! 🪄
-  tagline: TypeScript-native Infrastructure-as-Code (IaC)
+  text: Materialize all the Things 🪄
+  tagline: Synthesize content and deploy cloud infrastructure with pure TypeScript
+    that runs in any JS runtime
   image:
     src: ./public/alchemist.png
     alt: The Alchemist

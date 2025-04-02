@@ -14,13 +14,15 @@
     "./aws": "./lib/aws/index.js",
     "./aws/oidc": "./lib/aws/oidc/index.js",
     "./cloudflare": "./lib/cloudflare/index.js",
+    "./dns": "./lib/dns/index.js",
     "./esbuild": "./lib/esbuild/index.js",
     "./fs": "./lib/fs/index.js",
     "./github": "./lib/github/index.js",
     "./shadcn": "./lib/shadcn/index.js",
     "./stripe": "./lib/stripe/index.js",
     "./test/bun": "./lib/test/bun.js",
-    "./vite": "./lib/vite/index.js"
+    "./vite": "./lib/vite/index.js",
+    "./vitepress": "./lib/vitepress/index.js"
   },
   "peerDependencies": {
     "@ai-sdk/openai": "^1.1.9",
