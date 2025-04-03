@@ -22,14 +22,6 @@ import type {
 } from "./zone-settings";
 
 /**
- * Cloudflare Zone response format
- */
-export interface CloudflareZone {
-  id: string;
-  name: string;
-}
-
-/**
  * Properties for creating or updating a Zone
  */
 export interface ZoneProps {
@@ -349,8 +341,8 @@ export const Zone = Resource(
         );
       }
 
-      const result = (await response.json()) as CloudflareZoneResponse;
-      const zoneData = result.result;
+      const zoneData = ((await response.json()) as { result: CloudflareZone })
+        .result;
 
       // Update zone settings if provided
       if (props.settings) {
@@ -388,17 +380,38 @@ export const Zone = Resource(
       });
 
       const body = await response.text();
+      let zoneData;
       if (!response.ok) {
         if (response.status === 400 && body.includes("already exists")) {
-          // TODO: should we error?
+          // Zone already exists, fetch it instead
+          console.warn(
+            `Zone '${props.name}' already exists during Zone create, adopting it...`,
+          );
+          const getResponse = await api.get(`/zones?name=${props.name}`);
+
+          if (!getResponse.ok) {
+            throw new Error(
+              `Error fetching existing zone '${props.name}': ${getResponse.statusText}`,
+            );
+          }
+
+          const zones = (
+            (await getResponse.json()) as { result: CloudflareZone[] }
+          ).result;
+          if (zones.length === 0) {
+            throw new Error(
+              `Zone '${props.name}' does not exist, but the name is reserved for another user.`,
+            );
+          }
+          zoneData = zones[0];
         } else {
           throw new Error(
             `Error creating zone '${props.name}': ${response.statusText}\n${body}`,
           );
         }
+      } else {
+        zoneData = (JSON.parse(body) as { result: CloudflareZone }).result;
       }
-
-      const zoneData = (JSON.parse(body) as CloudflareZoneResponse).result;
 
       // Update zone settings if provided
       if (props.settings) {
@@ -530,25 +543,20 @@ async function getZoneSettings(
 }
 
 /**
- * Cloudflare Zone API response
+ * Cloudflare Zone response format
  */
-interface CloudflareZoneResponse {
-  result: {
+export interface CloudflareZone {
+  id: string;
+  name: string;
+  type: "full" | "partial" | "secondary";
+  status: string;
+  paused: boolean;
+  account: {
     id: string;
-    name: string;
-    type: "full" | "partial" | "secondary";
-    status: string;
-    paused: boolean;
-    account: {
-      id: string;
-    };
-    name_servers: string[];
-    original_name_servers: string[] | null;
-    created_on: string;
-    modified_on: string;
-    activated_on: string | null;
   };
-  success: boolean;
-  errors: Array<{ code: number; message: string }>;
-  messages: string[];
+  name_servers: string[];
+  original_name_servers: string[] | null;
+  created_on: string;
+  modified_on: string;
+  activated_on: string | null;
 }

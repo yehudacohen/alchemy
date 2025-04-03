@@ -1,4 +1,5 @@
-import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
+import { anthropic } from "@ai-sdk/anthropic";
+import { openai } from "@ai-sdk/openai";
 import type { Secret } from "../secret";
 
 /**
@@ -20,7 +21,7 @@ export interface ModelConfig {
   /**
    * Model-specific options
    */
-  options?: Record<string, unknown>;
+  options?: Record<string, any>;
 }
 
 /**
@@ -48,31 +49,10 @@ export interface ClientConfig {
 /**
  * Creates an OpenAI-compatible client with the given configuration
  */
-export function createClient(config: ClientConfig) {
-  // Get API key from props or environment
-  const apiKey = config.apiKey?.unencrypted || process.env.OPENAI_API_KEY;
-  if (!apiKey) {
-    throw new Error("OpenAI API key is required");
+export function createModel(config: ClientConfig) {
+  if (config.model?.provider === "anthropic") {
+    return anthropic(config.model?.id ?? "claude-3-7-sonnet-latest");
+  } else {
+    return openai(config.model?.id ?? "gpt-4o");
   }
-
-  // Initialize OpenAI compatible provider
-  return createOpenAICompatible({
-    name: config.model?.provider || "openai",
-    apiKey,
-    baseURL: config.baseURL || "https://api.openai.com/v1",
-  });
-}
-
-/**
- * Gets the model ID from the configuration or returns the default
- */
-export function getModelId(config: ClientConfig): string {
-  return config.model?.id || "gpt-4o";
-}
-
-/**
- * Gets the model options from the configuration
- */
-export function getModelOptions(config: ClientConfig): Record<string, unknown> {
-  return config.model?.options || {};
 }

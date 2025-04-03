@@ -6,18 +6,19 @@
   "module": "./lib/index.js",
   "license": "Apache-2.0",
   "scripts": {
-    "docs:dev": "bun run --filter alchemy-web dev",
-    "docs:gen": "bun run --filter alchemy-web gen",
+    "dev:docs": "bun run --filter alchemy-web docs:dev",
+    "build:docs": "bun run --filter alchemy-web deploy -- --verbose",
     "bootstrap": "bun run --env-file .env ./alchemy.config.ts --verbose",
     "build": "tsc -b",
     "check": "tsc -b ./tsconfig.json",
     "publish:npm": "bun run --filter alchemy publish:npm"
   },
-  "workspaces": ["alchemy", "alchemy-web", "examples/*"],
+  "workspaces": ["alchemy", "examples/*"],
   "devDependencies": {
     "@biomejs/biome": "~1.8.0",
     "@types/bun": "latest",
     "@types/node": "latest",
+    "prettier": "^3.5.3",
     "typescript": "latest",
     "yaml": "^2.7.1"
   }

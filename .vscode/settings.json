@@ -32,8 +32,8 @@
     "editor.insertSpaces": true,
     "editor.defaultFormatter": "biomejs.biome"
   },
-  "[typescript|javascript|tsx|jsx]": {
-    "editor.defaultFormatter": "biomejs.biome"
+  "[typescript][javascript][tsx][jsx]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
   },
   "[markdown]": {
     "editor.formatOnSave": false
@@ -52,5 +52,13 @@
     "**/__pycache__": true,
     "**/*.pyc": true
   },
-  "cSpell.words": ["bunx", "cursorrules", "deinit", "Pulumi", "qwik", "Shadcn"]
+  "cSpell.words": [
+    "Agentic",
+    "bunx",
+    "cursorrules",
+    "deinit",
+    "Pulumi",
+    "qwik",
+    "Shadcn"
+  ]
 }

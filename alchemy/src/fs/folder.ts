@@ -13,6 +13,18 @@ export interface FolderProps {
    * @default true
    */
   delete?: boolean;
+
+  /**
+   * Whether to clean the folder during the deletion phase (even if it contains existing files)
+   * @default false
+   */
+  clean?: boolean;
+
+  /**
+   * Whether to create the folder recursively
+   * @default true
+   */
+  recursive?: boolean;
 }
 
 /**
@@ -56,13 +68,13 @@ export const Folder = Resource(
       if (props?.delete !== false) {
         // we just do a best effort attempt
         await ignore(["ENOENT", "ENOTEMPTY"], async () =>
-          fs.promises.rmdir(dirPath),
+          fs.promises.rmdir(dirPath, { recursive: props?.clean ?? false }),
         );
       }
       return this.destroy();
     } else {
       await ignore("EEXIST", async () =>
-        fs.promises.mkdir(dirPath, { recursive: true }),
+        fs.promises.mkdir(dirPath, { recursive: props?.recursive ?? true }),
       );
     }
     return this({
