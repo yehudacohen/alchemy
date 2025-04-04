@@ -1,15 +1,21 @@
-import alchemy from "alchemy";
-import { Data, Document } from "alchemy/ai";
-import { Folder } from "alchemy/fs";
 import { type } from "arktype";
 import fs from "fs/promises";
 import path from "path";
+import { Data, Document } from "../ai";
+import { alchemy } from "../alchemy";
+import { Folder } from "../fs";
 
 export interface DocsProps {
   /**
    * The output directory for the docs.
    */
   outDir: string | Folder;
+
+  /**
+   * The source directory for the docs.
+   */
+  srcDir: string;
+
   /**
    * Whether to filter the docs.
    * If true, include all docs.
@@ -28,17 +34,25 @@ export type AlchemyProviderDocs = {
 }[];
 
 export async function AlchemyProviderDocs({
+  srcDir,
   outDir,
   filter,
 }: DocsProps): Promise<AlchemyProviderDocs> {
   outDir = typeof outDir === "string" ? outDir : outDir.path;
-  const providersDir = (await Folder(path.join(outDir, "providers"))).path;
 
-  const exclude = ["util", "test", "vitepress", "vite", "shadcn", "internal"];
+  const exclude = [
+    "util",
+    "test",
+    "vitepress",
+    "vite",
+    "shadcn",
+    "internal",
+    "web",
+  ];
 
   // Get all folders in the alchemy/src directory
   let providers = (
-    await fs.readdir(path.resolve("..", "alchemy", "src"), {
+    await fs.readdir(srcDir, {
       withFileTypes: true,
     })
   )
@@ -62,7 +76,7 @@ export async function AlchemyProviderDocs({
       )
         .filter((dirent) => dirent.isFile())
         .map((dirent) =>
-          path.relative(process.cwd(), path.resolve(provider, dirent.name)),
+          path.relative(process.cwd(), path.resolve(provider, dirent.name))
         )
         .filter((file) => file.endsWith(".ts") && !file.endsWith("index.ts"));
 
@@ -70,23 +84,23 @@ export async function AlchemyProviderDocs({
         object: { groups },
       } = await Data(`docs/${providerName}`, {
         model: {
-          id: "gpt-4o",
+          id: "o3-mini",
           provider: "openai",
-          // options: {
-          //   reasoningEffort: "high",
-          // },
+          options: {
+            reasoningEffort: "high",
+          },
         },
         temperature: 0.1,
         schema: type({
           groups: type({
             title: type("string").describe(
-              "The title of the group, should be the Resource Name exactly as it's defined in code (const ResourceName translates to 'Resource Name') without spaces, e.g. Bucket or Static Site.",
+              "The title of the group, should be the Resource Name exactly as it's defined in code (const ResourceName translates to 'Resource Name') without spaces, e.g. Bucket or Static Site."
             ),
             filename: type("string").describe(
-              "The filename of the Resource's Document, e.g. bucket.md or static-site.md",
+              "The filename of the Resource's Document, e.g. bucket.md or static-site.md"
             ),
             category: type("'Resource'|'Client'|'Utility'|'Types'").describe(
-              "The classification of the Resource's Document, one of: Resource, Client, Utility, or Types.",
+              "The classification of the Resource's Document, one of: Resource, Client, Utility, or Types."
             ),
           }).array(),
         }),
@@ -97,8 +111,8 @@ export async function AlchemyProviderDocs({
         `,
         prompt: await alchemy`
           Identify and classify the documents that need to be written for the '${provider}' Service's Alchemy Resources.
-          For background knowledge on Alchemy, see ${alchemy.file("../README.md")}.
-          For background knowledge on the structure of an Alchemy Resource, see ${alchemy.file("../.cursorrules")}.
+          For background knowledge on Alchemy, see ${alchemy.file("./README.md")}.
+          For background knowledge on the structure of an Alchemy Resource, see ${alchemy.file("./.cursorrules")}.
 
           The ${provider} Service has the following resources:
           ${alchemy.files(files)}
@@ -117,11 +131,10 @@ export async function AlchemyProviderDocs({
 
       // console.log(groups);
 
-      const providerDocsDir = (
-        await Folder(path.join(providersDir, providerName))
-      ).path;
+      const providerDocsDir = (await Folder(path.join(outDir, providerName)))
+        .path;
 
-      const documents = await Promise.all(
+      const documents = await Promise.allSettled(
         groups
           .filter((g) => g.category === "Resource")
           .map(async (g) =>
@@ -129,12 +142,19 @@ export async function AlchemyProviderDocs({
               title: g.title,
               path: path.join(
                 providerDocsDir,
-                `${g.filename.replace(".ts", "").replace(".md", "")}.md`,
+                `${g.filename.replace(".ts", "").replace(".md", "")}.md`
               ),
+              model: {
+                id: "claude-3-5-sonnet-latest",
+                provider: "anthropic",
+                // options: {
+                //   reasoningEffort: "high",
+                // },
+              },
               prompt: await alchemy`
                 You are a technical writer writing API documentation for an Alchemy IaC Resource.
-                See ${alchemy.file("../README.md")} to understand the overview of Alchemy.
-                See ${alchemy.file("../.cursorrules")} to better understand the structure and convention of an Alchemy Resource.
+                See ${alchemy.file("./README.md")} to understand the overview of Alchemy.
+                See ${alchemy.file("./.cursorrules")} to better understand the structure and convention of an Alchemy Resource.
 
                 Relevant files for the ${providerName} Service:
                 ${alchemy.files(files)}
@@ -156,6 +176,8 @@ export async function AlchemyProviderDocs({
                 The Efs component lets you add [Amazon Elastic File System (EFS)](https://docs.aws.amazon.com/efs/latest/ug/whatisefs.html) to your app.
 
                 # Minimal Example
+
+                (brief 1-2 sentences of what it does)
 
                 \`\`\`ts
                 import { ${g.title.replaceAll(" ", "")} } from "alchemy/${providerName}";
@@ -195,15 +217,25 @@ export async function AlchemyProviderDocs({
                     : ""
                 }
               `,
-            }),
-          ),
+            })
+          )
+      );
+
+      // Unwrap all documents, fail if any rejected
+      const results = await Promise.all(
+        documents.map((r) => {
+          if (r.status === "rejected") {
+            throw r.reason;
+          }
+          return r.value;
+        })
       );
 
       return {
         dir: providerDocsDir,
         provider: providerName,
-        documents,
+        documents: results,
       } as const;
-    }),
+    })
   );
 }

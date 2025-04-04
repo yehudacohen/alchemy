@@ -1,11 +1,9 @@
-import { generateText } from "ai";
-import fs from "node:fs/promises";
-import path from "node:path";
+import { generateText, type CoreMessage } from "ai";
 import type { Context } from "../context";
+import { StaticTextFile } from "../fs/static-text-file";
 import { Resource } from "../resource";
 import type { Secret } from "../secret";
-import { ignore } from "../util/ignore";
-import { type ModelConfig, createModel } from "./client";
+import { createModel, withRateLimitRetry, type ModelConfig } from "./client";
 
 /**
  * Properties for creating or updating a Document
@@ -17,9 +15,10 @@ export interface DocumentProps {
   title: string;
 
   /**
-   * Path to the markdown document
+   * Optional path to the markdown document
+   * If provided, document will be written to this path
    */
-  path: string;
+  path?: string;
 
   /**
    * Base URL for the OpenAI API
@@ -36,7 +35,19 @@ export interface DocumentProps {
    *   ${alchemy.file("src/api.ts")}
    * `
    */
-  prompt: string;
+  prompt?: string;
+
+  /**
+   * Message history for conversation-based generation
+   * If provided, this will be used instead of the prompt
+   * @example
+   * messages: [
+   *   { role: "user", content: "Generate API documentation for this file" },
+   *   { role: "assistant", content: "I'll create detailed API docs. What file should I document?" },
+   *   { role: "user", content: "Please document src/api.ts" }
+   * ]
+   */
+  messages?: CoreMessage[];
 
   /**
    * System prompt for the model
@@ -64,6 +75,13 @@ export interface DocumentProps {
    * @default 0.7
    */
   temperature?: number;
+
+  /**
+   * Maximum number of tokens to generate.
+   * Higher values allow for longer documents but may increase cost and generation time.
+   * @default 10000
+   */
+  maxTokens?: number;
 }
 
 /**
@@ -76,6 +94,11 @@ export interface Document extends DocumentProps, Resource<"docs::Document"> {
   content: string;
 
   /**
+   * Updated message history with the document response appended
+   */
+  messages: CoreMessage[];
+
+  /**
    * Time at which the document was created
    */
   createdAt: number;
@@ -84,6 +107,11 @@ export interface Document extends DocumentProps, Resource<"docs::Document"> {
    * Time at which the document was last updated
    */
   updatedAt: number;
+
+  /**
+   * File resource if path was provided
+   */
+  file?: StaticTextFile;
 }
 
 /**
@@ -97,7 +125,22 @@ const DEFAULT_MD_SYSTEM_PROMPT =
  * Supports powerful context handling through the alchemy template literal tag.
  *
  * @example
- * // Create a document using alchemy template literals for context
+ * // Create an in-memory document (no file created)
+ * const apiDocs = await Document("api-docs", {
+ *   title: "API Documentation",
+ *   prompt: await alchemy`
+ *     Generate API documentation based on these source files:
+ *     ${alchemy.file("src/api.ts")}
+ *     ${alchemy.file("src/types.ts")}
+ *   `,
+ *   model: {
+ *     id: "gpt-4o",
+ *     provider: "openai"
+ *   }
+ * });
+ *
+ * @example
+ * // Create a document and write it to disk
  * const apiDocs = await Document("api-docs", {
  *   title: "API Documentation",
  *   path: "./docs/api.md",
@@ -106,6 +149,23 @@ const DEFAULT_MD_SYSTEM_PROMPT =
  *     ${alchemy.file("src/api.ts")}
  *     ${alchemy.file("src/types.ts")}
  *   `,
+ *   model: {
+ *     id: "gpt-4o",
+ *     provider: "openai"
+ *   }
+ * });
+ *
+ * @example
+ * // Use message history for iterative document generation
+ * const apiDocs = await Document("api-docs", {
+ *   title: "API Documentation",
+ *   path: "./docs/api.md",
+ *   messages: [
+ *     { role: "user", content: "Create API documentation for these files" },
+ *     { role: "assistant", content: "I'll help you create API documentation. Please provide the files." },
+ *     { role: "user", content: "Here are the files: [file contents]" }
+ *   ],
+ *   system: "You are a technical documentation writer. Generate clear and concise API documentation.",
  *   model: {
  *     id: "gpt-4o",
  *     provider: "openai"
@@ -149,84 +209,93 @@ export const Document = Resource(
   async function (
     this: Context<Document>,
     id: string,
-    props: DocumentProps,
+    props: DocumentProps
   ): Promise<Document> {
-    // Ensure directory exists
-    await fs.mkdir(path.dirname(props.path), { recursive: true });
+    // Validate that either prompt or messages are provided
+    if (!props.prompt && !props.messages) {
+      throw new Error("Either prompt or messages must be provided");
+    }
 
+    // Handle deletion phase
     if (this.phase === "delete") {
-      try {
-        await fs.unlink(props.path);
-      } catch (error: any) {
-        // Ignore if file doesn't exist
-        if (error.code !== "ENOENT") {
-          throw error;
-        }
-      }
       return this.destroy();
     }
 
     // Use provided system prompt or default
     const system = props.system || DEFAULT_MD_SYSTEM_PROMPT;
 
-    // Generate initial content
-    const { text } = await generateText({
-      model: createModel(props),
-      prompt: props.prompt,
-      system,
-      providerOptions: props.model?.options,
-      ...(props.temperature === undefined
-        ? {}
-        : // some models error if you provide it (rather than ignoring it)
-          { temperature: props.temperature }),
+    // Generate initial content with rate limit retry
+    const { text } = await withRateLimitRetry(async () => {
+      return generateText({
+        model: createModel(props),
+        ...(props.messages
+          ? { messages: props.messages }
+          : { prompt: props.prompt! }),
+        system,
+        maxTokens: props.maxTokens || 8192,
+        providerOptions: props.model?.options,
+        ...(props.temperature === undefined
+          ? {}
+          : // some models error if you provide it (rather than ignoring it)
+            { temperature: props.temperature }),
+      });
     });
 
     // Extract and validate markdown content
-    let { content, error } = await extractMarkdownContent(text);
+    let { content, error } = extractMarkdownContent(text);
 
     // Re-prompt if there are validation errors
     if (error) {
       const errorSystem = `${system}\n\nERROR: ${error}\n\nPlease try again and ensure your response contains exactly one markdown document inside \`\`\`md fences.`;
 
-      const { text: retryText } = await generateText({
-        model: createModel(props),
-        prompt: props.prompt,
-        system: errorSystem,
-        providerOptions: props.model?.options,
-        ...(props.temperature === undefined
-          ? {}
-          : { temperature: props.temperature }),
+      const { text: retryText } = await withRateLimitRetry(async () => {
+        return generateText({
+          model: createModel(props),
+          ...(props.messages
+            ? { messages: props.messages }
+            : { prompt: props.prompt! }),
+          system: errorSystem,
+          providerOptions: props.model?.options,
+          ...(props.temperature === undefined
+            ? {}
+            : { temperature: props.temperature }),
+        });
       });
 
-      const retryResult = await extractMarkdownContent(retryText);
+      const retryResult = extractMarkdownContent(retryText);
 
       if (retryResult.error) {
         throw new Error(
-          `Failed to generate valid markdown content: ${retryResult.error}`,
+          `Failed to generate valid markdown content: ${retryResult.error}`
         );
       }
 
       content = retryResult.content;
     }
 
-    if (this.phase === "update" && props.path !== this.props.path) {
-      await ignore("ENOENT", () => fs.unlink(this.props.path));
+    // Create result object
+    const result: Partial<Document> = {
+      ...props,
+      content,
+      messages: [
+        ...(props.messages || [{ role: "user", content: props.prompt! }]),
+        { role: "assistant", content },
+      ],
+      createdAt: this.output?.createdAt || Date.now(),
+      updatedAt: Date.now(),
+    };
+
+    // Write file if path is provided
+    if (props.path) {
+      const filePath = props.path;
+      const fileId = `${id}-file`;
+
+      result.file = await StaticTextFile(fileId, filePath, content);
     }
 
-    // Write content to file
-    await fs.writeFile(props.path, content);
-
-    // Get file stats for timestamps
-    const stats = await fs.stat(props.path);
-
     // Return the resource
-    return this({
-      ...props,
-      content: content,
-      createdAt: stats.birthtimeMs,
-      updatedAt: stats.mtimeMs,
-    });
-  },
+    return this(result as Document);
+  }
 );
 
 /**
@@ -236,13 +305,14 @@ export const Document = Resource(
  * @param text The text to extract markdown content from
  * @returns The extracted markdown content or error message
  */
-async function extractMarkdownContent(
-  text: string,
-): Promise<{ content: string; error?: string }> {
-  const mdCodeRegex = /```md\s*([\s\S]*?)```/g;
-  const matches = Array.from(text.matchAll(mdCodeRegex));
+function extractMarkdownContent(text: string): {
+  content: string;
+  error?: string;
+} {
+  const lines = text.split("\n");
+  const startIdx = lines.findIndex((line) => line.trim() === "```md");
 
-  if (matches.length === 0) {
+  if (startIdx === -1) {
     return {
       content: "",
       error:
@@ -250,13 +320,24 @@ async function extractMarkdownContent(
     };
   }
 
-  if (matches.length > 1) {
+  const rest = lines.slice(startIdx + 1);
+  const endRelativeIdx = rest
+    .map((line) => line.trim() === "```")
+    .lastIndexOf(true);
+
+  if (endRelativeIdx === -1) {
     return {
       content: "",
-      error:
-        "Multiple markdown code blocks found in the response. Please provide exactly one markdown block within ```md fences.",
+      error: "Markdown block was not closed properly.",
     };
   }
 
-  return { content: matches[0][1].trim() };
+  const endIdx = startIdx + 1 + endRelativeIdx;
+
+  const content = lines
+    .slice(startIdx + 1, endIdx)
+    .join("\n")
+    .trim();
+
+  return { content };
 }
