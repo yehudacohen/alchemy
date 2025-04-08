@@ -1,10 +1,10 @@
 import { describe, expect } from "bun:test";
-import { Secret } from "../../src/secret";
-import { deserialize, serialize } from "../../src/util/serde";
+import { Secret } from "../src/secret";
+import { deserialize, serialize } from "../src/serde";
 
-import { alchemy } from "../../src/alchemy";
-import "../../src/test/bun";
-import { BRANCH_PREFIX } from "../util";
+import { alchemy } from "../src/alchemy";
+import "../src/test/bun";
+import { BRANCH_PREFIX } from "./util";
 
 const test = alchemy.test(import.meta, {
   prefix: BRANCH_PREFIX,
