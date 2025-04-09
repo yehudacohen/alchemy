@@ -153,6 +153,25 @@ function _alchemy(
                 value.map(async (value, i) => `${i}. ${await resolve(value)}`)
               )
             ).join("\n");
+          } else if (
+            typeof value === "object" &&
+            typeof value.path === "string"
+          ) {
+            if (typeof value.content === "string") {
+              appendices[value.path] = value.content;
+              return `[${path.basename(value.path)}](${value.path})`;
+            } else {
+              appendices[value.path] = await fs.readFile(value.path, "utf-8");
+              return `[${path.basename(value.path)}](${value.path})`;
+            }
+          } else if (typeof value === "object") {
+            return (
+              await Promise.all(
+                Object.entries(value).map(async ([key, value]) => {
+                  return `* ${key}: ${await resolve(value)}`;
+                })
+              )
+            ).join("\n");
           } else {
             // TODO: support other types
             console.log(value);

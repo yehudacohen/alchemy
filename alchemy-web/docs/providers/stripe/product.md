@@ -1,0 +1,52 @@
+# Product
+
+The Product resource lets you create and manage [Stripe Products](https://stripe.com/docs/api/products) that can be used with Prices for billing.
+
+# Minimal Example
+
+Create a basic digital product:
+
+```ts
+import { Product } from "alchemy/stripe";
+
+const product = await Product("basic-software", {
+  name: "Basic Software License",
+  description: "Single-user license for basic software package"
+});
+```
+
+# Physical Product
+
+Create a physical product with shipping details:
+
+```ts
+import { Product } from "alchemy/stripe";
+
+const product = await Product("premium-hardware", {
+  name: "Premium Hardware Kit", 
+  description: "Complete hardware kit with premium components",
+  shippable: true,
+  images: ["https://example.com/hardware-kit.jpg"],
+  unitLabel: "kit",
+  statementDescriptor: "PREMIUM HW KIT"
+});
+```
+
+# Service Product
+
+Create a service product with tax code:
+
+```ts
+import { Product } from "alchemy/stripe";
+
+const product = await Product("consulting", {
+  name: "Professional Consulting",
+  description: "Expert consulting services", 
+  type: "service",
+  taxCode: "txcd_10000000",
+  metadata: {
+    industry: "technology",
+    expertise: "cloud"
+  }
+});
+```
