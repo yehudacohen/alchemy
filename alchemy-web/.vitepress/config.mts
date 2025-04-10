@@ -44,6 +44,10 @@ export default defineConfig({
     ],
     socialLinks: [
       { icon: "github", link: "https://github.com/sam-goodwin/alchemy" },
+      {
+        icon: "discord",
+        link: "https://discord.gg/jwKw8dBJdN",
+      },
       { icon: "x", link: "https://twitter.com/samgoodwin89" },
     ],
     sidebar: [

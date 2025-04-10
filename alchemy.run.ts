@@ -221,8 +221,8 @@ await alchemy.run("docs", async () => {
       ],
       socialLinks: [
         { icon: "github", link: "https://github.com/sam-goodwin/alchemy" },
+        { icon: "discord", link: "https://discord.gg/jwKw8dBJdN" },
         { icon: "x", link: "https://twitter.com/samgoodwin89" },
-        // { icon: "discord", link: "https://discord.gg/MJr7pYzZQ4" },
       ],
       sidebar: [
         {
