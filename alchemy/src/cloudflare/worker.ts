@@ -1,14 +1,18 @@
+import * as crypto from "crypto";
 import * as fs from "fs/promises";
 import type { Context } from "../context";
 import { Bundle, type BundleProps } from "../esbuild/bundle";
 import { Resource } from "../resource";
 import { isSecret } from "../secret";
+import { getContentType } from "../util/content-type";
 import { withExponentialBackoff } from "../util/retry";
 import { slugify } from "../util/slugify";
 import { type CloudflareApi, createCloudflareApi } from "./api";
+import type { Assets } from "./assets";
 import {
   type Bindings,
   type WorkerBindingSpec,
+  isAssets,
   isDurableObjectNamespace,
 } from "./bindings";
 import type { Bound } from "./bound";
@@ -200,6 +204,20 @@ export interface Worker<B extends Bindings = Bindings>
  *   }
  * });
  *
+ * @example
+ * // Create a worker with static assets:
+ * const staticAssets = await Assets("static", {
+ *   path: "./src/assets"
+ * });
+ *
+ * const frontendWorker = await Worker("frontend", {
+ *   name: "frontend-worker",
+ *   entrypoint: "./src/worker.ts",
+ *   bindings: {
+ *     ASSETS: staticAssets
+ *   }
+ * });
+ *
  * @see https://developers.cloudflare.com/workers/
  */
 export const Worker = Resource(
@@ -232,14 +250,41 @@ export const Worker = Resource(
 
     const oldBindings = await this.get<Bindings>("bindings");
 
+    // Get the script content - either from props.script, or by bundling
+    const scriptContent = props.script ?? (await bundleWorkerScript(props));
+
+    // Find any assets bindings
+    const assetsBindings: { name: string; assets: Assets }[] = [];
+    if (props.bindings) {
+      for (const [bindingName, binding] of Object.entries(props.bindings)) {
+        if (isAssets(binding)) {
+          assetsBindings.push({ name: bindingName, assets: binding });
+        }
+      }
+    }
+
+    // Upload any assets and get completion tokens
+    let assetUploadResult: AssetUploadResult | undefined;
+    if (assetsBindings.length > 0) {
+      // We'll use the first asset binding for now
+      // In the future, we might want to support multiple asset bindings
+      const assetBinding = assetsBindings[0];
+
+      // Upload the assets and get the completion token
+      assetUploadResult = await uploadAssets(
+        api,
+        workerName,
+        assetBinding.assets
+      );
+    }
+
+    // Prepare metadata with bindings
     const scriptMetadata = await prepareWorkerMetadata(
       this,
       oldBindings,
-      props
+      props,
+      assetUploadResult
     );
-
-    // Get the script content - either from props.script, or by bundling
-    const scriptContent = props.script ?? (await bundleWorkerScript(props));
 
     // Upload the worker script
     await putWorker(api, workerName, scriptContent, scriptMetadata);
@@ -437,12 +482,29 @@ interface WorkerMetadata {
   main_module?: string;
   body_part?: string;
   tags?: string[];
+  assets?: {
+    jwt?: string;
+    keep_assets?: boolean;
+    config?: {
+      html_handling?: "auto-trailing-slash" | "none";
+      not_found_handling?: "none" | "fall-through";
+    };
+  };
+}
+
+interface AssetUploadResult {
+  completionToken: string;
+  assetConfig?: {
+    html_handling?: "auto-trailing-slash" | "none";
+    not_found_handling?: "none" | "fall-through";
+  };
 }
 
 async function prepareWorkerMetadata<B extends Bindings>(
   ctx: Context<Worker<B>>,
   oldBindings: Bindings | undefined,
-  props: WorkerProps
+  props: WorkerProps,
+  assetUploadResult?: AssetUploadResult
 ): Promise<WorkerMetadata> {
   // Prepare metadata with bindings
   const meta: WorkerMetadata = {
@@ -460,6 +522,17 @@ async function prepareWorkerMetadata<B extends Bindings>(
       new_sqlite_classes: props.migrations?.new_sqlite_classes ?? [],
     },
   };
+
+  // If we have asset upload results, add them to the metadata
+  if (assetUploadResult) {
+    meta.assets = {
+      jwt: assetUploadResult.completionToken,
+    };
+
+    if (assetUploadResult.assetConfig) {
+      meta.assets.config = assetUploadResult.assetConfig;
+    }
+  }
 
   const bindings = (props.bindings ?? {}) as Bindings;
 
@@ -521,6 +594,11 @@ async function prepareWorkerMetadata<B extends Bindings>(
         type: "r2_bucket",
         name: bindingName,
         bucket_name: binding.name,
+      });
+    } else if (isAssets(binding)) {
+      meta.bindings.push({
+        type: "assets",
+        name: bindingName,
       });
     } else if (isSecret(binding)) {
       meta.bindings.push({
@@ -801,4 +879,174 @@ async function getWorkerBindings(
   const data: any = await response.json();
 
   return data.result;
+}
+
+/**
+ * Interface for a file's metadata to be uploaded
+ */
+interface FileMetadata {
+  hash: string;
+  size: number;
+}
+
+/**
+ * Response from the assets upload session API
+ */
+interface UploadSessionResponse {
+  result: {
+    jwt: string;
+    buckets: string[][];
+  };
+  success: boolean;
+  errors: any[];
+  messages: any[];
+}
+
+/**
+ * Response from the file upload API
+ */
+interface UploadResponse {
+  result: {
+    jwt: string;
+    buckets?: string[][];
+  };
+  success: boolean;
+  errors: any[];
+  messages: any[];
+}
+
+/**
+ * Uploads assets to Cloudflare and returns a completion token
+ *
+ * @param api CloudflareApi instance
+ * @param workerName Name of the worker
+ * @param assets Assets resource containing files to upload
+ * @returns Completion token for the assets upload
+ */
+async function uploadAssets(
+  api: CloudflareApi,
+  workerName: string,
+  assets: Assets
+): Promise<AssetUploadResult> {
+  // Generate the file manifest
+  const fileMetadata: Record<string, FileMetadata> = {};
+
+  // Process each file in the assets
+  for (const file of assets.files) {
+    const { hash, size } = await calculateFileMetadata(file.filePath);
+    // Use the relative path as the key, ensuring it starts with a slash
+    const key = file.path.startsWith("/") ? file.path : `/${file.path}`;
+    fileMetadata[key] = { hash, size };
+  }
+
+  // Start the upload session
+  const uploadSessionUrl = `/accounts/${api.accountId}/workers/scripts/${workerName}/assets-upload-session`;
+  const uploadSessionResponse = await api.post(
+    uploadSessionUrl,
+    JSON.stringify({ manifest: fileMetadata }),
+    {
+      headers: { "Content-Type": "application/json" },
+    }
+  );
+
+  if (!uploadSessionResponse.ok) {
+    throw new Error(
+      `Failed to start assets upload session: ${uploadSessionResponse.status} ${uploadSessionResponse.statusText}`
+    );
+  }
+
+  const sessionData =
+    (await uploadSessionResponse.json()) as UploadSessionResponse;
+
+  // If there are no buckets, assets are already uploaded or empty
+  if (!sessionData.result.buckets || sessionData.result.buckets.length === 0) {
+    return { completionToken: sessionData.result.jwt };
+  }
+
+  // Upload the files in batches as specified by the API
+  let completionToken = sessionData.result.jwt;
+  const buckets = sessionData.result.buckets;
+
+  // Process each bucket of files
+  for (const bucket of buckets) {
+    const formData = new FormData();
+
+    // Add each file in the bucket to the form
+    for (const fileHash of bucket) {
+      // Find the file with this hash
+      const file = assets.files.find((f) => {
+        const filePath = f.path.startsWith("/") ? f.path : `/${f.path}`;
+        return fileMetadata[filePath]?.hash === fileHash;
+      });
+
+      if (!file) {
+        throw new Error(`Could not find file with hash ${fileHash}`);
+      }
+
+      // Read the file content
+      const fileContent = await fs.readFile(file.filePath);
+
+      // Convert to base64 as required by the API when using base64=true
+      const base64Content = fileContent.toString("base64");
+
+      // Add the file to the form with the hash as the key and set the correct content type
+      const blob = new Blob([base64Content], {
+        type: getContentType(file.filePath),
+      });
+      formData.append(fileHash, blob, fileHash);
+    }
+
+    // Upload this batch of files
+    const uploadResponse = await api.post(
+      `/accounts/${api.accountId}/workers/assets/upload?base64=true`,
+      formData,
+      {
+        headers: {
+          Authorization: `Bearer ${completionToken}`,
+          "Content-Type": "multipart/form-data",
+        },
+      }
+    );
+
+    if (!uploadResponse.ok) {
+      throw new Error(
+        `Failed to upload asset files: ${uploadResponse.status} ${uploadResponse.statusText}`
+      );
+    }
+
+    const uploadData = (await uploadResponse.json()) as UploadResponse;
+    // Update the completion token for the next batch
+    if (uploadData.result.jwt) {
+      completionToken = uploadData.result.jwt;
+    }
+  }
+
+  // Return the final completion token
+  return {
+    completionToken,
+    assetConfig: {
+      html_handling: "auto-trailing-slash",
+    },
+  };
+}
+
+/**
+ * Calculate the SHA-256 hash and size of a file
+ *
+ * @param filePath Path to the file
+ * @returns Hash (first 32 chars of SHA-256) and size of the file
+ */
+async function calculateFileMetadata(
+  filePath: string
+): Promise<{ hash: string; size: number }> {
+  const hash = crypto.createHash("sha256");
+  const fileContent = await fs.readFile(filePath);
+
+  hash.update(fileContent);
+  const fileHash = hash.digest("hex").substring(0, 32); // First 32 chars of hash
+
+  return {
+    hash: fileHash,
+    size: fileContent.length,
+  };
 }

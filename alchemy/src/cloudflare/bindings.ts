@@ -4,6 +4,7 @@
  * https://developers.cloudflare.com/api/resources/workers/subresources/scripts/methods/update/
  */
 import type { Secret } from "../secret";
+import type { Assets } from "./assets";
 import type { R2Bucket } from "./bucket";
 import type { DurableObjectNamespace } from "./durable-object-namespace";
 import type { KVNamespace } from "./kv-namespace";
@@ -22,14 +23,22 @@ export type Binding =
   | Worker
   | R2Bucket
   | Secret
-  | string;
+  | string
+  | Assets;
 
 export function isDurableObjectNamespace(
-  binding: Binding,
+  binding: Binding
 ): binding is DurableObjectNamespace {
   return (
     typeof binding === "object" && binding.type === "durable_object_namespace"
   );
+}
+
+/**
+ * Check if a binding is an Assets resource
+ */
+export function isAssets(binding: Binding): binding is Assets {
+  return typeof binding === "object" && binding.type === "assets";
 }
 
 /**

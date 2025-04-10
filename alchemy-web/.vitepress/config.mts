@@ -44,10 +44,7 @@ export default defineConfig({
     ],
     socialLinks: [
       { icon: "github", link: "https://github.com/sam-goodwin/alchemy" },
-      {
-        icon: "discord",
-        link: "https://discord.gg/jwKw8dBJdN",
-      },
+      { icon: "discord", link: "https://discord.gg/jwKw8dBJdN" },
       { icon: "x", link: "https://twitter.com/samgoodwin89" },
     ],
     sidebar: [
@@ -153,6 +150,7 @@ export default defineConfig({
                 text: "AccountId",
                 link: "/docs/providers/cloudflare/account-id",
               },
+              { text: "Assets", link: "/docs/providers/cloudflare/assets" },
               {
                 text: "CustomDomain",
                 link: "/docs/providers/cloudflare/custom-domain",

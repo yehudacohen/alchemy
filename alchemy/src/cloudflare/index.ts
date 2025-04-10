@@ -1,5 +1,6 @@
 export * from "./account-api-token";
 export * from "./api";
+export * from "./assets";
 export * from "./bindings";
 export * from "./bucket";
 export * from "./custom-domain";

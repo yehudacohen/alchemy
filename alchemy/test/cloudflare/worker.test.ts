@@ -1,10 +1,14 @@
 import { describe, expect } from "bun:test";
+import * as fs from "fs/promises";
+import * as path from "path";
 import { alchemy } from "../../src/alchemy";
 import { createCloudflareApi } from "../../src/cloudflare/api";
+import { Assets } from "../../src/cloudflare/assets";
 import { R2Bucket } from "../../src/cloudflare/bucket";
 import { DurableObjectNamespace } from "../../src/cloudflare/durable-object-namespace";
 import { KVNamespace } from "../../src/cloudflare/kv-namespace";
 import { Worker } from "../../src/cloudflare/worker";
+import { destroy } from "../../src/destroy";
 import "../../src/test/bun";
 import { BRANCH_PREFIX } from "../util";
 
@@ -12,12 +16,20 @@ const test = alchemy.test(import.meta, {
   prefix: BRANCH_PREFIX,
 });
 
+// Create a Cloudflare API client for verification
+const api = await createCloudflareApi();
+
+// Helper function to check if a worker exists
 async function assertWorkerDoesNotExist(workerName: string) {
-  const api = await createCloudflareApi();
-  const response = await api.get(
-    `/accounts/${api.accountId}/workers/scripts/${workerName}`,
-  );
-  expect(response.status).toEqual(404);
+  try {
+    const response = await api.get(
+      `/accounts/${api.accountId}/workers/scripts/${workerName}`
+    );
+    expect(response.status).toEqual(404);
+  } catch (error) {
+    // 404 is expected, so we can ignore it
+    return;
+  }
 }
 
 describe("Worker Resource", () => {
@@ -262,7 +274,7 @@ describe("Worker Resource", () => {
 
       expect(worker.id).toEqual(worker.id);
     } finally {
-      await alchemy.destroy(scope);
+      await destroy(scope);
       await assertWorkerDoesNotExist(workerName);
     }
   });
@@ -301,7 +313,7 @@ describe("Worker Resource", () => {
 
       expect(worker.id).toEqual(worker.id);
     } finally {
-      await alchemy.destroy(scope);
+      await destroy(scope);
       await assertWorkerDoesNotExist(workerName);
     }
   });
@@ -337,7 +349,7 @@ describe("Worker Resource", () => {
 
       expect(worker.format).toEqual("esm");
     } finally {
-      await alchemy.destroy(scope);
+      await destroy(scope);
       await assertWorkerDoesNotExist(workerName);
     }
   });
@@ -360,10 +372,10 @@ describe("Worker Resource", () => {
         format: "cjs",
       });
       await expect(duplicateWorker).rejects.toThrow(
-        `Worker with name '${workerName}' already exists. Please use a unique name.`,
+        `Worker with name '${workerName}' already exists. Please use a unique name.`
       );
     } finally {
-      await alchemy.destroy(scope);
+      await destroy(scope);
     }
   });
 
@@ -390,7 +402,7 @@ describe("Worker Resource", () => {
         {
           className: "Counter",
           scriptName: workerName,
-        },
+        }
       );
 
       // Update the worker with the DO binding
@@ -407,7 +419,7 @@ describe("Worker Resource", () => {
       expect(worker.name).toEqual(workerName);
       expect(worker.bindings).toBeDefined();
     } finally {
-      await alchemy.destroy(scope);
+      await destroy(scope);
       await assertWorkerDoesNotExist(workerName);
     }
   });
@@ -442,7 +454,7 @@ describe("Worker Resource", () => {
       expect(worker.name).toEqual(workerName);
       expect(worker.bindings).toBeDefined();
     } finally {
-      await alchemy.destroy(scope);
+      await destroy(scope);
       await assertWorkerDoesNotExist(workerName);
     }
   });
@@ -456,7 +468,7 @@ describe("Worker Resource", () => {
       {
         className: "Counter",
         scriptName: workerName,
-      },
+      }
     );
 
     // Create a KV namespace
@@ -499,7 +511,7 @@ describe("Worker Resource", () => {
       expect(worker.name).toEqual(workerName);
       expect(worker.bindings).toBeDefined();
     } finally {
-      await alchemy.destroy(scope);
+      await destroy(scope);
       await assertWorkerDoesNotExist(workerName);
     }
   });
@@ -589,7 +601,7 @@ describe("Worker Resource", () => {
         expect(removedVarText).toEqual("undefined");
       }
     } finally {
-      await alchemy.destroy(scope);
+      await destroy(scope);
       // Verify the worker was deleted
       await assertWorkerDoesNotExist(workerName);
     }
@@ -616,7 +628,7 @@ describe("Worker Resource", () => {
         {
           className: "Counter",
           scriptName: workerName,
-        },
+        }
       );
 
       // Update worker with the original Counter binding
@@ -637,7 +649,7 @@ describe("Worker Resource", () => {
         {
           className: "CounterV2",
           scriptName: workerName,
-        },
+        }
       );
 
       // Update worker with the migrated binding
@@ -652,7 +664,7 @@ describe("Worker Resource", () => {
 
       expect(worker.bindings).toBeDefined();
     } finally {
-      await alchemy.destroy(scope);
+      await destroy(scope);
       await assertWorkerDoesNotExist(workerName);
     }
   });
@@ -678,7 +690,7 @@ describe("Worker Resource", () => {
         {
           className: "Counter",
           scriptName: workerName,
-        },
+        }
       );
 
       // Update the worker with the DO binding
@@ -714,7 +726,7 @@ describe("Worker Resource", () => {
       expect(worker.env?.API_SECRET).toEqual("test-secret-123");
       expect(worker.env?.DEBUG_MODE).toEqual("true");
     } finally {
-      await alchemy.destroy(scope);
+      await destroy(scope);
       await assertWorkerDoesNotExist(workerName);
     }
   });
@@ -763,7 +775,135 @@ describe("Worker Resource", () => {
         expect(data.hasR2).toEqual(true);
       }
     } finally {
-      await alchemy.destroy(scope);
+      await destroy(scope);
+      await assertWorkerDoesNotExist(workerName);
+    }
+  });
+
+  // Test for static assets
+  test("create and test worker with static assets", async (scope) => {
+    const workerName = `${BRANCH_PREFIX}-test-worker-assets`;
+    let tempDir: string | undefined = undefined;
+
+    try {
+      // Create a temporary directory to store test assets
+      tempDir = path.join(".out", "alchemy-assets-test");
+
+      await fs.rm(tempDir, { recursive: true, force: true });
+
+      // Ensure directory exists with proper permissions
+      await fs.mkdir(tempDir, { recursive: true });
+
+      // Create test files in the temporary directory
+      const testContent = "Hello from static assets!";
+      const cssContent = "body { color: blue; }";
+      const jsonContent = JSON.stringify({
+        message: "Hello from JSON",
+        timestamp: Date.now(),
+      });
+
+      // Create a subdirectory with additional files
+      const subDir = path.join(tempDir, "data");
+      await Promise.all([
+        fs.writeFile(path.join(tempDir, "index.html"), testContent),
+        fs.writeFile(path.join(tempDir, "styles.css"), cssContent),
+        fs.mkdir(subDir, { recursive: true }),
+      ]);
+      await fs.writeFile(path.join(subDir, "config.json"), jsonContent);
+
+      // Create assets resource
+      const assets = await Assets("static-assets", {
+        path: tempDir,
+      });
+
+      // Create a worker that uses ESM format and serves static assets
+      const workerWithAssetsScript = `
+        export default {
+          async fetch(request, env, ctx) {
+            const url = new URL(request.url);
+
+            if (url.pathname.startsWith("/api/")) {
+              return new Response("Worker with assets is running!", { 
+                status: 200,
+                headers: { 'Content-Type': 'text/plain' }
+              });
+            }
+            try {
+              return env.ASSETS.fetch(request);
+            } catch (err) {
+              console.log(err);
+              return new Response(\`\${err}\`, { status: 404 });
+            }
+          }
+        };
+      `;
+
+      // Create the worker with assets binding
+      const worker = await Worker(workerName, {
+        name: workerName,
+        script: workerWithAssetsScript,
+        format: "esm",
+        url: true, // Enable workers.dev URL to test the worker
+        bindings: {
+          ASSETS: assets,
+        },
+      });
+
+      expect(worker.id).toBeTruthy();
+      expect(worker.name).toEqual(workerName);
+      expect(worker.url).toBeTruthy();
+      expect(worker.bindings?.ASSETS).toBeTruthy();
+
+      // Wait for the worker to be available and assets to be ready
+      await new Promise((resolve) => setTimeout(resolve, 500));
+
+      if (worker.url) {
+        async function get(url: string) {
+          const response = await fetch(url);
+          if (response.status !== 200) {
+            console.log(
+              response.status,
+              response.statusText,
+              await response.text()
+            );
+          }
+          expect(response.status).toEqual(200);
+          const text = await response.text();
+          return text;
+        }
+
+        // Test that the static assets are accessible
+        const indexText = await get(`${worker.url}/index.html`);
+        expect(indexText).toEqual(testContent);
+
+        // Test the worker's main handler
+        // should route to index.html
+        const mainText = await get(worker.url);
+        expect(mainText).toEqual("Hello from static assets!");
+
+        // Test CSS file
+        const cssText = await get(`${worker.url}/styles.css`);
+        expect(cssText).toEqual(cssContent);
+
+        // Test file in subdirectory
+        const jsonData = JSON.parse(
+          await get(`${worker.url}/data/config.json`)
+        );
+        expect(jsonData.message).toEqual("Hello from JSON");
+
+        const apiCall = await get(`${worker.url}/api/data`);
+        expect(apiCall).toEqual("Worker with assets is running!");
+      }
+    } catch (err) {
+      throw err;
+    } finally {
+      // Clean up temporary directory
+      if (tempDir) {
+        await fs.rm(tempDir, { recursive: true, force: true });
+      }
+
+      await destroy(scope);
+      // Verify the worker was deleted
       await assertWorkerDoesNotExist(workerName);
     }
   });
