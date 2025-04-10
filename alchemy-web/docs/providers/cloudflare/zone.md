@@ -1,6 +1,6 @@
 # Zone
 
-The Zone resource lets you manage [Cloudflare Zones](https://developers.cloudflare.com/dns/zone-setups/) which represent domains and their configuration settings on Cloudflare.
+The Zone resource lets you manage [Cloudflare Zones](https://developers.cloudflare.com/dns/zone-setups/) which represent domains and their configuration settings.
 
 # Minimal Example
 
@@ -37,7 +37,7 @@ const secureZone = await Zone("secure.example.com", {
 
 # Performance Optimization
 
-Create a zone optimized for performance:
+Create a zone with optimized performance settings:
 
 ```ts
 import { Zone } from "alchemy/cloudflare";
@@ -57,7 +57,7 @@ const fastZone = await Zone("fast.example.com", {
 
 # Development Configuration
 
-Configure a zone for development with specific features enabled:
+Configure a zone for development with specific features:
 
 ```ts
 import { Zone } from "alchemy/cloudflare";

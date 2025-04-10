@@ -69,11 +69,11 @@ const multiRecords = await DnsRecords("example.com-multi", {
       type: "A",
       content: "192.0.2.1",
       proxied: true,
-      ttl: 1
+      ttl: 1 
     },
     {
-      name: "api.example.com", 
-      type: "CNAME",
+      name: "api.example.com",
+      type: "CNAME", 
       content: "api.service.com",
       proxied: false,
       ttl: 3600

@@ -28,8 +28,7 @@ const config = await WranglerJson("api-config", {
   kv_namespaces: [
     {
       binding: "CACHE",
-      id: "xxxx", 
-      preview_id: "yyyy"
+      id: "xxxx" 
     }
   ],
   r2_buckets: [
@@ -59,19 +58,5 @@ const config = await WranglerJson("chat-config", {
       }
     ]
   }
-});
-```
-
-# With Custom Path
-
-Specify a custom path for the wrangler.json file:
-
-```ts
-import { WranglerJson } from "alchemy/cloudflare";
-
-const config = await WranglerJson("worker-config", {
-  name: "my-worker",
-  main: "src/index.ts",
-  path: "./config/wrangler.json"
 });
 ```

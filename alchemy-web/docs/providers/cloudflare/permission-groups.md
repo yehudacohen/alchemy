@@ -1,22 +1,20 @@
 # PermissionGroups
 
-Lists all [Cloudflare API permission groups](https://developers.cloudflare.com/api/tokens/create/permissions/) available for your account. Used when creating API tokens with specific permissions.
+Lists all [Cloudflare API permission groups](https://developers.cloudflare.com/api/tokens/create/permissions/) available for an account. Used primarily when creating API tokens for Cloudflare services like R2.
 
 # Minimal Example
 
-Get all available permission groups:
+Get all permission groups including those for R2:
 
 ```ts
 import { PermissionGroups } from "alchemy/cloudflare";
 
-const permissions = await PermissionGroups("cloudflare-permissions", {
-  accountId: "abc123" // Optional - will auto-discover if not provided
-});
+const permissions = await PermissionGroups("cloudflare-permissions");
 ```
 
-# Use with AccountApiToken
+# Create API Token with Permissions
 
-Create an API token with specific permissions:
+Use with AccountApiToken to create a token with proper permissions:
 
 ```ts
 import { PermissionGroups, AccountApiToken } from "alchemy/cloudflare";

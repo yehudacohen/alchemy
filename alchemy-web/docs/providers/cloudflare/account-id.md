@@ -1,10 +1,10 @@
 # AccountId
 
-The AccountId resource retrieves your [Cloudflare Account ID](https://developers.cloudflare.com/fundamentals/get-started/basic-tasks/find-account-and-zone-ids/) for use with other Cloudflare resources.
+The AccountId resource retrieves a Cloudflare account ID from the API token or environment variables.
 
 # Minimal Example
 
-Gets the account ID using environment variables or API token.
+Gets the account ID using environment variables:
 
 ```ts
 import { AccountId } from "alchemy/cloudflare";
@@ -12,22 +12,21 @@ import { AccountId } from "alchemy/cloudflare";
 const accountId = await AccountId("my-account", {});
 ```
 
-# With Explicit API Key
+# Custom API Token
 
-Specify API key and email directly instead of using environment variables.
+Uses a specific API token to get the account ID:
 
-```ts 
+```ts
 import { AccountId } from "alchemy/cloudflare";
 
 const accountId = await AccountId("my-account", {
-  apiKey: alchemy.secret(process.env.CF_API_KEY),
-  email: "user@example.com"
+  apiKey: alchemy.secret(process.env.CF_API_TOKEN)
 });
 ```
 
 # Bind to a Worker
 
-Use the account ID when creating other Cloudflare resources.
+Provides the account ID to a Cloudflare Worker:
 
 ```ts
 import { Worker, AccountId } from "alchemy/cloudflare";
@@ -35,8 +34,10 @@ import { Worker, AccountId } from "alchemy/cloudflare";
 const accountId = await AccountId("my-account", {});
 
 await Worker("my-worker", {
-  name: "my-worker",
-  script: "console.log('Hello, world!')", 
-  accountId: accountId
+  name: "my-worker", 
+  script: "console.log('Hello, world!')",
+  bindings: {
+    ACCOUNT_ID: accountId
+  }
 });
 ```

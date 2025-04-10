@@ -4,7 +4,7 @@ The CustomDomain resource lets you bind a [Cloudflare Worker](https://developers
 
 # Minimal Example
 
-Bind a domain to a Cloudflare Worker:
+Bind a domain to a Cloudflare Worker.
 
 ```ts
 import { CustomDomain } from "alchemy/cloudflare";
@@ -18,7 +18,7 @@ const domain = await CustomDomain("api-domain", {
 
 # Bind to a Static Site
 
-Bind a domain to a Cloudflare Static Site:
+Bind a domain to a Cloudflare Static Site's underlying worker.
 
 ```ts
 import { StaticSite, CustomDomain } from "alchemy/cloudflare";
@@ -42,7 +42,7 @@ import { Worker, CustomDomain } from "alchemy/cloudflare";
 
 const worker = await Worker("api", {
   name: "my-api",
-  script: "export default { fetch() { return new Response('Hello') } }"
+  script: "console.log('Hello, world!')"
 });
 
 const domain = await CustomDomain("api-domain", {

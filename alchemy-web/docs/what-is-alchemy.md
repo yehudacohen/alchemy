@@ -1,12 +1,12 @@
 # What is Alchemy
 
-Alchemy is a TypeScript-native Infrastructure-as-Code (IaC) library with zero dependencies that lets you model resources that are automatically created, updated, and deleted.
+Alchemy is an embeddable, zero-dependency, Infrastructure-as-Code (IaC) library written in pure TypeScript that runs anywhere that JavaScript runs - including the browser, serverless functions or even durable workflows.
 
 ## What is Infrastructure as Code?
 
-Infrastructure as Code means writing code that defines your infrastructure instead of manually creating it. 
+Infrastructure-as-Code is the practice of using code to define your infrastructure configuration instead of manually creating it. 
 
-Let's say you need a database. Instead of clicking through a cloud console, you write:
+Let's say you need a database. Instead of clicking through a cloud console or executing a CLI command, you simply write:
 
 ```typescript
 const database = await Database("main", { 
@@ -18,32 +18,35 @@ const database = await Database("main", {
 console.log(database.connectionString);
 ```
 
-Run this code, and the actual database gets created. Change the size to "medium" and run it again - your database will be updated. Remove the code, and the database will be deleted.
+Run this code, and the actual database gets created. Run it twice without changes, and nothing happens. Change the size to `"medium"` and run it again - your database will be updated. Remove the code and run it again, the database will be deleted.
 
-Your code becomes the blueprint for repeatable infrastructure. The IaC tool (Alchemy in this case) handles the synchronization between your code and the real world.
+Your code is the blueprint for repeatable infrastructure. Alchemy keeps track of all the resources and handles the synchronization between your code and the real world.
 
-## How Alchemy Works
+## How is Alchemy different than traditonal IaC?
 
-```typescript
-// Define and deploy a resource with a single async function call
-const bucket = await Bucket("assets", { name: "my-app-assets" });
+Unlike similar tools like Terraform, Pulumi, SST and CloudFormation, Alchemy is implemented in pure ESM-native TypeScript code. 
 
-// Access properties directly
-console.log(bucket.url);
-```
+The Terraform, Pulumi and SST ecosystem are all tied together. SST is on top of Pulumi, which is again on top of Terraform. Terraform and Pulumi are implemented in Go and generate TypeScript "wrappers" that depend on a separate Go process.
+
+The AWS CDK genereates CloudFormation JSON, depends on a managed service to run and only supports AWS services. Extending CloudFormation requires you deploy a Lambda Function (which is an ordeal).
+
+All together, IaC without Alchemy is a clunky, heavy, opinionated toolchain that mostly works against you as a user. Alchemy simplifies the entire stack down to pure async functions.
 
 ## Zero Dependencies
 
-Alchemy has no dependencies and runs anywhere JavaScript runs.
+Alchemy adopts a philosophy of zero-dependencies and web standards so that it can run anywhere with minimal impact on bundle size.
 
-```typescript
-// Install with your preferred package manager
+All you gotta do is install `alchemy` and you're good to go.
+
+```sh
 bun add alchemy
 ```
 
 ## Just Async Functions
 
-Resources in Alchemy are implemented as async functions, not complex classes or abstractions with sharp edge gotchas.
+Resources in Alchemy are implemented with async functions instead of complex class abstractions with sharp edge gotchas, inter-process-communication or hosted services.
+
+This means you can create resources in any async environment and gain access to its physical properties immediately:
 
 ```typescript
 // Create a resource by awaiting a function
@@ -51,6 +54,21 @@ const worker = await Worker("api", {
   name: "my-api",
   entrypoint: "./src/index.ts"
 });
+
+console.log(worker.workerName) // string
+```
+
+Contrast this with Pulumi which relies on a complex graph abstraction:
+```ts
+const worker = new Worker("api", {
+  name: "my-api",
+  entrypoint: "./src/index.ts"
+});
+
+worker.workerName // Output<string>
+
+// requires a complex abstraction just to log a value 😵‍💫
+pulumi.export(worker.workerName)
 ```
 
 ## Runs Anywhere
@@ -89,6 +107,9 @@ State is stored as plain JSON files you can inspect, edit, and version control.
 }
 ```
 
+> [!NOTE]
+> You usually don't want to edit these files, but when things go wrong, having state that is easy to understand and change is useful.
+
 ## Pluggable State
 
 Alchemy supports custom state backends including file systems, cloud storage, or databases.
@@ -102,26 +123,15 @@ const app = alchemy("my-app", {
 });
 ```
 
+By default, Alchemy assumes you want to store state files locally for development purposes, but since Alchemy can run anywhere - you may want to store state in the the browser, or a Cloudflare Durable Object!
+
 [Learn more about custom state stores](./guides/custom-state-store.md)
-
-## No Inter-Process Communication
-
-Unlike Terraform, Pulumi, and SST which rely on Go processes, Alchemy runs everything in your JavaScript runtime.
-
-```typescript
-// Initialize app - no external processes started
-const app = alchemy("my-app");
-
-// Create resources - all executed in JavaScript
-const bucket = await Bucket("assets", { name: "my-assets" });
-
-// Finalize - everything happens in JavaScript
-await app.finalize();
-```
 
 ## Direct API Integration
 
-Alchemy resources call service APIs directly using fetch, without requiring SDKs.
+> `fetch` is all you need
+
+Alchemy resources call service APIs directly using `fetch`, instead of using SDKs that often come with heavy dependencies and runtime requirements.
 
 ```typescript
 // Resource implementation using direct API calls

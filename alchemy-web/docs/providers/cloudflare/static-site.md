@@ -48,7 +48,7 @@ const site = await StaticSite("my-site", {
 
 # API Backend Integration
 
-Add an API backend worker to handle API routes:
+Add API routes handled by a separate worker:
 
 ```ts
 import { StaticSite, Worker } from "alchemy/cloudflare";
@@ -69,7 +69,7 @@ const site = await StaticSite("my-site", {
 
 # Bind to a Worker
 
-Bind the static site to a worker to access its assets:
+Access the static site from another worker:
 
 ```ts
 import { Worker, StaticSite } from "alchemy/cloudflare";
@@ -79,9 +79,9 @@ const site = await StaticSite("my-site", {
   dir: "./dist"
 });
 
-await Worker("my-worker", {
+const worker = await Worker("my-worker", {
   name: "my-worker",
-  script: "console.log('Hello, world!')",
+  script: "console.log('Hello from worker')",
   bindings: {
     SITE: site
   }
