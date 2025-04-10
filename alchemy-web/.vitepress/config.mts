@@ -7,7 +7,7 @@ export default defineConfig({
   title: "Alchemy",
   description: "Alchemy Docs",
   head: [
-    ["link", { rel: "icon", type: "image/png", href: "/alchemy-flower.png" }],
+    ["link", { rel: "icon", type: "image/png", href: "/potion.png" }],
     ["meta", { property: "og:type", content: "website" }],
     ["meta", { property: "og:title", content: "Alchemy" }],
     ["meta", { property: "og:description", content: "Alchemy Docs" }],
@@ -70,31 +70,16 @@ export default defineConfig({
         collapsed: false,
         items: [
           {
+            text: "Deploy ViteJS Static Site",
+            link: "/docs/guides/cloudflare-vitejs.md",
+          },
+          {
             text: "Use AI to develop Custom Resources",
             link: "/docs/guides/custom-resources.md",
           },
           {
             text: "Custom State Store",
             link: "/docs/guides/custom-state-store.md",
-          },
-          {
-            text: "Cloudflare",
-            items: [
-              {
-                text: "Deploy ViteJS Static Site",
-                link: "/docs/guides/cloudflare/vitejs.md",
-              },
-              {
-                text: "Workers and Bindings",
-                link: "/docs/guides/cloudflare/worker.md",
-              },
-              {
-                text: "Durable Objects & Migrations",
-                link: "/docs/guides/cloudflare/durable-object.md",
-              },
-              { text: "DNS & Zone", link: "/docs/guides/cloudflare/zone.md" },
-            ],
-            collapsed: true,
           },
         ],
       },
@@ -168,10 +153,6 @@ export default defineConfig({
                 link: "/docs/providers/cloudflare/permission-groups",
               },
               { text: "R2Bucket", link: "/docs/providers/cloudflare/bucket" },
-              {
-                text: "StaticSite",
-                link: "/docs/providers/cloudflare/static-site",
-              },
               { text: "Worker", link: "/docs/providers/cloudflare/worker" },
               {
                 text: "WranglerJson",
@@ -215,10 +196,6 @@ export default defineConfig({
                 link: "/docs/providers/fs/static-html-file",
               },
               {
-                text: "StaticJsonFile",
-                link: "/docs/providers/fs/static-json-file",
-              },
-              {
                 text: "StaticTextFile",
                 link: "/docs/providers/fs/static-text-file",
               },
@@ -242,6 +219,11 @@ export default defineConfig({
             items: [
               { text: "GitHubSecret", link: "/docs/providers/github/secret" },
             ],
+          },
+          {
+            text: "os",
+            collapsed: true,
+            items: [{ text: "Exec", link: "/docs/providers/os/exec" }],
           },
           {
             text: "stripe",

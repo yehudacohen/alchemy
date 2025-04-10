@@ -77,7 +77,7 @@ Alchemy works in any JavaScript environment including browsers, serverless funct
 
 ```typescript
 // Browser environment
-const app = alchemy("my-browser-app");
+const app = await alchemy("my-browser-app");
 
 // Lambda function
 export const handler = async () => {
@@ -116,7 +116,7 @@ Alchemy supports custom state backends including file systems, cloud storage, or
 
 ```typescript
 // Use Cloudflare R2 for state
-const app = alchemy("my-app", {
+const app = await alchemy("my-app", {
   stateStore: (scope) => new R2StateStore(scope, {
     bucketName: "my-state-bucket"
   })
@@ -203,7 +203,7 @@ Alchemy organizes resources with a hierarchical scope system that supports infin
 
 ```typescript
 // Root and stage scopes
-const app = alchemy("my-app", { 
+const app = await alchemy("my-app", { 
   stage: "prod",
   password: "prod-secret"  // Encryption password for this scope
 });
@@ -252,9 +252,15 @@ Alchemy works for a wide range of infrastructure use cases.
 
 ```typescript
 // Cloudflare Workers and Static Sites
-const site = await StaticSite("Website", {
+const assets = await Assets("Assets", {
+  path: "./dist"
+})
+
+const site = await Worker("Website", {
   name: "my-app",
-  dir: "./dist"
+  bindings: {
+    ASSETS: assets
+  }
 });
 
 // AWS Lambda Functions
