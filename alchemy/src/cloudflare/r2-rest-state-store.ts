@@ -123,16 +123,30 @@ export class R2RestStateStore implements StateStore {
       }
 
       const listPath = `/accounts/${this.api.accountId}/r2/buckets/${this.bucketName}/objects?${params.toString()}`;
-      const response = await this.api.get(listPath);
 
-      if (!response.ok) {
-        const errorData: any = await response.json().catch(() => ({
-          errors: [{ message: response.statusText }],
-        }));
-        throw new Error(
-          `Error listing R2 objects: ${errorData.errors?.[0]?.message || response.statusText}`
-        );
-      }
+      const response = await withExponentialBackoff(
+        async () => {
+          const response = await this.api.get(listPath);
+
+          if (!response.ok) {
+            const errorData: any = await response.json().catch(() => ({
+              errors: [{ message: response.statusText }],
+            }));
+            throw new Error(
+              `Error listing R2 objects: ${errorData.errors?.[0]?.message || response.statusText}`
+            );
+          }
+
+          return response;
+        },
+        // Retry on transient errors
+        (error) =>
+          error.message?.includes("502") ||
+          error.message?.includes("503") ||
+          error.message?.includes("timeout"),
+        5, // 5 retry attempts
+        1000 // Start with 1 second delay
+      );
 
       const data = (await response.json()) as any;
 
@@ -176,21 +190,38 @@ export class R2RestStateStore implements StateStore {
     await this.ensureInitialized();
 
     try {
-      const response = await this.api.get(
-        `/accounts/${this.api.accountId}/r2/buckets/${this.bucketName}/objects/${this.getObjectKey(key)}`
+      const response = await withExponentialBackoff(
+        async () => {
+          const response = await this.api.get(
+            `/accounts/${this.api.accountId}/r2/buckets/${this.bucketName}/objects/${this.getObjectKey(key)}`
+          );
+
+          if (!response.ok) {
+            if (response.status === 404) {
+              return response;
+            }
+
+            const errorData: any = await response.json().catch(() => ({
+              errors: [{ message: response.statusText }],
+            }));
+            throw new Error(
+              `Error getting R2 object: ${errorData.errors?.[0]?.message || response.statusText}`
+            );
+          }
+
+          return response;
+        },
+        // Retry on transient errors
+        (error) =>
+          error.message?.includes("502") ||
+          error.message?.includes("503") ||
+          error.message?.includes("timeout"),
+        5, // 5 retry attempts
+        1000 // Start with 1 second delay
       );
 
-      if (!response.ok) {
-        if (response.status === 404) {
-          return undefined;
-        }
-
-        const errorData: any = await response.json().catch(() => ({
-          errors: [{ message: response.statusText }],
-        }));
-        throw new Error(
-          `Error getting R2 object: ${errorData.errors?.[0]?.message || response.statusText}`
-        );
+      if (response.status === 404) {
+        return undefined;
       }
 
       // Parse and deserialize the state data
@@ -298,18 +329,31 @@ export class R2RestStateStore implements StateStore {
   async delete(key: string): Promise<void> {
     await this.ensureInitialized();
 
-    const response = await this.api.delete(
-      `/accounts/${this.api.accountId}/r2/buckets/${this.bucketName}/objects/${this.getObjectKey(key)}`
-    );
+    await withExponentialBackoff(
+      async () => {
+        const response = await this.api.delete(
+          `/accounts/${this.api.accountId}/r2/buckets/${this.bucketName}/objects/${this.getObjectKey(key)}`
+        );
 
-    if (!response.ok && response.status !== 404) {
-      const errorData: any = await response.json().catch(() => ({
-        errors: [{ message: response.statusText }],
-      }));
-      throw new Error(
-        `Error deleting from R2: ${errorData.errors?.[0]?.message || response.statusText}`
-      );
-    }
+        if (!response.ok && response.status !== 404) {
+          const errorData: any = await response.json().catch(() => ({
+            errors: [{ message: response.statusText }],
+          }));
+          throw new Error(
+            `Error deleting from R2: ${errorData.errors?.[0]?.message || response.statusText}`
+          );
+        }
+
+        return response;
+      },
+      // Retry on transient errors
+      (error) =>
+        error.message?.includes("502") ||
+        error.message?.includes("503") ||
+        error.message?.includes("timeout"),
+      5, // 5 retry attempts
+      1000 // Start with 1 second delay
+    );
   }
 
   /**
