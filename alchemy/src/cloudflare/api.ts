@@ -1,4 +1,5 @@
 import type { Secret } from "../secret";
+import { withExponentialBackoff } from "../util/retry";
 import { type CloudflareAuthOptions, getCloudflareHeaders } from "./auth";
 
 /**
@@ -240,11 +241,27 @@ export class CloudflareApi {
 
     const url = `${this.baseUrl}${path}`;
 
-    // Make the request
-    return fetch(url, {
-      ...init,
-      headers: combinedHeaders,
-    });
+    // Use withExponentialBackoff for automatic retry on network errors
+    return withExponentialBackoff(
+      () =>
+        fetch(url, {
+          ...init,
+          headers: combinedHeaders,
+        }),
+      (error) => {
+        // Only retry on network-related errors
+        const errorMsg = (error as Error).message || "";
+        const isNetworkError =
+          errorMsg.includes("socket connection was closed") ||
+          errorMsg.includes("ECONNRESET") ||
+          errorMsg.includes("ETIMEDOUT") ||
+          errorMsg.includes("ECONNREFUSED");
+
+        return isNetworkError;
+      },
+      5, // Maximum 5 attempts (1 initial + 4 retries)
+      1000 // Start with 1s delay, will exponentially increase
+    );
   }
 
   /**

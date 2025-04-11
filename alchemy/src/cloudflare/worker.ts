@@ -978,6 +978,8 @@ async function uploadAssets(
   for (const bucket of buckets) {
     const formData = new FormData();
 
+    let totalBytes = 0;
+
     // Add each file in the bucket to the form
     for (const fileHash of bucket) {
       // Find the file with this hash
@@ -1000,8 +1002,11 @@ async function uploadAssets(
       const blob = new Blob([base64Content], {
         type: getContentType(file.filePath),
       });
+      totalBytes += blob.size;
       formData.append(fileHash, blob, fileHash);
     }
+
+    console.log(`Uploading ${totalBytes} bytes of assets`);
 
     // Upload this batch of files
     const uploadResponse = await api.post(
