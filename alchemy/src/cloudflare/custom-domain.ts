@@ -1,11 +1,16 @@
 import type { Context } from "../context";
 import { Resource } from "../resource";
-import { CloudflareApi, createCloudflareApi, handleApiError } from "./api";
+import {
+  CloudflareApi,
+  createCloudflareApi,
+  type CloudflareApiOptions,
+} from "./api";
+import { handleApiError } from "./api-error";
 
 /**
  * Properties for creating or updating a CustomDomain
  */
-export interface CustomDomainProps {
+export interface CustomDomainProps extends CloudflareApiOptions {
   /**
    * The domain name to bind to the worker
    */
@@ -89,7 +94,7 @@ export const CustomDomain = Resource(
     props: CustomDomainProps
   ): Promise<CustomDomain> {
     // Create Cloudflare API client with automatic account discovery
-    const api = await createCloudflareApi();
+    const api = await createCloudflareApi(props);
 
     // Validate required properties
     if (!props.name) {

@@ -1,19 +1,14 @@
 import { AwsClient } from "aws4fetch";
 import type { Context } from "../context";
 import { Resource } from "../resource";
-import {
-  CloudflareAccountId,
-  CloudflareApi,
-  CloudflareApiError,
-  createCloudflareApi,
-  handleApiError,
-  type CloudflareApiOptions,
-} from "./api";
+import type { Secret } from "../secret";
+import { CloudflareApi, createCloudflareApi } from "./api";
+import { CloudflareApiError, handleApiError } from "./api-error";
 
 /**
  * Properties for creating or updating an R2 Bucket
  */
-export interface BucketProps extends CloudflareApiOptions {
+export interface BucketProps {
   /**
    * Name of the bucket
    * Names can only contain lowercase letters (a-z), numbers (0-9), and hyphens (-)
@@ -52,6 +47,36 @@ export interface BucketProps extends CloudflareApiOptions {
    * @default false
    */
   empty?: boolean;
+
+  /**
+   * API Token to use for the bucket
+   */
+  apiToken?: Secret;
+
+  /**
+   * API Key to use for the bucket
+   */
+  apiKey?: Secret;
+
+  /**
+   * Email to use for the bucket
+   */
+  email?: string;
+
+  /**
+   * Account ID to use for the bucket
+   */
+  accountId?: string;
+
+  /**
+   * Access Key to use for the bucket
+   */
+  accessKey?: Secret;
+
+  /**
+   * Secret Access Key to use for the bucket
+   */
+  secretAccessKey?: Secret;
 }
 
 /**
@@ -135,7 +160,10 @@ export const R2Bucket = Resource(
       if (props.delete !== false) {
         if (props.empty) {
           console.log("Emptying R2 bucket:", bucketName);
-          const r2Client = await createR2Client(props);
+          const r2Client = await createR2Client({
+            ...props,
+            accountId: api.accountId,
+          });
           // Empty the bucket first by deleting all objects
           await emptyBucket(r2Client, bucketName, props.jurisdiction);
         }
@@ -166,6 +194,7 @@ export const R2Bucket = Resource(
         creationDate: new Date(),
         jurisdiction: props.jurisdiction || "default",
         type: "r2_bucket",
+        accountId: api.accountId,
       });
     }
   }
@@ -175,9 +204,9 @@ export const R2Bucket = Resource(
  * Configuration for R2 client to connect to Cloudflare R2
  */
 export interface R2ClientConfig {
-  accountId?: string;
-  accessKeyId?: string;
-  secretAccessKey?: string;
+  accountId: string;
+  accessKeyId?: Secret;
+  secretAccessKey?: Secret;
   jurisdiction?: string;
 }
 
@@ -188,13 +217,12 @@ type R2Client = AwsClient & { accountId: string };
  *
  * @see https://developers.cloudflare.com/r2/examples/aws/aws-sdk-js-v3/
  */
-export async function createR2Client(
-  config: R2ClientConfig = {}
-): Promise<R2Client> {
-  const accountId = await CloudflareAccountId(config);
-  const accessKeyId = config.accessKeyId || process.env.R2_ACCESS_KEY_ID;
+export function createR2Client(config?: R2ClientConfig): Promise<R2Client> {
+  const accountId = config?.accountId ?? process.env.CLOUDFLARE_ACCOUNT_ID;
+  const accessKeyId =
+    config?.accessKeyId?.unencrypted || process.env.R2_ACCESS_KEY_ID;
   const secretAccessKey =
-    config.secretAccessKey || process.env.R2_SECRET_ACCESS_KEY;
+    config?.secretAccessKey?.unencrypted || process.env.R2_SECRET_ACCESS_KEY;
 
   if (!accountId) {
     throw new Error("CLOUDFLARE_ACCOUNT_ID environment variable is required");
@@ -282,12 +310,11 @@ export async function createBucket(
   );
 
   if (!createResponse.ok) {
-    const errorData: any = await createResponse.json().catch(() => ({
-      errors: [{ message: createResponse.statusText }],
-    }));
-    throw new CloudflareApiError(
-      `Error creating R2 bucket '${bucketName}': ${errorData.errors?.[0]?.message || createResponse.statusText}`,
-      createResponse
+    return await handleApiError(
+      createResponse,
+      "creating",
+      "R2 bucket",
+      bucketName
     );
   }
 
@@ -469,10 +496,6 @@ export async function updatePublicAccess(
   allowPublicAccess: boolean,
   jurisdiction?: string
 ): Promise<void> {
-  console.log(
-    `/accounts/${api.accountId}/r2/buckets/${bucketName}/domains/managed`
-  );
-
   const headers = withJurisdiction({}, jurisdiction);
 
   const response = await api.put(

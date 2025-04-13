@@ -67,13 +67,6 @@ export async function Providers({
     .filter((dirent) => dirent.isDirectory() && !exclude.includes(dirent.name))
     .map((dirent) => path.join(dirent.parentPath, dirent.name));
 
-  // For each provider, list all files
-  if (filter === false) {
-    return [];
-  } else if (typeof filter === "number") {
-    providers = providers.slice(0, filter);
-  }
-
   if (parallel) {
     return await Promise.all(
       providers.map((provider) =>

@@ -72,6 +72,10 @@ export type PermissionGroups = Resource<"cloudflare::PermissionGroups"> & {
  *
  * This is primarily used when creating API tokens for Cloudflare services like R2.
  *
+ * Note: Requires a Cloudflare API Key or Token with account read access.
+ * The API token must have permission to read token permission groups.
+ * The OAuth token from `wrangler login` is NOT sufficient for this operation.
+ *
  * @example
  * // Get all permission groups including those for R2
  * const permissions = await PermissionGroups("cloudflare-permissions");
@@ -99,7 +103,7 @@ export const PermissionGroups = Resource(
   async function (
     this: Context<PermissionGroups>,
     id: string,
-    options?: CloudflareApiOptions
+    options: CloudflareApiOptions = {}
   ): Promise<PermissionGroups> {
     // Only create and update phases are supported
     if (this.phase === "delete") {

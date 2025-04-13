@@ -3,7 +3,7 @@ import type { Context } from "../context";
 import { Resource } from "../resource";
 import { Secret } from "../secret";
 import { sha256 } from "../util/sha256";
-import { createCloudflareApi } from "./api";
+import { createCloudflareApi, type CloudflareApiOptions } from "./api";
 
 /**
  * Permission group for a token policy
@@ -63,7 +63,7 @@ export interface TokenCondition {
 /**
  * Properties for creating or updating an Account API Token
  */
-export interface AccountApiTokenProps {
+export interface AccountApiTokenProps extends CloudflareApiOptions {
   /**
    * Name of the token
    */
@@ -162,6 +162,10 @@ export interface AccountApiToken
 /**
  * Creates a Cloudflare Account API Token with specified permissions.
  *
+ * Note: Requires a Cloudflare API Key or Token with admin-level account access.
+ * The OAuth token from `wrangler login` is NOT sufficient for this operation.
+ * You must use an API token with permission to manage account API tokens.
+ *
  * @see https://developers.cloudflare.com/api/resources/accounts/subresources/tokens/methods/create/
  *
  * @example
@@ -222,7 +226,7 @@ export const AccountApiToken = Resource(
     props: AccountApiTokenProps
   ): Promise<AccountApiToken> {
     // Create Cloudflare API client with automatic account discovery
-    const api = await createCloudflareApi();
+    const api = await createCloudflareApi(props);
 
     if (this.phase === "delete") {
       // Delete token if we have an ID

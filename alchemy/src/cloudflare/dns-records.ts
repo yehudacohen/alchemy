@@ -5,7 +5,11 @@ import type {
   DnsRecordWithMetadata,
 } from "../dns/record";
 import { Resource } from "../resource";
-import { type CloudflareApi, createCloudflareApi } from "./api";
+import {
+  type CloudflareApi,
+  type CloudflareApiOptions,
+  createCloudflareApi,
+} from "./api";
 import type { CloudflareResponse } from "./response";
 
 /**
@@ -48,7 +52,7 @@ export interface DnsRecord extends DnsRecordWithMetadata {}
 /**
  * Properties for managing multiple DNS records
  */
-export interface DnsRecordsProps {
+export interface DnsRecordsProps extends CloudflareApiOptions {
   /**
    * Zone ID or domain name where records will be created
    */
@@ -127,7 +131,7 @@ export const DnsRecords = Resource(
     props: DnsRecordsProps
   ): Promise<DnsRecords> {
     // Create Cloudflare API client
-    const api = await createCloudflareApi();
+    const api = await createCloudflareApi(props);
 
     // Get zone ID if domain name was provided
     const zoneId = props.zoneId;

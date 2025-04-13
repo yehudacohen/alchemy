@@ -18,7 +18,6 @@ import { GitHubOIDCProvider } from "./alchemy/src/aws/oidc";
 import {
   AccountApiToken,
   Assets,
-  CloudflareAccountId,
   CustomDomain,
   DnsRecords,
   PermissionGroups,
@@ -46,13 +45,8 @@ const app = await alchemy("github:alchemy", {
 });
 
 const cfEmail = await alchemy.env("CLOUDFLARE_EMAIL");
-
+const cfAccountId = await alchemy.env("CLOUDFLARE_ACCOUNT_ID");
 const cfApiKey = await alchemy.secret.env("CLOUDFLARE_API_KEY");
-
-const cfAccountId = await CloudflareAccountId({
-  email: cfEmail,
-  apiKey: cfApiKey,
-});
 
 const zone = await Zone("alchemy.run", {
   name: "alchemy.run",
@@ -251,42 +245,38 @@ await alchemy.run("docs", async () => {
           collapsed: false,
           items: await processFrontmatterFiles(guides.path, "/docs/guides"),
         },
-        ...(process.argv.includes("--providers")
-          ? [
-              {
-                text: "Providers",
-                link: "/docs/providers",
-                collapsed: false,
-                items: (
-                  await Providers({
-                    srcDir: path.join("alchemy", "src"),
-                    outDir: providers.path,
-                    // anthropic throttles are painful, so we'll run them serially
-                    parallel: false,
-                    filter:
-                      process.argv[filterIdx + 1] === "true"
-                        ? true
-                        : filterIdx > -1
-                          ? isNaN(parseInt(process.argv[filterIdx + 1]))
-                            ? false
-                            : parseInt(process.argv[filterIdx + 1])
-                          : false,
-                  })
-                )
-                  .sort((a, b) => a.provider.localeCompare(b.provider))
-                  .map((p) => ({
-                    text: p.provider,
-                    collapsed: true,
-                    items: p.documents
-                      .sort((a, b) => a.title.localeCompare(b.title))
-                      .map((doc) => ({
-                        text: doc.title.replaceAll(" ", ""),
-                        link: `/docs/providers/${p.provider}/${path.basename(doc.path!, ".md")}`,
-                      })),
-                  })),
-              },
-            ]
-          : []),
+        {
+          text: "Providers",
+          link: "/docs/providers",
+          collapsed: false,
+          items: (
+            await Providers({
+              srcDir: path.join("alchemy", "src"),
+              outDir: providers.path,
+              // anthropic throttles are painful, so we'll run them serially
+              parallel: false,
+              filter:
+                process.argv[filterIdx + 1] === "true"
+                  ? true
+                  : filterIdx > -1
+                    ? isNaN(parseInt(process.argv[filterIdx + 1]))
+                      ? false
+                      : parseInt(process.argv[filterIdx + 1])
+                    : false,
+            })
+          )
+            .sort((a, b) => a.provider.localeCompare(b.provider))
+            .map((p) => ({
+              text: p.provider,
+              collapsed: true,
+              items: p.documents
+                .sort((a, b) => a.title.localeCompare(b.title))
+                .map((doc) => ({
+                  text: doc.title.replaceAll(" ", ""),
+                  link: `/docs/providers/${p.provider}/${path.basename(doc.path!, ".md")}`,
+                })),
+            })),
+        },
       ],
     },
   });

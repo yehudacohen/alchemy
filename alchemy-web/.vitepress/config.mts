@@ -131,10 +131,6 @@ export default defineConfig({
                 text: "AccountApiToken",
                 link: "/docs/providers/cloudflare/account-api-token",
               },
-              {
-                text: "AccountId",
-                link: "/docs/providers/cloudflare/account-id",
-              },
               { text: "Assets", link: "/docs/providers/cloudflare/assets" },
               {
                 text: "CustomDomain",
@@ -194,6 +190,10 @@ export default defineConfig({
               {
                 text: "StaticHTMLFile",
                 link: "/docs/providers/fs/static-html-file",
+              },
+              {
+                text: "StaticJsonFile",
+                link: "/docs/providers/fs/static-json-file",
               },
               {
                 text: "StaticTextFile",

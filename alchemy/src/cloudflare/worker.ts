@@ -7,7 +7,11 @@ import { isSecret } from "../secret";
 import { getContentType } from "../util/content-type";
 import { withExponentialBackoff } from "../util/retry";
 import { slugify } from "../util/slugify";
-import { type CloudflareApi, createCloudflareApi } from "./api";
+import {
+  type CloudflareApi,
+  type CloudflareApiOptions,
+  createCloudflareApi,
+} from "./api";
 import type { Assets } from "./assets";
 import {
   type Bindings,
@@ -24,7 +28,8 @@ import type { SingleStepMigration } from "./worker-migration";
 /**
  * Properties for creating or updating a Worker
  */
-export interface WorkerProps<B extends Bindings = Bindings> {
+export interface WorkerProps<B extends Bindings = Bindings>
+  extends CloudflareApiOptions {
   /**
    * The worker script content (JavaScript or WASM)
    * One of script, entryPoint, or bundle must be provided
@@ -57,12 +62,6 @@ export interface WorkerProps<B extends Bindings = Bindings> {
    * This is mandatory - must be explicitly specified
    */
   name: string;
-
-  /**
-   * Routes to associate with this worker
-   * Format: example.com/* or *.example.com/*
-   */
-  routes?: string[];
 
   /**
    * Bindings to attach to the worker
@@ -236,7 +235,7 @@ export const Worker = Resource(
     props: WorkerProps<B>
   ): Promise<Worker<B>> {
     // Create Cloudflare API client with automatic account discovery
-    const api = await createCloudflareApi();
+    const api = await createCloudflareApi(props);
 
     // Use the provided name
     const workerName = props.name;
@@ -299,9 +298,6 @@ export const Worker = Resource(
     // TODO: it is less than ideal that this can fail, resulting in state problem
     await this.set("bindings", props.bindings);
 
-    // Handle routes if requested
-    await setupRoutes(api, workerName, props.routes || []);
-
     // Handle worker URL if requested
     const workerUrl = await configureURL(
       this,
@@ -320,7 +316,6 @@ export const Worker = Resource(
       name: workerName,
       script: scriptContent,
       format: props.format || "esm", // Include format in the output
-      routes: props.routes || [],
       bindings: props.bindings ?? ({} as B),
       env: props.env,
       observability: scriptMetadata.observability,
@@ -352,35 +347,6 @@ async function deleteWorker<B extends Bindings>(
       "Error deleting worker:",
       errorData.errors?.[0]?.message || deleteResponse.statusText
     );
-  }
-
-  // Also remove any associated routes if they exist
-  if (ctx.output?.routes && ctx.output.routes.length > 0 && api.zoneId) {
-    // First get existing routes to find their IDs
-    const routesResponse = await api.get(`/zones/${api.zoneId}/workers/routes`);
-
-    if (!routesResponse.ok) {
-      throw new Error(
-        `Could not fetch routes for cleanup: ${routesResponse.status} ${routesResponse.statusText}`
-      );
-    }
-    const routesData: any = await routesResponse.json();
-    const existingRoutes = routesData.result || [];
-
-    for (const route of existingRoutes) {
-      if (ctx.output.routes.includes(route.pattern)) {
-        // Delete the route
-        const routeDeleteResponse = await api.delete(
-          `/zones/${api.zoneId}/workers/routes/${route.id}`
-        );
-
-        if (!routeDeleteResponse.ok) {
-          console.warn(
-            `Failed to delete route ${route.pattern}: ${routeDeleteResponse.status} ${routeDeleteResponse.statusText}`
-          );
-        }
-      }
-    }
   }
 
   // Disable the URL if it was enabled
@@ -717,67 +683,6 @@ async function bundleWorkerScript<B extends Bindings>(props: WorkerProps) {
   }
 }
 
-async function setupRoutes(
-  api: CloudflareApi,
-  workerName: string,
-  routes: string[]
-) {
-  // Set up routes if provided
-  if (routes && routes.length > 0 && api.zoneId) {
-    // First get existing routes
-    const routesResponse = await api.get(`/zones/${api.zoneId}/workers/routes`);
-
-    if (!routesResponse.ok) {
-      throw new Error(
-        `Could not fetch routes: ${routesResponse.status} ${routesResponse.statusText}`
-      );
-    }
-    const routesData: any = await routesResponse.json();
-    const existingRoutes = routesData.result || [];
-
-    // For each desired route
-    for (const pattern of routes) {
-      const existingRoute = existingRoutes.find(
-        (r: any) => r.pattern === pattern
-      );
-
-      if (existingRoute) {
-        // Update if script name doesn't match
-        if (existingRoute.script !== workerName) {
-          const updateRouteResponse = await api.put(
-            `/zones/${api.zoneId}/workers/routes/${existingRoute.id}`,
-            {
-              pattern,
-              script: workerName,
-            }
-          );
-
-          if (!updateRouteResponse.ok) {
-            console.warn(
-              `Failed to update route ${pattern}: ${updateRouteResponse.status} ${updateRouteResponse.statusText}`
-            );
-          }
-        }
-      } else {
-        // Create new route
-        const createRouteResponse = await api.post(
-          `/zones/${api.zoneId}/workers/routes`,
-          {
-            pattern,
-            script: workerName,
-          }
-        );
-
-        if (!createRouteResponse.ok) {
-          throw new Error(
-            `Failed to create route ${pattern}: ${createRouteResponse.status} ${createRouteResponse.statusText}`
-          );
-        }
-      }
-    }
-  }
-}
-
 async function configureURL<B extends Bindings>(
   ctx: Context<Worker<B>>,
   api: CloudflareApi,
@@ -1005,8 +910,6 @@ async function uploadAssets(
       totalBytes += blob.size;
       formData.append(fileHash, blob, fileHash);
     }
-
-    console.log(`Uploading ${totalBytes} bytes of assets`);
 
     // Upload this batch of files
     const uploadResponse = await api.post(

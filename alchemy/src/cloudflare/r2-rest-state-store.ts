@@ -1,14 +1,17 @@
 import type { Scope } from "../scope";
-import type { Secret } from "../secret";
 import { deserialize, serialize } from "../serde";
 import type { State, StateStore } from "../state";
 import { withExponentialBackoff } from "../util/retry";
-import { type CloudflareApi, createCloudflareApi } from "./api";
+import {
+  type CloudflareApi,
+  type CloudflareApiOptions,
+  createCloudflareApi,
+} from "./api";
 
 /**
  * Options for CloudflareR2StateStore
  */
-export interface CloudflareR2StateStoreOptions {
+export interface CloudflareR2StateStoreOptions extends CloudflareApiOptions {
   /**
    * The prefix to use for object keys in the R2 bucket
    * This allows multiple state stores to use the same R2 bucket
@@ -20,21 +23,6 @@ export interface CloudflareR2StateStoreOptions {
    * Required - the bucket must already exist
    */
   bucketName: string;
-
-  /**
-   * API key to use (overrides CLOUDFLARE_API_KEY env var)
-   */
-  apiKey?: Secret;
-
-  /**
-   * Account ID to use (overrides CLOUDFLARE_ACCOUNT_ID env var)
-   */
-  accountId?: string;
-
-  /**
-   * Email to use with API Key authentication (overrides CLOUDFLARE_EMAIL env var)
-   */
-  email?: string;
 }
 
 /**
@@ -45,9 +33,6 @@ export class R2RestStateStore implements StateStore {
   private api: CloudflareApi;
   private prefix: string;
   private bucketName: string;
-  private apiKey: Secret | undefined;
-  private accountId: string | undefined;
-  private email: string | undefined;
   private initialized = false;
 
   /**
@@ -58,7 +43,7 @@ export class R2RestStateStore implements StateStore {
    */
   constructor(
     public readonly scope: Scope,
-    options: CloudflareR2StateStoreOptions
+    private readonly options: CloudflareR2StateStoreOptions
   ) {
     // Use the scope's chain to build the prefix, similar to how FileSystemStateStore builds its directory
     const scopePath = scope.chain.join("/");
@@ -71,10 +56,6 @@ export class R2RestStateStore implements StateStore {
     }
     this.bucketName = options.bucketName;
 
-    this.apiKey = options.apiKey;
-    this.accountId = options.accountId;
-    this.email = options.email;
-
     // We'll initialize the API in init() to allow for async creation
     this.api = null as any;
   }
@@ -86,11 +67,7 @@ export class R2RestStateStore implements StateStore {
     if (this.initialized) return;
 
     // Create Cloudflare API client with automatic account discovery
-    this.api = await createCloudflareApi({
-      apiKey: this.apiKey,
-      accountId: this.accountId,
-      email: this.email,
-    });
+    this.api = await createCloudflareApi(this.options);
 
     this.initialized = true;
   }
