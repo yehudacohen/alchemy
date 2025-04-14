@@ -2,7 +2,7 @@
 order: 1
 ---
 
-# Deploy ViteJS Static Site
+# Cloudflare ViteJS
 
 This guide shows how to deploy a Vite.js React TypeScript application to Cloudflare using Alchemy.
 
