@@ -232,7 +232,6 @@ await alchemy.run("docs", async () => {
         },
         {
           text: "Concepts",
-          link: "/docs/concepts",
           collapsed: false,
           items: await processFrontmatterFiles(
             conceptsDir.path,
@@ -241,13 +240,11 @@ await alchemy.run("docs", async () => {
         },
         {
           text: "Guides",
-          link: "/guides",
           collapsed: false,
           items: await processFrontmatterFiles(guides.path, "/docs/guides"),
         },
         {
           text: "Providers",
-          link: "/docs/providers",
           collapsed: false,
           items: (
             await Providers({

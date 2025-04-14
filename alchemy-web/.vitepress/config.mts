@@ -52,7 +52,6 @@ export default defineConfig({
       { text: "What is Alchemy?", link: "/docs/what-is-alchemy" },
       {
         text: "Concepts",
-        link: "/docs/concepts",
         collapsed: false,
         items: [
           { text: "Resource", link: "/docs/concepts/resource.md" },
@@ -66,7 +65,6 @@ export default defineConfig({
       },
       {
         text: "Guides",
-        link: "/guides",
         collapsed: false,
         items: [
           {
@@ -85,7 +83,6 @@ export default defineConfig({
       },
       {
         text: "Providers",
-        link: "/docs/providers",
         collapsed: false,
         items: [
           {
