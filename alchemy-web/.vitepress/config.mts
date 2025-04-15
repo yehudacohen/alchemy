@@ -142,6 +142,10 @@ export default defineConfig({
                 link: "/docs/providers/cloudflare/custom-domain",
               },
               {
+                text: "D1Database",
+                link: "/docs/providers/cloudflare/d1-database",
+              },
+              {
                 text: "DnsRecords",
                 link: "/docs/providers/cloudflare/dns-records",
               },
@@ -157,6 +161,7 @@ export default defineConfig({
                 text: "PermissionGroups",
                 link: "/docs/providers/cloudflare/permission-groups",
               },
+              { text: "Queue", link: "/docs/providers/cloudflare/queue" },
               { text: "R2Bucket", link: "/docs/providers/cloudflare/bucket" },
               { text: "Worker", link: "/docs/providers/cloudflare/worker" },
               { text: "Workflow", link: "/docs/providers/cloudflare/workflow" },
