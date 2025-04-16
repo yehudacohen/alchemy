@@ -99,6 +99,17 @@ export interface WorkerProps<B extends Bindings = Bindings>
    * Whether to adopt the Worker if it already exists when creating
    */
   adopt?: boolean;
+
+  /**
+   * The compatibility date for the worker
+   * @default "2024-09-09"
+   */
+  compatibilityDate?: string;
+
+  /**
+   * The compatibility flags for the worker
+   */
+  compatibilityFlags?: string[];
 }
 
 /**
@@ -456,6 +467,8 @@ class NotFoundError extends Error {
 }
 
 interface WorkerMetadata {
+  compatibility_date: string;
+  compatibility_flags?: string[];
   bindings: WorkerBindingSpec[];
   observability: {
     enabled: boolean;
@@ -490,6 +503,8 @@ async function prepareWorkerMetadata<B extends Bindings>(
 ): Promise<WorkerMetadata> {
   // Prepare metadata with bindings
   const meta: WorkerMetadata = {
+    compatibility_date: props.compatibilityDate ?? "2024-09-09",
+    compatibility_flags: props.compatibilityFlags,
     bindings: [],
     observability: {
       enabled: props.observability?.enabled !== false,
@@ -589,6 +604,12 @@ async function prepareWorkerMetadata<B extends Bindings>(
         type: "queue",
         name: bindingName,
         queue_name: binding.name,
+      });
+    } else if (binding.type === "pipeline") {
+      meta.bindings.push({
+        type: "pipelines",
+        name: bindingName,
+        pipeline: binding.name,
       });
     } else {
       // @ts-expect-error - we should never reach here
