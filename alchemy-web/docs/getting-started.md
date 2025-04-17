@@ -11,7 +11,7 @@ Start by installing the Alchemy library using Bun (or your preferred package man
 bun add alchemy
 ```
 
-## Creating Your First Alchemy App
+## Create Your First Alchemy App
 
 Create a file named `alchemy.run.ts` in your project directory and follow these steps:
 
@@ -139,7 +139,7 @@ Notice how we didn't have to write any code to delete the old file?
 
 In a nutshell, that's the point of Infrastructure-as-Code - we just write code that creates the state we want and Alchemy takes care of deciding what to create, update or delete and in what order.
 
-## Destroying Resources
+## Destroy the Resource
 
 Let's now comment out the `File` and run it again.
 
@@ -149,6 +149,16 @@ Let's now comment out the `File` and run it again.
 //   content: "Hello, world!"
 // });
 ```
+
+> [!CAUTION]
+> Now, before we run our script again, you need to first add a "naked" impot of `alchemy/fs` at the top of our `alchemy.run.ts` script.
+> ```typescript
+> import "alchemy/fs"
+> ```
+> If you forget this, you would get an error
+> `Cannot destroy resource "my-first-app/dev/hello" type fs::File - no provider found. You may need to import the provider in your alchemy.config.ts.`
+> 
+> This is because IDEs usually remove unused imports. If you don't import the resource, the delete handler won't be registered which Alchemy needs to delete the resource.
 
 The output should look like:
 

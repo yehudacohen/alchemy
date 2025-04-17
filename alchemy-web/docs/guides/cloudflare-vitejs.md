@@ -16,6 +16,23 @@ cd my-cloudflare-app
 bun install
 ```
 
+Install `cloudflare` and `alchemy`:
+```sh
+bun add alchemy cloudflare
+```
+
+Update your `tsconfig.json` to register `@cloudflare/workers-types` globally:
+
+```json
+{
+  "compilerOptions": {
+    // make sure to register this globally
+    "types": ["@cloudflare/workers-types",],
+  },
+  "include": ["src/**/*.ts", "src/**/*.tsx"]
+}
+```
+
 ## Set up Cloudflare Credentials
 
 Create a `.env` file in the root of the new project and place your Cloudflare Account's Email and API Key:
@@ -33,7 +50,6 @@ CLOUDFLARE_EMAIL=<account-email>
 Create a standard `alchemy.run.ts` file in your project root:
 
 ```typescript
-import "@types/node";
 import alchemy from "alchemy";
 
 const app = await alchemy("cloudflare-vite", {

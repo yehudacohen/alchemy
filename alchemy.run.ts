@@ -192,24 +192,24 @@ await alchemy.run("docs", async () => {
       ["meta", { property: "og:title", content: "Alchemy" }],
       ["meta", { property: "og:description", content: "Alchemy Docs" }],
       ["meta", { property: "og:url", content: "https://alchemy.run" }],
-      [
-        "meta",
-        {
-          property: "og:image",
-          content: "https://alchemy.run/alchemy-unfurl.png",
-        },
-      ],
+      // [
+      //   "meta",
+      //   {
+      //     property: "og:image",
+      //     content: "https://alchemy.run/alchemy-unfurl.png",
+      //   },
+      // ],
       // Twitter Card (similar to Open Graph)
-      ["meta", { name: "twitter:card", content: "summary_large_image" }],
+      // ["meta", { name: "twitter:card", content: "summary_large_image" }],
       ["meta", { name: "twitter:title", content: "Alchemy" }],
       ["meta", { name: "twitter:description", content: "Alchemy Docs" }],
-      [
-        "meta",
-        {
-          name: "twitter:image",
-          content: "https://alchemy.run/alchemy-unfurl.png",
-        },
-      ],
+      // [
+      //   "meta",
+      //   {
+      //     name: "twitter:image",
+      //     content: "https://alchemy.run/alchemy-unfurl.png",
+      //   },
+      // ],
     ],
     themeConfig: {
       nav: [

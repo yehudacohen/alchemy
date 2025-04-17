@@ -61,7 +61,8 @@ export default {
 To make bindings type-safe, create an `env.d.ts` file:
 
 ```typescript
-// env.d.ts
+/// <reference types="./env.d.ts" />
+
 import type { myWorker } from "./alchemy.run";
 
 export type WorkerEnv = typeof myWorker.Env;
