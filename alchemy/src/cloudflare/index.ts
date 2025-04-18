@@ -13,6 +13,8 @@ export * from "./permission-groups";
 export * from "./pipeline";
 export * from "./queue";
 export * from "./r2-rest-state-store";
+export * from "./vectorize-index";
+export * from "./vectorize-metadata-index";
 export * from "./worker";
 export { Workflow } from "./workflow";
 export * from "./wrangler.json";
