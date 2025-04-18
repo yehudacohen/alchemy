@@ -201,6 +201,15 @@ export interface WranglerJsonSpec {
   vars?: Record<string, string>;
 
   /**
+   * D1 database bindings
+   */
+  d1_databases?: {
+    binding: string;
+    database_id: string;
+    database_name: string;
+  }[];
+
+  /**
    * Assets bindings
    */
   assets?: {
