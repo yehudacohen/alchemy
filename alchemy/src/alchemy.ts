@@ -1,13 +1,11 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 
-import { DestroyedSignal, destroy } from "./destroy";
+import { destroy, DestroyedSignal } from "./destroy";
+import type { PendingResource } from "./resource";
 import { Scope } from "./scope";
 import { secret } from "./secret";
 import type { StateStoreType } from "./state";
-
-// TODO: support browser
-const DEFAULT_STAGE = process.env.ALCHEMY_STAGE ?? process.env.USER ?? "dev";
 
 /**
  * Type alias for semantic highlighting of `alchemy` as a type keyword
@@ -37,7 +35,6 @@ export const alchemy: Alchemy = _alchemy as any;
  * await app.finalize();
  */
 export interface Alchemy {
-  scope: typeof scope;
   run: typeof run;
   destroy: typeof destroy;
 
@@ -63,7 +60,7 @@ export interface Alchemy {
    *   password: process.env.SECRET_PASSPHRASE
    * });
    */
-  (...parameters: Parameters<typeof scope>): Promise<Scope>;
+  (appName: string, options?: Omit<AlchemyOptions, "appName">): Promise<Scope>;
   /**
    * Template literal tag that supports file interpolation for documentation.
    * Automatically formats the content and appends file contents as code blocks.
@@ -95,11 +92,12 @@ async function _alchemy(
 ): Promise<Scope | string | never> {
   if (typeof args[0] === "string") {
     const [appName, options] = args as [string, AlchemyOptions?];
-    const root = scope(undefined, {
+    const root = new Scope({
       ...options,
       appName,
       stage: options?.stage,
     });
+    root.enter();
     if (options?.phase === "destroy") {
       await destroy(root);
       return process.exit(0);
@@ -215,7 +213,6 @@ async function _alchemy(
 }
 _alchemy.destroy = destroy;
 _alchemy.run = run;
-_alchemy.scope = scope;
 _alchemy.secret = secret;
 _alchemy.env = env;
 
@@ -256,7 +253,6 @@ export interface AlchemyOptions {
    * @default false
    */
   quiet?: boolean;
-
   /**
    * A passphrase to use to encrypt/decrypt secrets.
    * Required if using alchemy.secret() in this scope.
@@ -264,35 +260,16 @@ export interface AlchemyOptions {
   password?: string;
 }
 
-/**
- * Enter a new scope synchronously.
- *
- * @example
- * // Create a scope with a password for secret handling
- * await using scope = alchemy.scope("my-scope", {
- *   password: process.env.SECRET_PASSPHRASE
- * });
- *
- * // Use secrets within the scope
- * const resource = await Resource("my-resource", {
- *   apiKey: alchemy.secret(process.env.API_KEY)
- * });
- */
-function scope(
-  id: string | undefined,
-  options?: AlchemyOptions
-  // TODO: maybe we want to allow using _ = await alchemy.scope(import.meta)
-  // | [meta: ImportMeta]
-): Scope {
-  const scope = new Scope({
-    ...options,
-    appName: options?.appName,
-    stage: options?.stage ?? DEFAULT_STAGE,
-    scopeName: id,
-    parent: options?.parent ?? Scope.get(),
-  });
-  scope.enter();
-  return scope;
+export interface ScopeOptions extends AlchemyOptions {
+  enter: boolean;
+}
+
+export interface RunOptions extends AlchemyOptions {
+  /**
+   * @default false
+   */
+  // TODO(sam): this is an awful hack to differentiate between naked scopes and resources
+  isResource?: boolean;
 }
 
 /**
@@ -315,7 +292,7 @@ async function run<T>(
     | [id: string, fn: (this: Scope, scope: Scope) => Promise<T>]
     | [
         id: string,
-        options: AlchemyOptions,
+        options: RunOptions,
         fn: (this: Scope, scope: Scope) => Promise<T>,
       ]
 ): Promise<T> {
@@ -324,20 +301,49 @@ async function run<T>(
       ? [args[0], undefined, args[1]]
       : (args as [
           string,
-          AlchemyOptions | undefined,
+          RunOptions,
           (this: Scope, scope: Scope) => Promise<T>,
         ]);
-  const scope = alchemy.scope(id, options);
+  const _scope = new Scope({
+    ...options,
+    scopeName: id,
+  });
   try {
-    return await fn.bind(scope)(scope);
+    if (options?.isResource !== true && _scope.parent) {
+      // TODO(sam): this is an awful hack to differentiate between naked scopes and resources
+      const seq = _scope.parent.seq();
+      const output = {
+        ID: id,
+        FQN: "",
+        Kind: "alchemy::Scope",
+        Scope: _scope,
+        Seq: seq,
+      } as const;
+      const resource = {
+        kind: "scope",
+        id,
+        seq,
+        data: {},
+        fqn: "",
+        props: {},
+        status: "created",
+        output,
+      } as const;
+      await _scope.parent!.state.set(id, resource);
+      _scope.parent!.resources.set(
+        id,
+        Object.assign(Promise.resolve(resource), output) as PendingResource
+      );
+    }
+    return await _scope.run(async () => fn.bind(_scope)(_scope));
   } catch (error) {
     if (!(error instanceof DestroyedSignal)) {
-      scope.fail();
-    } else {
+      console.log(error);
+      _scope.fail();
     }
     throw error;
   } finally {
-    await scope.finalize();
+    await _scope.finalize();
   }
 }
 

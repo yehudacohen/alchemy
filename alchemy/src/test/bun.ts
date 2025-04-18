@@ -4,8 +4,7 @@ import { afterAll, beforeAll, it } from "bun:test";
 import path from "node:path";
 import { alchemy } from "../alchemy";
 import { R2RestStateStore } from "../cloudflare";
-import { destroy } from "../destroy";
-import type { Scope } from "../scope";
+import { Scope } from "../scope";
 import type { StateStoreType } from "../state";
 
 /**
@@ -26,12 +25,6 @@ alchemy.test = test;
  * Options for configuring test behavior
  */
 export interface TestOptions {
-  /**
-   * Whether to automatically destroy resources after test.
-   * @default true.
-   */
-  destroy?: boolean;
-
   /**
    * Whether to suppress logging output.
    * @default false.
@@ -121,7 +114,6 @@ type test = {
  * ```
  */
 export function test(meta: ImportMeta, defaultOptions?: TestOptions): test {
-  let isFailed = false;
   defaultOptions = defaultOptions ?? {};
   if (
     defaultOptions.stateStore === undefined &&
@@ -146,37 +138,21 @@ export function test(meta: ImportMeta, defaultOptions?: TestOptions): test {
   };
 
   // Create local test scope based on filename
-  const localTestScope = alchemy.scope(
-    `${defaultOptions.prefix ? `${defaultOptions.prefix}-` : ""}${path.basename(meta.filename)}`,
-    {
-      // parent: globalTestScope,
-      stateStore: defaultOptions?.stateStore,
-    }
-  );
-  test.scope = localTestScope;
+  const scope = new Scope({
+    scopeName: `${defaultOptions.prefix ? `${defaultOptions.prefix}-` : ""}${path.basename(meta.filename)}`,
+    // parent: globalTestScope,
+    stateStore: defaultOptions?.stateStore,
+  });
 
   test.beforeAll = (fn: (scope: Scope) => Promise<void>) => {
-    return beforeAll(async () => {
-      test.scope.enter();
-      await fn(test.scope);
-    });
+    return beforeAll(() => scope.run(() => fn(scope)));
   };
 
   test.afterAll = (fn: (scope: Scope) => Promise<void>) => {
-    return afterAll(async () => {
-      test.scope.enter();
-      await fn(test.scope);
-    });
+    return afterAll(() => scope.run(() => fn(scope)));
   };
 
-  // Clean up test scope after all tests complete
-  afterAll(async () => {
-    if (defaultOptions?.destroy !== false && !isFailed) {
-      await alchemy.destroy(test.scope);
-    }
-  });
-
-  return test as any;
+  return test as test;
 
   function test(
     ...args:
@@ -204,7 +180,6 @@ export function test(meta: ImportMeta, defaultOptions?: TestOptions): test {
 
     // Merge options with defaults
     const options: TestOptions = {
-      destroy: true,
       quiet: false,
       password: "test-password",
       ...spread(defaultOptions),
@@ -213,32 +188,26 @@ export function test(meta: ImportMeta, defaultOptions?: TestOptions): test {
 
     const fn = typeof args[1] === "function" ? args[1] : args[2]!;
 
-    return alchemy.run(
+    return it(
       testName,
-      {
-        ...options,
-        parent: localTestScope,
-      },
-      async (scope) => {
-        return it(
+      async () =>
+        alchemy.run(
           testName,
-          async () => {
-            // Enter test scope since bun calls from different scope
-            scope.enter();
+          {
+            ...options,
+            parent: scope,
+          },
+          async (scope) => {
             try {
-              await fn(scope);
+              // Enter test scope since bun calls from different scope
+              await scope.run(() => fn(scope));
             } catch (err) {
               console.error(err);
               throw err;
-            } finally {
-              if (options.destroy !== false) {
-                await destroy(scope);
-              }
             }
-          },
-          timeout
-        );
-      }
+          }
+        ),
+      timeout
     );
   }
 }
