@@ -1,6 +1,5 @@
 import { exec } from "child_process";
 import * as esbuild from "esbuild";
-import * as fs from "fs";
 import { glob } from "glob";
 import { spawn } from "node:child_process";
 import path from "node:path";
@@ -55,12 +54,18 @@ export async function findChangedTestFiles(
   // 2. Get git changed files
   const changedFiles = await getChangedFiles(baseCommit);
 
+  console.log("changedFiles", changedFiles);
+
   // 3. Process each test file
   const changedTestFiles: string[] = [];
 
   for (const testFile of testFiles) {
     // Get dependency tree for the test file
     const dependencies = await getDependencies(testFile);
+
+    if (testFile.includes("kv-namespace")) {
+      console.log(dependencies);
+    }
 
     // Check if any dependencies have changed
     const changedDependencies = [...dependencies].filter((dep) =>
@@ -129,41 +134,19 @@ async function getDependencies(testFile: string): Promise<Set<string>> {
       write: false,
       platform: "node",
       format: "esm",
-      bundle: false, // Don't bundle, just analyze imports
+      bundle: true,
       metafile: true,
+      external: ["@cloudflare/workers-types", "bun:test"],
     });
 
     if (!result.metafile) {
       return dependencies;
     }
 
-    // Get the direct imports from the test file
-    const relevantImports = new Set<string>();
-
-    // Extract the base directory for the test file
-    const testDir = path.dirname(testFile);
-    const srcDir = testDir.replace(/\/test\//, "/src/");
-
     // Function to normalize paths for comparison
     const normalizePath = (p: string) => path.resolve(p).replace(/\\/g, "/");
 
-    // Add the corresponding source file(s) that the test is likely testing
-    // For example, for test/aws/ses.test.ts, add src/aws/ses.ts
-    const testFileBase = path.basename(testFile).replace(".test.ts", "");
-    const potentialSourceFiles = [
-      path.join(srcDir, `${testFileBase}.ts`),
-      path.join(srcDir, `${testFileBase}.js`),
-      path.join(srcDir, "index.ts"),
-      path.join(srcDir, "index.js"),
-    ];
-
-    for (const sourceFile of potentialSourceFiles) {
-      if (fs.existsSync(sourceFile)) {
-        relevantImports.add(normalizePath(sourceFile));
-      }
-    }
-
-    // Process direct imports from the test file
+    // Process imports from the metafile
     const { inputs } = result.metafile;
     for (const filePath in inputs) {
       // Skip node_modules and non-local imports
@@ -175,29 +158,8 @@ async function getDependencies(testFile: string): Promise<Set<string>> {
         continue;
       }
 
-      // Add the source file and its test to dependencies
       const absolutePath = normalizePath(filePath);
       dependencies.add(absolutePath);
-
-      // If this is importing a source file, add it to relevant imports
-      if (absolutePath.includes("/src/")) {
-        relevantImports.add(absolutePath);
-      }
-    }
-
-    // Now add relevant imports and their test files
-    for (const sourceFile of relevantImports) {
-      // Add the source file
-      dependencies.add(sourceFile);
-
-      // Try to find and add corresponding test file
-      const possibleTestFile = sourceFile
-        .replace("/src/", "/test/")
-        .replace(/\.ts$/, ".test.ts");
-
-      if (fs.existsSync(possibleTestFile)) {
-        dependencies.add(normalizePath(possibleTestFile));
-      }
     }
 
     return dependencies;
