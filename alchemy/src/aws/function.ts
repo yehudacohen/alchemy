@@ -89,6 +89,11 @@ export interface FunctionProps {
    */
   url?: {
     /**
+     * Configure type of response for the function URL
+     */
+    invokeMode?: "BUFFERED" | "RESPONSE_STREAM";
+
+    /**
      * Authentication type for the function URL
      */
     authType?: "AWS_IAM" | "NONE";
@@ -277,7 +282,7 @@ export interface Function extends Resource<"lambda::Function">, FunctionProps {
  * });
  *
  * @example
- * // Create a function with a public URL endpoint and CORS
+ * // Create a function with a public URL endpoint, CORS and optional response streaming
  * const apiFunction = await Function("public-api", {
  *   functionName: "public-api",
  *   zipPath: "./dist/api.zip",
@@ -285,6 +290,7 @@ export interface Function extends Resource<"lambda::Function">, FunctionProps {
  *   handler: "api.handler",
  *   url: {
  *     authType: "NONE",
+ *     invokeMode: "RESPONSE_STREAM",
  *     cors: {
  *       allowOrigins: ["*"],
  *       allowMethods: ["GET", "POST"],
@@ -387,6 +393,7 @@ export const Function = Resource(
                   new UpdateFunctionUrlConfigCommand({
                     FunctionName: props.functionName,
                     AuthType: props.url.authType || "NONE",
+                    InvokeMode: props.url.invokeMode || "BUFFERED",
                     Cors: props.url.cors
                       ? {
                           AllowCredentials: props.url.cors.allowCredentials,
@@ -425,6 +432,7 @@ export const Function = Resource(
                   new CreateFunctionUrlConfigCommand({
                     FunctionName: props.functionName,
                     AuthType: props.url.authType || "NONE",
+                    InvokeMode: props.url.invokeMode || "BUFFERED",
                     Cors: props.url.cors
                       ? {
                           AllowCredentials: props.url.cors.allowCredentials,
@@ -465,6 +473,7 @@ export const Function = Resource(
                   new CreateFunctionUrlConfigCommand({
                     FunctionName: props.functionName,
                     AuthType: props.url.authType || "NONE",
+                    InvokeMode: props.url.invokeMode || "BUFFERED",
                     Cors: props.url.cors
                       ? {
                           AllowCredentials: props.url.cors.allowCredentials,
@@ -585,6 +594,7 @@ export const Function = Resource(
                 new CreateFunctionUrlConfigCommand({
                   FunctionName: props.functionName,
                   AuthType: props.url.authType || "NONE",
+                  InvokeMode: props.url.invokeMode || "BUFFERED",
                   Cors: props.url.cors
                     ? {
                         AllowCredentials: props.url.cors.allowCredentials,
