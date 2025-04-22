@@ -1,10 +1,10 @@
 {
   "exclude": ["node_modules", "dist"],
   "compilerOptions": {
+    "types": ["@cloudflare/workers-types", "@types/node"],
     // Enable latest features
     "lib": ["ESNext", "DOM"],
     "target": "ESNext",
-    "module": "ESNext",
     "moduleDetection": "force",
     "jsx": "react-jsx",
     "allowJs": true,
@@ -12,7 +12,8 @@
     "noEmit": true,
 
     // Bundler mode
-    "moduleResolution": "bundler",
+    "module": "Preserve",
+    "moduleResolution": "Bundler",
     // "allowImportingTsExtensions": true,
     "verbatimModuleSyntax": true,
 
