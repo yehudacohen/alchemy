@@ -9,6 +9,7 @@ export * from "./d1-database";
 export * from "./dns-records";
 export * from "./durable-object-namespace";
 export * from "./kv-namespace";
+export * from "./local-dev-cloudflare-shim";
 export * from "./permission-groups";
 export * from "./pipeline";
 export * from "./queue";
