@@ -1,13 +1,16 @@
 {
   "name": "alchemy",
-  "version": "0.11.4",
+  "version": "0.12.0",
   "type": "module",
   "module": "./lib/index.js",
   "scripts": {
     "publish:npm": "cp ../README.md . && rm -rf ./*.tsbuildinfo && rm -rf ./lib && tsc -b && npm publish && rm README.md",
     "docs:gen": "rm -rf ./docs && typedoc"
   },
-  "files": ["lib", "src"],
+  "files": [
+    "lib",
+    "src"
+  ],
   "exports": {
     ".": "./lib/index.js",
     "./ai": "./lib/ai/index.js",
