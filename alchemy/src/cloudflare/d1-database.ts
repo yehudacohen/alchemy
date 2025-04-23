@@ -82,40 +82,39 @@ export interface D1DatabaseProps extends CloudflareApiOptions {
 /**
  * Output returned after D1 Database creation/update
  */
-export interface D1Database
-  extends Resource<"cloudflare::D1Database">,
-    D1DatabaseProps {
-  type: "d1";
-  /**
-   * The unique ID of the database (UUID)
-   */
-  id: string;
-
-  /**
-   * File size of the database
-   */
-  fileSize: number;
-
-  /**
-   * Number of tables in the database
-   */
-  numTables: number;
-
-  /**
-   * Version of the database
-   */
-  version: string;
-
-  /**
-   * Read replication configuration
-   */
-  readReplication?: {
+export type D1Database = Resource<"cloudflare::D1Database"> &
+  D1DatabaseProps & {
+    type: "d1";
     /**
-     * Read replication mode
+     * The unique ID of the database (UUID)
      */
-    mode: "auto" | "disabled";
+    id: string;
+
+    /**
+     * File size of the database
+     */
+    fileSize: number;
+
+    /**
+     * Number of tables in the database
+     */
+    numTables: number;
+
+    /**
+     * Version of the database
+     */
+    version: string;
+
+    /**
+     * Read replication configuration
+     */
+    readReplication?: {
+      /**
+       * Read replication mode
+       */
+      mode: "auto" | "disabled";
+    };
   };
-}
 
 export async function D1Database(
   id: string,
