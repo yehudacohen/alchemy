@@ -17,6 +17,7 @@ import env, {
   CLOUDFLARE_ACCOUNT_ID,
   CLOUDFLARE_API_KEY,
   CLOUDFLARE_EMAIL,
+  NEON_API_KEY,
   OPENAI_API_KEY,
   STRIPE_API_KEY,
 } from "./env";
@@ -97,6 +98,7 @@ await Promise.all([
     CLOUDFLARE_EMAIL,
     STRIPE_API_KEY,
     OPENAI_API_KEY,
+    NEON_API_KEY,
     CLOUDFLARE_BUCKET_NAME: stateStore.name,
     R2_ACCESS_KEY_ID: accountAccessToken.accessKeyId,
     R2_SECRET_ACCESS_KEY: accountAccessToken.secretAccessKey,

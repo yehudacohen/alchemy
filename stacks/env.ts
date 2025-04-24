@@ -11,6 +11,8 @@ export const STRIPE_API_KEY = await alchemy.secret.env.STRIPE_API_KEY;
 
 export const OPENAI_API_KEY = await alchemy.secret.env.OPENAI_API_KEY;
 
+export const NEON_API_KEY = await alchemy.secret.env.NEON_API_KEY;
+
 export default {
   stage: "prod",
   phase: process.argv.includes("--destroy") ? "destroy" : "up",

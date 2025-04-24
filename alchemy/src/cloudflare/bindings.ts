@@ -9,6 +9,7 @@ import type { Assets } from "./assets.js";
 import type { R2Bucket } from "./bucket.js";
 import type { D1Database } from "./d1-database.js";
 import type { DurableObjectNamespace } from "./durable-object-namespace.js";
+import type { Hyperdrive } from "./hyperdrive.js";
 import type { KVNamespace } from "./kv-namespace.js";
 import type { Pipeline } from "./pipeline.js";
 import type { Queue } from "./queue.js";
@@ -24,9 +25,11 @@ export type Bindings = {
  * L2 Binding Resources.
  */
 export type Binding =
+  | AiGateway
   | Assets
   | D1Database
   | DurableObjectNamespace
+  | Hyperdrive
   | KVNamespace
   | Pipeline
   | Queue
@@ -35,8 +38,7 @@ export type Binding =
   | string
   | VectorizeIndex
   | Worker
-  | Workflow
-  | AiGateway;
+  | Workflow;
 
 /**
  * Union type for all Worker binding types (API spec)

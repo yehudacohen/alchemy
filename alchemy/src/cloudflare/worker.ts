@@ -784,6 +784,13 @@ async function prepareWorkerMetadata<B extends Bindings>(
         type: "ai",
         name: bindingName,
       });
+    } else if (binding.type === "hyperdrive") {
+      // Hyperdrive binding
+      meta.bindings.push({
+        type: "hyperdrive",
+        name: bindingName,
+        id: binding.hyperdriveId,
+      });
     } else {
       // @ts-expect-error - we should never reach here
       throw new Error(`Unsupported binding type: ${binding.type}`);

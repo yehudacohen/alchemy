@@ -151,7 +151,6 @@ export interface AiGateway
  */
 export const AiGateway = Resource(
   "cloudflare::AiGateway",
-  { alwaysUpdate: true }, // AI Gateway PUT updates, so always run update logic
   async function (
     this: Context<AiGateway>,
     id: string,
