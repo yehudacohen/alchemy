@@ -38,8 +38,10 @@ export interface QueueProps extends CloudflareApiOptions {
    * Name of the queue
    * Required during creation
    * Cannot be changed after creation
+   *
+   * @default id
    */
-  name: string;
+  name?: string;
 
   /**
    * Settings for the queue
@@ -56,10 +58,16 @@ export interface QueueProps extends CloudflareApiOptions {
   delete?: boolean;
 }
 
+export function isQueue(eventSource: any): eventSource is Queue {
+  return "Kind" in eventSource && eventSource.Kind === "cloudflare::Queue";
+}
+
 /**
  * Output returned after Cloudflare Queue creation/update
  */
-export interface Queue extends Resource<"cloudflare::Queue">, QueueProps {
+export interface Queue<Body = unknown>
+  extends Resource<"cloudflare::Queue">,
+    QueueProps {
   /**
    * Type identifier for Cloudflare Queue
    */
@@ -71,6 +79,11 @@ export interface Queue extends Resource<"cloudflare::Queue">, QueueProps {
   id: string;
 
   /**
+   * The name of the queue
+   */
+  name: string;
+
+  /**
    * Time when the queue was created
    */
   createdOn: string;
@@ -79,6 +92,13 @@ export interface Queue extends Resource<"cloudflare::Queue">, QueueProps {
    * Modified timestamp
    */
   modifiedOn: string;
+
+  /**
+   * Phantom property to allow type inference
+   */
+  Body: Body;
+
+  Batch: MessageBatch<Body>;
 }
 
 interface CloudflareQueueResponse {
@@ -131,74 +151,74 @@ interface CloudflareQueueResponse {
  *
  * @see https://developers.cloudflare.com/queues/
  */
-export const Queue = Resource(
-  "cloudflare::Queue",
-  async function (
-    this: Context<Queue>,
-    id: string,
-    props: QueueProps
-  ): Promise<Queue> {
-    const api = await createCloudflareApi(props);
-    const queueName = props.name || id;
+export const Queue = Resource("cloudflare::Queue", async function <
+  T = unknown,
+>(this: Context<Queue<T>>, id: string, props: QueueProps = {}): Promise<
+  Queue<T>
+> {
+  const api = await createCloudflareApi(props);
+  const queueName = props.name ?? id;
 
-    if (this.phase === "delete") {
-      console.log("Deleting Cloudflare Queue:", queueName);
-      if (props.delete !== false) {
-        // Delete Queue
-        await deleteQueue(api, this.output?.id);
-      }
-
-      // Return void (a deleted queue has no content)
-      return this.destroy();
-    } else {
-      let queueData: CloudflareQueueResponse;
-
-      if (this.phase === "create") {
-        console.log("Creating Cloudflare Queue:", queueName);
-        queueData = await createQueue(api, queueName, props);
-      } else {
-        // Update operation
-        if (this.output?.id) {
-          console.log("Updating Cloudflare Queue:", queueName);
-
-          // Check if name is being changed, which is not allowed
-          if (props.name !== this.output.name) {
-            throw new Error(
-              "Cannot update Queue name after creation. Queue name is immutable."
-            );
-          }
-
-          // Update the queue with new settings
-          queueData = await updateQueue(api, this.output.id, props);
-        } else {
-          // If no ID exists, fall back to creating a new queue
-          console.log(
-            "No existing Queue ID found, creating new Cloudflare Queue:",
-            queueName
-          );
-          queueData = await createQueue(api, queueName, props);
-        }
-      }
-
-      return this({
-        type: "queue",
-        id: queueData.result.queue_id || "",
-        name: queueName,
-        settings: queueData.result.settings
-          ? {
-              deliveryDelay: queueData.result.settings.delivery_delay,
-              deliveryPaused: queueData.result.settings.delivery_paused,
-              messageRetentionPeriod:
-                queueData.result.settings.message_retention_period,
-            }
-          : undefined,
-        createdOn: queueData.result.created_on || new Date().toISOString(),
-        modifiedOn: queueData.result.modified_on || new Date().toISOString(),
-        accountId: api.accountId,
-      });
+  if (this.phase === "delete") {
+    console.log("Deleting Cloudflare Queue:", queueName);
+    if (props.delete !== false) {
+      // Delete Queue
+      await deleteQueue(api, this.output?.id);
     }
+
+    // Return void (a deleted queue has no content)
+    return this.destroy();
+  } else {
+    let queueData: CloudflareQueueResponse;
+
+    if (this.phase === "create") {
+      console.log("Creating Cloudflare Queue:", queueName);
+      queueData = await createQueue(api, queueName, props);
+    } else {
+      // Update operation
+      if (this.output?.id) {
+        console.log("Updating Cloudflare Queue:", queueName);
+
+        // Check if name is being changed, which is not allowed
+        if (props.name !== this.output.name) {
+          throw new Error(
+            "Cannot update Queue name after creation. Queue name is immutable."
+          );
+        }
+
+        // Update the queue with new settings
+        queueData = await updateQueue(api, this.output.id, props);
+      } else {
+        // If no ID exists, fall back to creating a new queue
+        console.log(
+          "No existing Queue ID found, creating new Cloudflare Queue:",
+          queueName
+        );
+        queueData = await createQueue(api, queueName, props);
+      }
+    }
+
+    return this({
+      type: "queue",
+      id: queueData.result.queue_id || "",
+      name: queueName,
+      settings: queueData.result.settings
+        ? {
+            deliveryDelay: queueData.result.settings.delivery_delay,
+            deliveryPaused: queueData.result.settings.delivery_paused,
+            messageRetentionPeriod:
+              queueData.result.settings.message_retention_period,
+          }
+        : undefined,
+      createdOn: queueData.result.created_on || new Date().toISOString(),
+      modifiedOn: queueData.result.modified_on || new Date().toISOString(),
+      accountId: api.accountId,
+      // phantom properties
+      Body: undefined as T,
+      Batch: undefined! as MessageBatch<T>,
+    });
   }
-);
+});
 
 /**
  * Create a new Cloudflare Queue

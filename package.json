@@ -14,7 +14,11 @@
     "publish:npm": "bun run --filter alchemy publish:npm",
     "test": "bun ./alchemy/test/run.ts"
   },
-  "workspaces": ["alchemy", "alchemy-web", "examples/*"],
+  "workspaces": [
+    "alchemy",
+    "alchemy-web",
+    "examples/*"
+  ],
   "devDependencies": {
     "@biomejs/biome": "~1.8.0",
     "@types/bun": "latest",
