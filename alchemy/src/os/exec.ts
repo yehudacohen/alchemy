@@ -1,9 +1,6 @@
-import { exec } from "node:child_process";
-import { promisify } from "node:util";
+import { spawn } from "node:child_process";
 import type { Context } from "../context.js";
 import { Resource } from "../resource.js";
-
-const execAsync = promisify(exec);
 
 /**
  * Properties for executing a shell command
@@ -32,15 +29,15 @@ export interface ExecProps {
   env?: Record<string, string>;
 
   /**
-   * Maximum buffer size for stdout and stderr (in bytes)
-   * @default 1024 * 1024 (1MB)
-   */
-  maxBuffer?: number;
-
-  /**
    * Whether to throw an error if the command exits with a non-zero status
    */
   throwOnError?: boolean;
+
+  /**
+   * Whether to inherit stdio from parent process
+   * @default true
+   */
+  inheritStdio?: boolean;
 }
 
 /**
@@ -58,12 +55,12 @@ export interface Exec extends Resource<"os::Exec">, ExecProps {
   exitCode: number;
 
   /**
-   * Standard output from the command
+   * Standard output from the command (only available when inheritStdio is false)
    */
   stdout: string;
 
   /**
-   * Standard error from the command
+   * Standard error from the command (only available when inheritStdio is false)
    */
   stderr: string;
 
@@ -82,9 +79,16 @@ export interface Exec extends Resource<"os::Exec">, ExecProps {
  * Execute a shell command
  *
  * @example
- * // Run a simple command
+ * // Run a simple command with inherited stdio (default)
  * const result = await Exec("list-files", {
  *   command: "ls -la"
+ * });
+ *
+ * @example
+ * // Run a command and capture output instead of inheriting stdio
+ * const result = await Exec("list-files", {
+ *   command: "ls -la",
+ *   inheritStdio: false
  * });
  *
  * console.log(result.stdout);
@@ -95,13 +99,6 @@ export interface Exec extends Resource<"os::Exec">, ExecProps {
  *   command: "npm run build",
  *   cwd: "./my-project",
  *   env: { NODE_ENV: "production" }
- * });
- *
- * @example
- * // Run a command with a larger buffer for output
- * const logs = await Exec("get-logs", {
- *   command: "cat large-log-file.log",
- *   maxBuffer: 10 * 1024 * 1024 // 10MB
  * });
  *
  * @example
@@ -143,31 +140,61 @@ export const Exec = Resource(
       let stderr = "";
       let exitCode = 0;
 
+      // Default to inheriting stdio unless explicitly set to false
+      const inheritStdio = props.inheritStdio !== false;
+
       try {
-        console.log(props.command);
-        // Execute the command
-        const result = await execAsync(props.command, {
+        // Parse the command into command and args
+        const [cmd, ...args] = props.command.split(/\s+/);
+
+        // Use spawn for better stdio control
+        const childProcess = spawn(cmd, args, {
           cwd: props.cwd || process.cwd(),
           env: { ...process.env, ...props.env },
-          maxBuffer: props.maxBuffer || 1024 * 1024, // Default 1MB
+          shell: true, // Use shell to handle complex commands
+          stdio: inheritStdio ? "inherit" : "pipe", // Inherit stdio when requested
         });
 
-        stdout = result.stdout;
-        console.log(stdout);
-        stderr = result.stderr;
-        exitCode = 0; // Success
+        if (!inheritStdio) {
+          // If not inheriting stdio, collect output manually
+          childProcess.stdout?.on("data", (data) => {
+            stdout += data.toString();
+          });
+
+          childProcess.stderr?.on("data", (data) => {
+            stderr += data.toString();
+          });
+        }
+
+        // Wait for the process to complete
+        exitCode = await new Promise<number>((resolve, reject) => {
+          childProcess.on("close", (code) => {
+            resolve(code || 0);
+          });
+
+          childProcess.on("error", (err) => {
+            if (props.throwOnError) {
+              reject(err);
+            } else {
+              stderr += err.toString();
+              resolve(1);
+            }
+          });
+        });
+
+        if (exitCode !== 0 && props.throwOnError) {
+          throw new Error(
+            `Command failed with exit code ${exitCode}: ${props.command}`
+          );
+        }
       } catch (error: any) {
-        console.log("error", error);
         if (props.throwOnError) {
           throw error;
         }
 
         // If not throwing, capture the error information
-        exitCode = error.code || 1;
-        stdout = error.stdout || "";
-        stderr = error.stderr || String(error);
-        console.log(stdout);
-        console.error(stderr);
+        exitCode = 1;
+        stderr += String(error);
       }
 
       // Return the execution result
@@ -176,9 +203,9 @@ export const Exec = Resource(
         command: props.command,
         cwd: props.cwd,
         env: props.env,
-        maxBuffer: props.maxBuffer,
         throwOnError: props.throwOnError,
         memoize: props.memoize,
+        inheritStdio,
         exitCode,
         stdout,
         stderr,
