@@ -8,6 +8,7 @@ import {
   type CloudflareApiOptions,
   createCloudflareApi,
 } from "./api.js";
+import { createBucket, getBucket } from "./bucket.js";
 
 /**
  * Options for CloudflareR2StateStore
@@ -23,7 +24,7 @@ export interface CloudflareR2StateStoreOptions extends CloudflareApiOptions {
    * The R2 bucket name to use
    * Required - the bucket must already exist
    */
-  bucketName: string;
+  bucketName?: string;
 }
 
 /**
@@ -44,7 +45,7 @@ export class R2RestStateStore implements StateStore {
    */
   constructor(
     public readonly scope: Scope,
-    private readonly options: CloudflareR2StateStoreOptions
+    private readonly options: CloudflareR2StateStoreOptions = {}
   ) {
     // Use the scope's chain to build the prefix, similar to how FileSystemStateStore builds its directory
     const scopePath = scope.chain.join("/");
@@ -52,10 +53,7 @@ export class R2RestStateStore implements StateStore {
       ? `${options.prefix}${scopePath}/`
       : `alchemy/${scopePath}/`;
 
-    if (!options.bucketName) {
-      throw new Error("bucketName is required for CloudflareR2StateStore");
-    }
-    this.bucketName = options.bucketName;
+    this.bucketName = options.bucketName ?? "alchemy-state";
 
     // We'll initialize the API in init() to allow for async creation
     this.api = null as any;
@@ -69,6 +67,26 @@ export class R2RestStateStore implements StateStore {
 
     // Create Cloudflare API client with automatic account discovery
     this.api = await createCloudflareApi(this.options);
+
+    // Check if the alchemy state bucket exists
+    try {
+      await withExponentialBackoff(
+        () => getBucket(this.api, this.bucketName),
+        isRetryableError,
+        5,
+        1000
+      );
+    } catch (error) {
+      // If not, create the alchemy state bucket
+      if (error instanceof CloudflareApiError && error.status === 404) {
+        await withExponentialBackoff(
+          () => createBucket(this.api, this.bucketName),
+          isRetryableError,
+          5,
+          1000
+        );
+      }
+    }
 
     this.initialized = true;
   }

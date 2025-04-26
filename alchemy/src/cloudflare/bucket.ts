@@ -264,10 +264,15 @@ export function createR2Client(config?: R2ClientConfig): Promise<R2Client> {
 }
 
 interface CloudflareBucketResponse {
+  /**
+   * The bucket information returned from the Cloudflare REST API
+   * @see https://developers.cloudflare.com/api/node/resources/r2/subresources/buckets/models/bucket/#(schema)
+   */
   result: {
-    name: string;
-    location?: string;
     creation_date: string;
+    location?: "apac" | "eeur" | "enam" | "weur" | "wnam" | "oc";
+    name: string;
+    storage_class?: "Standard" | "InfrequentAccess";
   };
   success: boolean;
   errors: Array<{ code: number; message: string }>;
@@ -303,12 +308,44 @@ export function withJurisdiction(
 }
 
 /**
+ * Get a bucket
+ */
+export async function getBucket(
+  api: CloudflareApi,
+  bucketName: string,
+  props: BucketProps = {}
+): Promise<CloudflareBucketResponse> {
+  const headers = withJurisdiction({}, props);
+  const getResponse = await api.get(
+    `/accounts/${api.accountId}/r2/buckets/${bucketName}`,
+    { headers }
+  );
+
+  if (!getResponse.ok) {
+    return await handleApiError(getResponse, "get", "R2 bucket", bucketName);
+  }
+
+  if (getResponse.status === 200) {
+    return (await getResponse.json()) as CloudflareBucketResponse;
+  }
+
+  const errorData: any = await getResponse.json().catch(() => ({
+    errors: [{ message: getResponse.statusText }],
+  }));
+
+  throw new CloudflareApiError(
+    `Error getting R2 bucket '${bucketName}': ${errorData.errors?.[0]?.message || getResponse.statusText}`,
+    getResponse
+  );
+}
+
+/**
  * Create a new bucket
  */
 export async function createBucket(
   api: CloudflareApi,
   bucketName: string,
-  props: BucketProps
+  props: BucketProps = {}
 ): Promise<CloudflareBucketResponse> {
   // Create new R2 bucket
   const createPayload: any = {
