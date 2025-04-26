@@ -1,19 +1,17 @@
 import "../../alchemy/src/cloudflare";
 
 import alchemy from "../../alchemy/src";
-import { R2Bucket, TanStackStart } from "../../alchemy/src/cloudflare";
+import { TanStackStart } from "../../alchemy/src/cloudflare";
 
-const app = await alchemy("tanstack-app");
+const BRANCH_PREFIX = process.env.BRANCH_PREFIX ?? "";
 
-const bucket = await R2Bucket("tanstack-bucket", {
-  name: "tanstack-bucket",
+const app = await alchemy("cloudflare-tanstack", {
+  phase: process.argv.includes("--destroy") ? "destroy" : "up",
 });
 
-export const website = await TanStackStart("tanstack-website", {
-  bindings: {
-    BUCKET: bucket,
-  },
-});
+export const website = await TanStackStart(
+  `cloudflare-tanstack-website${BRANCH_PREFIX}`
+);
 
 console.log({
   url: website.url,

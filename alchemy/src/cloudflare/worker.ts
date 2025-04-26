@@ -17,6 +17,7 @@ import type { Bindings, WorkerBindingSpec } from "./bindings.js";
 import type { Bound } from "./bound.js";
 import type { DurableObjectNamespace } from "./durable-object-namespace.js";
 import { type EventSource, isQueueEventSource } from "./event-source.js";
+import { external } from "./external.js";
 import {
   QueueConsumer,
   deleteQueueConsumer,
@@ -576,8 +577,6 @@ async function putWorker(
         })
       );
 
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-
       // Upload worker script with bindings
       const uploadResponse = await api.put(
         `/accounts/${api.accountId}/workers/scripts/${workerName}`,
@@ -591,34 +590,20 @@ async function putWorker(
 
       // Check if the upload was successful
       if (!uploadResponse.ok) {
-        const errorData: any = await uploadResponse
-          .json()
-          .catch(() => ({ errors: [{ message: uploadResponse.statusText }] }));
-
-        const errorMessage = `Error (HTTP ${uploadResponse.status}) uploading worker script '${workerName}': ${errorData.errors?.[0]?.message || uploadResponse.statusText}`;
-
-        if (
-          uploadResponse.status === 400 &&
-          errorMessage.includes("not found")
-        ) {
-          throw new NotFoundError(errorMessage);
-        }
-        throw new Error(errorMessage);
+        await handleApiError(
+          uploadResponse,
+          "uploading worker script",
+          "worker",
+          workerName
+        );
       }
 
       return formData;
     },
-    (err) => err instanceof NotFoundError,
+    (err) => err.status === 404 || err.status === 500 || err.status === 503,
     10,
     100
   );
-}
-
-class NotFoundError extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = "NotFoundError";
-  }
 }
 
 interface WorkerMetadata {
@@ -889,6 +874,9 @@ async function prepareWorkerMetadata<B extends Bindings>(
     // For service worker format (CJS)
     meta.body_part = scriptName;
   }
+  if (process.env.DEBUG) {
+    console.log(meta);
+  }
   return meta;
 }
 
@@ -931,34 +919,26 @@ async function assertWorkerDoesNotExist<B extends Bindings>(
 }
 
 async function bundleWorkerScript<B extends Bindings>(props: WorkerProps) {
-  // Get the script content - either from props.script, or by bundling
-
-  // Create and use a Bundle resource with worker-optimized configuration
-  const defaultBundleOptions: Omit<BundleProps, "entryPoint"> = {
+  const bundle = await Bundle("bundle", {
+    entryPoint: props.entrypoint!,
     format: props.format === "cjs" ? "cjs" : "esm", // Use the specified format or default to ESM
-    target: "es2020",
-    platform: "browser",
+    target: "esnext",
+    platform: "neutral",
     minify: true,
+    ...(props.bundle || {}),
     options: {
+      ...(props.bundle?.options || {}),
       keepNames: true, // Important for Durable Object classes
       loader: {
         ".sql": "text",
         ".json": "json",
       },
     },
-  };
-
-  // Merge with user-provided options
-  const bundleOptions = {
-    ...defaultBundleOptions,
-    ...(props.bundle || {}),
-  };
-
-  // Create the bundle
-  const bundle = await Bundle("bundle", {
-    entryPoint: props.entrypoint!,
-    ...bundleOptions,
-    external: [...(bundleOptions.external ?? []), "cloudflare:workers"],
+    external: [
+      ...external,
+      ...(props.bundle?.external ?? []),
+      ...(props.bundle?.options?.external ?? []),
+    ],
   });
 
   try {
