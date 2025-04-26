@@ -34,7 +34,12 @@ jobs:
           bun-version: latest
 
       - name: Install dependencies
-        run: bun install
+        run: |
+          bun install
+          # tanstack start doesn't deploy when packages are hoisted ...
+          cd examples/cloudflare-tanstack-start
+          bun install
+          cd ../..
 
       - name: Check Types
         run: bun run check
@@ -61,6 +66,8 @@ jobs:
 
           echo "Running tests changed since commit: $BASE_COMMIT"
           bun run test --since "$BASE_COMMIT"
+
+          bun run test:smoke
         env:
           CI: true
           ALCHEMY_STATE_STORE: cloudflare
