@@ -79,7 +79,7 @@ Then, use the type in your worker:
 ```typescript
 // src/worker.ts
 export default {
-  async fetch(request: Request, env: Cloudflare.Env, ctx: any) {
+  async fetch(request: Request, env: WorkerEnv, ctx: any) {
     // Type-safe access to bindings
     const value = await env.MY_KV.get("key");
     const apiKey = env.API_KEY;
