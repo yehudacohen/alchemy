@@ -3,10 +3,12 @@
   "scripts": {
     "docs:gen": "bun alchemy.run.ts",
     "docs:dev": "vitepress dev",
-    "docs:build": "vitepress build",
+    "docs:build": "npx vitepress build",
     "docs:preview": "vitepress preview"
   },
-  "dependencies": { "vitepress-plugin-group-icons": "^1.5.2" },
+  "dependencies": {
+    "vitepress-plugin-group-icons": "^1.5.2"
+  },
   "devDependencies": {
     "@shikijs/vitepress-twoslash": "^3.3.0",
     "markdown-it-footnote": "^4.0.0",
