@@ -1,5 +1,6 @@
 import alchemy from "../alchemy/src";
 import type { AlchemyOptions } from "../alchemy/src/alchemy";
+import { R2RestStateStore } from "../alchemy/src/cloudflare";
 
 export const CLOUDFLARE_EMAIL = await alchemy.env.CLOUDFLARE_EMAIL;
 
@@ -19,4 +20,8 @@ export default {
   // pass the password in (you can get it from anywhere, e.g. stdin)
   password: process.env.SECRET_PASSPHRASE,
   quiet: process.argv.includes("--quiet"),
+  stateStore:
+    process.env.ALCHEMY_STATE_STORE === "cloudflare"
+      ? (scope) => new R2RestStateStore(scope)
+      : undefined,
 } satisfies AlchemyOptions;

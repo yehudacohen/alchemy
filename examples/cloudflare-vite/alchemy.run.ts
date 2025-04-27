@@ -28,8 +28,6 @@ export const website = await Vite(`cloudflare-vite-website${BRANCH_PREFIX}`, {
   bindings: {
     STORAGE: storage,
     AUTH_STORE: authStore,
-    GITHUB_CLIENT_ID: alchemy.secret(process.env.GITHUB_CLIENT_ID),
-    GITHUB_CLIENT_SECRET: alchemy.secret(process.env.GITHUB_CLIENT_SECRET),
   },
 });
 
