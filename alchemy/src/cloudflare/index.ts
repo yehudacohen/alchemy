@@ -4,6 +4,7 @@ export * from "./api-error.js";
 export * from "./api.js";
 export * from "./assets.js";
 export * from "./bindings.js";
+export * from "./bound.js";
 export * from "./bucket.js";
 export * from "./custom-domain.js";
 export * from "./d1-database.js";

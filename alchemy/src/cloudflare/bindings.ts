@@ -6,6 +6,7 @@
 import type { Secret } from "../secret.js";
 import type { AiGateway } from "./ai-gateway.js";
 import type { Assets } from "./assets.js";
+import type { Bound } from "./bound.js";
 import type { R2Bucket } from "./bucket.js";
 import type { D1Database } from "./d1-database.js";
 import type { DurableObjectNamespace } from "./durable-object-namespace.js";
@@ -20,6 +21,12 @@ import type { Workflow } from "./workflow.js";
 export type Bindings = {
   [bindingName: string]: Binding;
 };
+
+export declare namespace Bindings {
+  export type Runtime<B extends Bindings> = {
+    [bindingName in keyof B]: Bound<B[bindingName]>;
+  };
+}
 
 /**
  * L2 Binding Resources.
