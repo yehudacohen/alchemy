@@ -1,5 +1,6 @@
 import alchemy from "alchemy";
 import { Function, Queue, Role, Table } from "alchemy/aws";
+import { R2RestStateStore } from "alchemy/cloudflare";
 import { Bundle } from "alchemy/esbuild";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -9,6 +10,10 @@ const app = await alchemy("aws-app", {
   phase: process.argv[2] === "destroy" ? "destroy" : "up",
   stage: process.argv[3],
   quiet: process.argv.includes("--quiet"),
+  stateStore:
+    process.env.ALCHEMY_STATE_STORE === "cloudflare"
+      ? (scope) => new R2RestStateStore(scope)
+      : undefined,
 });
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));

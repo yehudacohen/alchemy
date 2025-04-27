@@ -2,6 +2,7 @@ import alchemy from "../../alchemy/src";
 import {
   Queue,
   R2Bucket,
+  R2RestStateStore,
   Worker,
   WranglerJson,
 } from "../../alchemy/src/cloudflare";
@@ -9,6 +10,10 @@ import {
 const BRANCH_PREFIX = process.env.BRANCH_PREFIX ?? "";
 const app = await alchemy("cloudflare-worker", {
   phase: process.argv.includes("--destroy") ? "destroy" : "up",
+  stateStore:
+    process.env.ALCHEMY_STATE_STORE === "cloudflare"
+      ? (scope) => new R2RestStateStore(scope)
+      : undefined,
 });
 
 export const queue = await Queue<{

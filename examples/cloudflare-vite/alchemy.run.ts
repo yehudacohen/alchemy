@@ -1,7 +1,12 @@
 /// <reference types="node" />
 
 import alchemy from "../../alchemy/src/";
-import { KVNamespace, R2Bucket, Vite } from "../../alchemy/src/cloudflare";
+import {
+  KVNamespace,
+  R2Bucket,
+  R2RestStateStore,
+  Vite,
+} from "../../alchemy/src/cloudflare";
 
 const BRANCH_PREFIX = process.env.BRANCH_PREFIX ?? "";
 const app = await alchemy("cloudflare-vite", {
@@ -9,6 +14,10 @@ const app = await alchemy("cloudflare-vite", {
   phase: process.argv.includes("--destroy") ? "destroy" : "up",
   quiet: process.argv.includes("--verbose") ? false : true,
   password: process.env.ALCHEMY_PASSWORD,
+  stateStore:
+    process.env.ALCHEMY_STATE_STORE === "cloudflare"
+      ? (scope) => new R2RestStateStore(scope)
+      : undefined,
 });
 
 export const [authStore, storage] = await Promise.all([
