@@ -1,3 +1,4 @@
+export type { AlchemyOptions } from "./alchemy.js";
 export type * from "./context.js";
 export * from "./resource.js";
 export type * from "./scope.js";
