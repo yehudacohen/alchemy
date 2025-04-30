@@ -1,5 +1,6 @@
 export * from "./account-api-token.js";
 export * from "./ai-gateway.js";
+export * from "./ai.js";
 export * from "./api-error.js";
 export * from "./api.js";
 export * from "./assets.js";

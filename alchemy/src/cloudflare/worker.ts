@@ -822,6 +822,11 @@ async function prepareWorkerMetadata<B extends Bindings>(
         type: "browser",
         name: bindingName,
       });
+    } else if (binding.type === "ai") {
+      meta.bindings.push({
+        type: "ai",
+        name: bindingName,
+      });
     } else {
       // @ts-expect-error - we should never reach here
       throw new Error(`Unsupported binding type: ${binding.type}`);

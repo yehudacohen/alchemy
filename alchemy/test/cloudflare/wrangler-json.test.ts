@@ -2,6 +2,7 @@ import { describe, expect } from "bun:test";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { alchemy } from "../../src/alchemy";
+import { Ai } from "../../src/cloudflare/ai";
 import { createCloudflareApi } from "../../src/cloudflare/api";
 import { Worker } from "../../src/cloudflare/worker";
 import { WranglerJson } from "../../src/cloudflare/wrangler.json";
@@ -113,19 +114,37 @@ describe("WranglerJson Resource", () => {
         await destroy(scope);
       }
     });
-  });
 
-  describe("without worker", () => {
-    test("throws error", async (scope) => {
-      const id = `${BRANCH_PREFIX}-test-wrangler-json-3`;
+    test("with AI binding", async (scope) => {
+      const name = `${BRANCH_PREFIX}-test-worker-ai`;
+      const tempDir = path.join(".out", "alchemy-ai-test");
+      const entrypoint = path.join(tempDir, "worker.ts");
 
       try {
-        await expect(
-          async () => await WranglerJson(id, { worker: undefined as any })
-        ).toThrow(
-          "undefined is not an object (evaluating 'props.worker.entrypoint')"
+        // Create a temporary directory for the entrypoint file
+        await fs.rm(tempDir, { recursive: true, force: true });
+        await fs.mkdir(tempDir, { recursive: true });
+        await fs.writeFile(entrypoint, esmWorkerScript);
+
+        const worker = await Worker(name, {
+          format: "esm",
+          entrypoint,
+          compatibilityDate: "2024-01-01",
+          bindings: {
+            AI: new Ai(),
+          },
+        });
+
+        const { spec } = await WranglerJson(
+          `${BRANCH_PREFIX}-test-wrangler-json-ai`,
+          { worker }
         );
+
+        expect(spec.name).toEqual(name);
+        expect(spec.ai).toBeDefined();
+        expect(spec.ai?.binding).toEqual("AI");
       } finally {
+        await fs.rm(tempDir, { recursive: true, force: true });
         await destroy(scope);
       }
     });

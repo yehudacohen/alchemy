@@ -151,6 +151,13 @@ export interface WranglerJsonSpec {
   routes?: string[];
 
   /**
+   * AI bindings
+   */
+  ai?: {
+    binding: string;
+  };
+
+  /**
    * Browser bindings
    */
   browser?: {
@@ -398,6 +405,13 @@ function processBindings(
         throw new Error(`Browser already bound to ${spec.browser.binding}`);
       }
       spec.browser = {
+        binding: bindingName,
+      };
+    } else if (binding.type === "ai") {
+      if (spec.ai) {
+        throw new Error(`AI already bound to ${spec.ai.binding}`);
+      }
+      spec.ai = {
         binding: bindingName,
       };
     }
