@@ -15,9 +15,10 @@ import {
 import type { Assets } from "./assets.js";
 import type { Bindings, WorkerBindingSpec } from "./bindings.js";
 import type { Bound } from "./bound.js";
+import { external } from "./bundle/external.js";
+import { nodejsHybridPlugin } from "./bundle/hybrid-nodejs-compat.js";
 import type { DurableObjectNamespace } from "./durable-object-namespace.js";
 import { type EventSource, isQueueEventSource } from "./event-source.js";
-import { external } from "./external.js";
 import {
   QueueConsumer,
   deleteQueueConsumer,
@@ -364,8 +365,12 @@ export const Worker = Resource(
 
     const oldBindings = await this.get<Bindings>("bindings");
 
+    const compatibilityDate = props.compatibilityDate ?? "2025-04-20";
+    const compatibilityFlags = props.compatibilityFlags ?? [];
+
     // Get the script content - either from props.script, or by bundling
-    const scriptContent = props.script ?? (await bundleWorkerScript(props));
+    const scriptContent =
+      props.script ?? (await bundleWorkerScript(compatibilityDate, props));
 
     // Find any assets bindings
     const assetsBindings: { name: string; assets: Assets }[] = [];
@@ -398,9 +403,6 @@ export const Worker = Resource(
         props.assets
       );
     }
-
-    const compatibilityDate = props.compatibilityDate ?? "2025-04-20";
-    const compatibilityFlags = props.compatibilityFlags ?? [];
 
     // Prepare metadata with bindings
     const scriptMetadata = await prepareWorkerMetadata(
@@ -928,13 +930,16 @@ async function assertWorkerDoesNotExist<B extends Bindings>(
   }
 }
 
-async function bundleWorkerScript<B extends Bindings>(props: WorkerProps) {
+async function bundleWorkerScript<B extends Bindings>(
+  compatibilityDate: string,
+  props: WorkerProps<B>
+) {
   const bundle = await Bundle("bundle", {
     entryPoint: props.entrypoint!,
     format: props.format === "cjs" ? "cjs" : "esm", // Use the specified format or default to ESM
     target: "esnext",
     platform: "neutral",
-    minify: true,
+    minify: false,
     ...(props.bundle || {}),
     options: {
       ...(props.bundle?.options || {}),
@@ -943,6 +948,11 @@ async function bundleWorkerScript<B extends Bindings>(props: WorkerProps) {
         ".sql": "text",
         ".json": "json",
       },
+      plugins:
+        compatibilityDate >= "2024-09-23" &&
+        props.compatibilityFlags?.find((flag) => flag === "nodejs_compat")
+          ? [await nodejsHybridPlugin()]
+          : [],
     },
     external: [
       ...external,
