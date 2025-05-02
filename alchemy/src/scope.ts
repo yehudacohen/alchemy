@@ -74,9 +74,8 @@ export class Scope {
     const app = this.appName ? [this.appName] : [];
     if (this.parent) {
       return [...this.parent.chain, ...thisScope];
-    } else {
-      return [...app, this.stage, ...thisScope];
     }
+    return [...app, this.stage, ...thisScope];
   }
 
   public fail() {
@@ -115,10 +114,10 @@ export class Scope {
       const resourceIds = await this.state.list();
       const aliveIds = new Set(this.resources.keys());
       const orphanIds = Array.from(
-        resourceIds.filter((id) => !aliveIds.has(id))
+        resourceIds.filter((id) => !aliveIds.has(id)),
       );
       const orphans = await Promise.all(
-        orphanIds.map(async (id) => (await this.state.get(id))!.output)
+        orphanIds.map(async (id) => (await this.state.get(id))!.output),
       );
       await destroy.all(orphans, {
         quiet: this.quiet,
