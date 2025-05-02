@@ -16,7 +16,9 @@ const REQUIRED_UNENV_ALIAS_NAMESPACE = "required-unenv-alias";
  *
  * @returns ESBuild plugin
  */
-export async function nodejsHybridPlugin(): Promise<Plugin> {
+export async function nodejsHybridPlugin(
+  unenvResolvePaths: string[] | undefined,
+): Promise<Plugin> {
   // `unenv` and `@cloudflare/unenv-preset` only publish esm
   const { defineEnv } = await import("unenv");
   const { cloudflare } = await import("@cloudflare/unenv-preset");
