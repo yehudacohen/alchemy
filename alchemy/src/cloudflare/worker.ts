@@ -847,7 +847,7 @@ async function prepareWorkerMetadata<B extends Bindings>(
         // script_name: ??,
       });
       // it's unclear whether this is needed, but it works both ways
-      configureClassMigration(binding, binding.id, binding.className);
+      // configureClassMigration(binding, binding.id, binding.className);
     } else if (binding.type === "queue") {
       meta.bindings.push({
         type: "queue",
