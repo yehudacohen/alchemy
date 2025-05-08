@@ -95,7 +95,7 @@ export const WranglerJson = Resource(
 
     // Process bindings if they exist
     if (worker.bindings) {
-      processBindings(spec, worker.bindings, worker.eventSources);
+      processBindings(spec, worker.bindings, worker.eventSources, worker.name);
     }
 
     // Add environment variables as vars
@@ -291,6 +291,7 @@ function processBindings(
   spec: WranglerJsonSpec,
   bindings: Bindings,
   eventSources: EventSource[] | undefined,
+  workerName: string,
 ): void {
   // Arrays to collect different binding types
   const kvNamespaces: { binding: string; id: string }[] = [];
@@ -356,7 +357,7 @@ function processBindings(
       // Self(service) binding
       services.push({
         binding: bindingName,
-        service: bindingName,
+        service: workerName,
       });
     } else if (binding.type === "service") {
       // Service binding
