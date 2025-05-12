@@ -7,10 +7,7 @@ import "../alchemy/src/os";
 import alchemy from "../alchemy/src";
 import { AccountId, Role } from "../alchemy/src/aws";
 import { GitHubOIDCProvider } from "../alchemy/src/aws/oidc";
-import {
-  AccountApiToken,
-  R2Bucket
-} from "../alchemy/src/cloudflare";
+import { AccountApiToken, R2Bucket } from "../alchemy/src/cloudflare";
 import { GitHubSecret, RepositoryEnvironment } from "../alchemy/src/github";
 import env, {
   CLOUDFLARE_ACCOUNT_ID,
@@ -19,6 +16,7 @@ import env, {
   NEON_API_KEY,
   OPENAI_API_KEY,
   STRIPE_API_KEY,
+  UPSTASH_API_KEY,
 } from "./env.js";
 
 const app = await alchemy("alchemy:repo", env);
@@ -97,6 +95,8 @@ await Promise.all([
     R2_ACCESS_KEY_ID: accountAccessToken.accessKeyId,
     R2_SECRET_ACCESS_KEY: accountAccessToken.secretAccessKey,
     SECRET_PASSPHRASE: alchemy.secret(process.env.SECRET_PASSPHRASE!),
+    UPSTASH_API_KEY,
+    UPSTASH_EMAIL: "sam@alchemy.run",
   }).flatMap(async ([name, value]) => {
     const props = {
       owner: "sam-goodwin",
