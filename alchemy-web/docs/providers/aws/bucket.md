@@ -7,7 +7,7 @@ description: Learn how to create, configure, and manage AWS S3 Buckets using Alc
 
 The Bucket resource lets you create and manage [Amazon S3 buckets](https://docs.aws.amazon.com/AmazonS3/latest/userguide/Welcome.html) for object storage.
 
-# Minimal Example
+## Minimal Example
 
 Create a basic S3 bucket with default settings:
 
@@ -22,7 +22,7 @@ const bucket = await Bucket("storage", {
 });
 ```
 
-# Bucket with Versioning
+## Bucket with Versioning
 
 Create a bucket with versioning enabled for change tracking:
 
@@ -39,7 +39,7 @@ const versionedBucket = await Bucket("document-archive", {
 });
 ```
 
-# Development Bucket
+## Development Bucket
 
 Create a temporary bucket for development/testing:
 

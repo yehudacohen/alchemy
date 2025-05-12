@@ -7,7 +7,7 @@ description: Learn how to use Alchemy's AI provider to create, update, and manag
 
 The VueFile resource lets you generate [Vue.js](https://vuejs.org/) single-file components using AI models.
 
-# Minimal Example
+## Minimal Example
 
 Creates a basic Vue component file with the specified content.
 
@@ -20,7 +20,7 @@ const button = await VueFile("button", {
 });
 ```
 
-# Generate Component with Context
+## Generate Component with Context
 
 Uses existing files as reference to generate a component that matches your codebase style.
 
@@ -40,7 +40,7 @@ const userCard = await VueFile("user-card", {
 });
 ```
 
-# Custom System Prompt
+## Custom System Prompt
 
 Provides specific instructions to the AI model about component generation.
 

@@ -7,7 +7,7 @@ description: Learn how to create and manage deployment environments in your GitH
 
 The RepositoryEnvironment resource lets you manage [GitHub repository environments](https://docs.github.com/en/actions/deployment/targeting-different-environments/using-environments-for-deployment) for deployment protection rules and secrets.
 
-# Minimal Example
+## Minimal Example
 
 Create a basic environment with no protection rules:
 
@@ -21,7 +21,7 @@ const devEnv = await RepositoryEnvironment("dev-environment", {
 });
 ```
 
-# Production Environment with Approvals
+## Production Environment with Approvals
 
 Create a production environment with approval requirements and protected branches:
 
@@ -45,7 +45,7 @@ const prodEnv = await RepositoryEnvironment("prod-environment", {
 });
 ```
 
-# Custom Branch Patterns
+## Custom Branch Patterns
 
 Create an environment with custom branch deployment patterns:
 

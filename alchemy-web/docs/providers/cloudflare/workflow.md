@@ -7,7 +7,7 @@ description: Learn how to create and manage Cloudflare Workflows using Alchemy t
 
 A [Cloudflare Workflow](https://developers.cloudflare.com/workers/configuration/workflows/) allows you to define reusable logic that can be shared across multiple Workers.
 
-# Minimal Example
+## Minimal Example
 
 Create a basic workflow that can be bound to a Worker.
 
@@ -20,7 +20,7 @@ const workflow = await Workflow("my-workflow", {
 });
 ```
 
-# Bind to a Worker
+## Bind to a Worker
 
 Bind a workflow to a Worker to use its functionality.
 

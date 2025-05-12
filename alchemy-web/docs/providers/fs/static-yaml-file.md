@@ -7,7 +7,7 @@ description: Learn how to create and manage static YAML (.yaml, .yml) files with
 
 The StaticYamlFile resource creates YAML files with formatted content using the [YAML](https://yaml.org/) format.
 
-# Minimal Example
+## Minimal Example
 
 Creates a simple YAML configuration file.
 
@@ -22,7 +22,7 @@ const config = await StaticYamlFile("config.yaml", {
 });
 ```
 
-# Nested Configuration
+## Nested Configuration
 
 Creates a YAML file with nested configuration objects.
 
@@ -44,7 +44,7 @@ const config = await StaticYamlFile("config.yaml", {
 });
 ```
 
-# Custom Path
+## Custom Path
 
 Creates a YAML file at a specific path.
 

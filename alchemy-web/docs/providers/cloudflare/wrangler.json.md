@@ -7,7 +7,7 @@ description: Learn how to generate and manage wrangler.json configuration files 
 
 The WranglerJson resource generates a `wrangler.json` configuration file for a Cloudflare Worker. This file is used by the [Wrangler CLI](https://developers.cloudflare.com/workers/wrangler/) to deploy and manage Workers.
 
-# Minimal Example
+## Minimal Example
 
 Creates a basic wrangler.json file for a Worker:
 
@@ -24,7 +24,7 @@ await WranglerJson("wrangler", {
 });
 ```
 
-# With Custom Path
+## With Custom Path
 
 Specify a custom path for the wrangler.json file:
 
@@ -35,7 +35,7 @@ await WranglerJson("wrangler", {
 });
 ```
 
-# With Bindings
+## With Bindings
 
 Generate wrangler.json with Worker bindings:
 

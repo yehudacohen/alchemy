@@ -7,7 +7,7 @@ description: Learn how to configure Cloudflare Routes for your Workers using Alc
 
 The Route resource lets you map URL patterns to [Cloudflare Workers](https://developers.cloudflare.com/workers/configuration/routing/routes/).
 
-# Minimal Example
+## Minimal Example
 
 Map a domain pattern to a Worker:
 
@@ -21,7 +21,7 @@ const route = await Route("api-route", {
 });
 ```
 
-# Route with Worker Resource
+## Route with Worker Resource
 
 Use a Worker resource directly:
 
@@ -45,7 +45,7 @@ const route = await Route("api-route", {
 });
 ```
 
-# Bind to a Worker
+## Bind to a Worker
 
 Routes are automatically bound to the specified Worker:
 

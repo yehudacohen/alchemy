@@ -7,7 +7,7 @@ description: Learn how to use Alchemy's esbuild provider to bundle JavaScript an
 
 The Bundle resource uses [esbuild](https://esbuild.github.io/) to bundle JavaScript and TypeScript files into optimized output.
 
-# Minimal Example
+## Minimal Example
 
 Bundle a TypeScript file into ESM format:
 
@@ -20,7 +20,7 @@ const bundle = await Bundle("handler", {
 });
 ```
 
-# Bundle with Output Directory
+## Bundle with Output Directory
 
 Specify an output directory and additional build options:
 
@@ -36,7 +36,7 @@ const bundle = await Bundle("api", {
 });
 ```
 
-# Bundle with External Dependencies
+## Bundle with External Dependencies
 
 Exclude packages from the bundle:
 
@@ -49,7 +49,7 @@ const bundle = await Bundle("app", {
 });
 ```
 
-# Bundle for Browser
+## Bundle for Browser
 
 Create a browser-compatible IIFE bundle:
 

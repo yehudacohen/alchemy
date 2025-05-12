@@ -7,7 +7,7 @@ description: Learn how to create and manage static JSON (.json) files with prope
 
 The StaticJsonFile resource creates formatted JSON files using [Prettier](https://prettier.io/) for consistent formatting.
 
-# Minimal Example
+## Minimal Example
 
 Creates a simple JSON configuration file.
 
@@ -20,7 +20,7 @@ const config = await StaticJsonFile("config.json", {
 });
 ```
 
-# Custom Path
+## Custom Path
 
 Creates a JSON file at a specific path.
 
@@ -36,7 +36,7 @@ const config = await StaticJsonFile("config", "config/settings.json", {
 });
 ```
 
-# Complex Configuration
+## Complex Configuration
 
 Creates a JSON file with nested configuration.
 

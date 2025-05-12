@@ -7,7 +7,7 @@ description: Learn how to deploy and manage Cloudflare Pages websites using Alch
 
 The Website resource deploys a static website to Cloudflare Pages with an optional Worker for server-side functionality.
 
-# Minimal Example
+## Minimal Example
 
 Deploy a static site from a local directory:
 
@@ -21,7 +21,7 @@ const site = await Website("my-site", {
 });
 ```
 
-# With Custom Worker
+## With Custom Worker
 
 Add server-side functionality with a Worker:
 
@@ -38,7 +38,7 @@ const site = await Website("my-site", {
 });
 ```
 
-# With Advanced Configuration
+## With Advanced Configuration
 
 Configure caching, routing and other options:
 
@@ -58,7 +58,7 @@ const site = await Website("my-site", {
 });
 ```
 
-# Bind to a Worker
+## Bind to a Worker
 
 Use the Website's assets in another Worker:
 

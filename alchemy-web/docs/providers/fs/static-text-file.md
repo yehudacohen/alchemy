@@ -7,7 +7,7 @@ description: Learn how to create and manage static text (.txt) files using Alche
 
 The StaticTextFile resource creates and manages plain text files in the filesystem using [Alchemy's File System](https://alchemy.run/docs/concepts/fs) capabilities.
 
-# Minimal Example
+## Minimal Example
 
 Creates a simple text file with content:
 
@@ -19,7 +19,7 @@ const readme = await StaticTextFile("README.md",
 );
 ```
 
-# Custom Path
+## Custom Path
 
 Creates a text file at a specific path:
 
@@ -32,7 +32,7 @@ const changelog = await StaticTextFile("CHANGELOG.md",
 );
 ```
 
-# Nested Directory
+## Nested Directory
 
 Creates a text file in a nested directory structure (directories are created automatically):
 

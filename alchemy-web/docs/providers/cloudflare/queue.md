@@ -7,7 +7,7 @@ description: Learn how to create, configure, and manage Cloudflare Queues using 
 
 The Queue component lets you add [Cloudflare Queue](https://developers.cloudflare.com/queues/) to your app for reliable message delivery between workers.
 
-# Minimal Example
+## Minimal Example
 
 Create a basic queue with default settings.
 
@@ -19,7 +19,7 @@ const queue = await Queue("my-queue", {
 });
 ```
 
-# Queue with Custom Settings
+## Queue with Custom Settings
 
 Configure queue behavior with delivery delay and message retention.
 
@@ -36,7 +36,7 @@ const queue = await Queue("delayed-queue", {
 });
 ```
 
-# Bind to a Worker
+## Bind to a Worker
 
 Attach a queue to a worker for processing messages.
 

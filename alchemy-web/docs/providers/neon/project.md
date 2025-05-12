@@ -7,7 +7,7 @@ description: Learn how to create, configure, and manage Neon serverless Postgres
 
 The NeonProject resource lets you create and manage [Neon serverless PostgreSQL](https://neon.tech) projects.
 
-# Minimal Example
+## Minimal Example
 
 Create a basic Neon project with default settings:
 
@@ -19,7 +19,7 @@ const project = await NeonProject("my-project", {
 });
 ```
 
-# Custom Region and Version
+## Custom Region and Version
 
 Create a project in a specific region with a specific PostgreSQL version:
 
@@ -34,7 +34,7 @@ const project = await NeonProject("eu-project", {
 });
 ```
 
-# Custom Branch Name
+## Custom Branch Name
 
 Create a project with a custom default branch name:
 

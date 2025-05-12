@@ -7,7 +7,7 @@ description: Learn how to create, configure, and manage AWS DynamoDB Tables usin
 
 The Table resource lets you create and manage [Amazon DynamoDB tables](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/Introduction.html) for NoSQL database storage.
 
-# Minimal Example
+## Minimal Example
 
 Create a basic table with just a partition key:
 
@@ -23,7 +23,7 @@ const table = await Table("users", {
 });
 ```
 
-# Table with Sort Key
+## Table with Sort Key
 
 Add a sort key to enable range queries and composite keys:
 
@@ -41,7 +41,7 @@ const table = await Table("events", {
 });
 ```
 
-# Provisioned Capacity
+## Provisioned Capacity
 
 Configure provisioned read/write capacity for predictable workloads:
 

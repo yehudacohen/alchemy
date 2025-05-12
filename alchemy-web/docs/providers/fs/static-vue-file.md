@@ -7,7 +7,7 @@ description: Learn how to create and manage static Vue (.vue) single-file compon
 
 The StaticVueFile resource creates [Vue.js](https://vuejs.org/) single-file component files (.vue) with template, script and style sections.
 
-# Minimal Example
+## Minimal Example
 
 Creates a basic Vue component file with template, script and style sections.
 
@@ -35,7 +35,7 @@ export default {
 `);
 ```
 
-# Custom Path
+## Custom Path
 
 Creates a Vue component file at a specific path.
 

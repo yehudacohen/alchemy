@@ -7,7 +7,7 @@ description: Learn how to create and manage static CSS (.css) files with proper 
 
 The StaticCSSFile resource creates and manages static CSS files in your project using [Alchemy's File System](https://alchemy.run/docs/concepts/fs) capabilities.
 
-# Minimal Example
+## Minimal Example
 
 Creates a basic CSS file with styles:
 
@@ -23,7 +23,7 @@ const styles = await StaticCSSFile("styles.css", `
 `);
 ```
 
-# Custom Path
+## Custom Path
 
 Creates a CSS file at a specific path:
 

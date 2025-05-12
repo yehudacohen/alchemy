@@ -7,7 +7,7 @@ description: Learn how to define and manage Cloudflare Pipelines using Alchemy f
 
 The [Pipeline](https://developers.cloudflare.com/workers/configuration/pipelines/) resource lets you create and manage Cloudflare Pipelines for collecting, transforming and routing data.
 
-# Minimal Example
+## Minimal Example
 
 Create a basic pipeline with an R2 bucket destination:
 
@@ -35,7 +35,7 @@ const pipeline = await Pipeline("logs-pipeline", {
 });
 ```
 
-# Custom Source Configuration
+## Custom Source Configuration
 
 Configure a pipeline with custom HTTP source settings:
 
@@ -70,7 +70,7 @@ const customPipeline = await Pipeline("custom-pipeline", {
 });
 ```
 
-# Bind to a Worker
+## Bind to a Worker
 
 Use the pipeline in a worker:
 

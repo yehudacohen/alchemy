@@ -7,7 +7,7 @@ description: Learn how to configure and use Cloudflare Hyperdrive using Alchemy 
 
 [Cloudflare Hyperdrive](https://developers.cloudflare.com/hyperdrive/) provides serverless connection pooling and caching for PostgreSQL databases.
 
-# Minimal Example
+## Minimal Example
 
 Create a basic Hyperdrive connection to a PostgreSQL database.
 
@@ -26,7 +26,7 @@ const db = await Hyperdrive("my-postgres-db", {
 });
 ```
 
-# With Caching Disabled
+## With Caching Disabled
 
 Create a Hyperdrive connection with caching disabled.
 
@@ -46,7 +46,7 @@ const noCacheDb = await Hyperdrive("no-cache-db", {
 });
 ```
 
-# With mTLS Configuration
+## With mTLS Configuration
 
 Create a Hyperdrive connection with mTLS security.
 
@@ -68,7 +68,7 @@ const secureDb = await Hyperdrive("secure-db", {
 });
 ```
 
-# With Access Client Credentials
+## With Access Client Credentials
 
 Create a Hyperdrive connection using access client credentials.
 
@@ -86,7 +86,7 @@ const accessDb = await Hyperdrive("access-db", {
 });
 ```
 
-# Bind to a Worker
+## Bind to a Worker
 
 Use Hyperdrive with a Cloudflare Worker.
 
