@@ -1,6 +1,6 @@
 ---
 order: 100
-title: Resource Bindings in Alchemy
+title: Bindings
 description: Connect your infrastructure resources with type-safe bindings. Learn how to bind KV namespaces, Durable Objects, R2 buckets, and environment variables to Cloudflare Workers.
 ---
 

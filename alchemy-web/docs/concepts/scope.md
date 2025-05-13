@@ -1,6 +1,6 @@
 ---
 order: 2
-title: Understanding Scopes in Alchemy
+title: Scope
 description: Learn how Alchemy uses hierarchical scopes to organize and manage infrastructure resources. Master application scopes, stage scopes, and resource scopes.
 ---
 

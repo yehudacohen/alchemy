@@ -1,6 +1,6 @@
 ---
 order: 4
-title: Secure Secret Management in Alchemy
+title: Secret
 description: Best practices for handling sensitive information in your infrastructure. Learn how to encrypt API keys, passwords, and credentials in Alchemy state files.
 ---
 

@@ -1,6 +1,6 @@
 ---
 order: 3
-title: State Management in Alchemy
+title: State
 description: Understand how Alchemy tracks and manages infrastructure state using transparent, pluggable storage. Learn about state files, customizing storage backends, and securing sensitive data.
 ---
 

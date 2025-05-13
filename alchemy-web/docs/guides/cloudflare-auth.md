@@ -1,6 +1,6 @@
 ---
 order: 0
-title: Cloudflare Authentication in Alchemy
+title: Cloudflare Auth
 description: Configure Cloudflare authentication for your Alchemy applications. Learn to use API tokens, OAuth, or global API keys to securely manage Cloudflare resources.
 ---
 

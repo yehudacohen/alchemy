@@ -1,6 +1,6 @@
 ---
 order: 6
-title: Using Cloudflare Queues with Alchemy
+title: Queue
 description: Learn how to create, configure, and use Cloudflare Queues for background job processing in your Worker applications managed by Alchemy.
 ---
 
