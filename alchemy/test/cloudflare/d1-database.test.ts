@@ -73,6 +73,36 @@ describe("D1 Database Resource", async () => {
     }
   });
 
+  test("create database with read replication", async (scope) => {
+    const replicationCreateDb = `${testId}-replication-create`;
+
+    try {
+      // Create a database with read replication enabled from the start
+      const database = await D1Database(replicationCreateDb, {
+        name: replicationCreateDb,
+        readReplication: {
+          mode: "auto",
+        },
+        adopt: true,
+      });
+
+      expect(database.name).toEqual(replicationCreateDb);
+      expect(database.id).toBeTruthy();
+      expect(database.readReplication?.mode).toEqual("auto");
+
+      // Verify the read replication setting by fetching the database directly from API
+      const getResponse = await api.get(
+        `/accounts/${api.accountId}/d1/database/${database.id}`,
+      );
+      expect(getResponse.ok).toBe(true);
+
+      const dbData: any = await getResponse.json();
+      expect(dbData.result.read_replication?.mode).toEqual("auto");
+    } finally {
+      await alchemy.destroy(scope);
+    }
+  });
+
   test("update read replication mode", async (scope) => {
     const replicationDb = `${testId}-replication`;
 

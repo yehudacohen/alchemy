@@ -257,6 +257,11 @@ const D1DatabaseResource = Resource(
       try {
         dbData = await createDatabase(api, databaseName, props);
 
+        // Read replication cannot be set during creation, so update it after creation
+        if (props.readReplication && dbData.result.uuid) {
+          dbData = await updateDatabase(api, dbData.result.uuid, props);
+        }
+
         // If clone property is provided, perform cloning after database creation
         if (props.clone && dbData.result.uuid) {
           await cloneDb(api, props.clone, dbData.result.uuid);
