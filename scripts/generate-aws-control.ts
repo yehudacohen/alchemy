@@ -1,13 +1,41 @@
 #!/usr/bin/env bun
-import { mkdir, writeFile } from "node:fs/promises";
-import { dirname } from "node:path";
+import { randomUUID } from "node:crypto";
+import { access, mkdir, readdir, readFile, writeFile } from "node:fs/promises";
+import { dirname, join } from "node:path";
+import OpenAI from "openai";
 import prettier from "prettier";
+import * as ts from "typescript";
+
+// Parse CLI arguments
+const args = process.argv.slice(2);
+const overwrite = args.includes("--overwrite");
+
+// Initialize OpenAI client
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+});
 
 const CFN_SPEC_URL =
   "https://d1uauaxba7bl26.cloudfront.net/latest/gzip/CloudFormationResourceSpecification.json";
 const OUTPUT_FILE = "alchemy/src/aws/control/types.d.ts";
 const PROPERTIES_FILE = "alchemy/src/aws/control/properties.ts";
 const DOCS_BASE_DIR = "alchemy-web/docs/providers/aws-control";
+const CLOUDFLARE_DOCS_DIR = "alchemy-web/docs/providers/cloudflare";
+
+// Maximum number of concurrent documentation generation tasks
+const MAX_CONCURRENT_TASKS = process.argv.includes("--concurrency")
+  ? (() => {
+      const idx = process.argv.indexOf("--concurrency");
+      const nextArg = process.argv[idx + 1];
+      if (!nextArg || Number.isNaN(Number(nextArg))) {
+        console.warn(
+          "Warning: --concurrency flag used without a valid number, defaulting to 5",
+        );
+        return 5;
+      }
+      return Number.parseInt(nextArg, 10);
+    })()
+  : 5;
 
 interface ResourceTypeProperty {
   Documentation?: string;
@@ -347,6 +375,371 @@ function getAwsDocsUrl(service: string, _resource: string): string {
   return `${baseUrl}/${serviceName}/latest/userguide/`;
 }
 
+// Extract markdown content helper function (copied from alchemy/src/ai/document.ts)
+function extractMarkdownContent(text: string): {
+  content: string;
+  error?: string;
+} {
+  const lines = text.split("\n");
+  const startIdx = lines.findIndex((line) => line.trim() === "```md");
+
+  if (startIdx === -1) {
+    return {
+      content: "",
+      error:
+        "No markdown code block found in the response. Please include your markdown content within ```md fences.",
+    };
+  }
+
+  const rest = lines.slice(startIdx + 1);
+  const endRelativeIdx = rest
+    .map((line) => line.trim() === "```")
+    .lastIndexOf(true);
+
+  if (endRelativeIdx === -1) {
+    return {
+      content: "",
+      error: "Markdown block was not closed properly.",
+    };
+  }
+
+  const endIdx = startIdx + 1 + endRelativeIdx;
+
+  const content = lines
+    .slice(startIdx + 1, endIdx)
+    .join("\n")
+    .trim();
+
+  return { content };
+}
+
+/**
+ * Load Cloudflare documentation files to use as examples for formatting conventions
+ */
+async function loadCloudflareDocsExamples(): Promise<string> {
+  try {
+    const files = await readdir(CLOUDFLARE_DOCS_DIR);
+    const mdFiles = files.filter((file) => file.endsWith(".md"));
+
+    // Read a few example files to show the pattern
+    const exampleFiles = mdFiles.slice(0, 3);
+    const examples: string[] = [];
+
+    for (const file of exampleFiles) {
+      const content = await readFile(join(CLOUDFLARE_DOCS_DIR, file), "utf-8");
+      examples.push(`=== Example from ${file} ===\n${content}\n`);
+    }
+
+    return examples.join("\n");
+  } catch (error) {
+    console.warn("Could not load Cloudflare docs examples:", error);
+    return "";
+  }
+}
+
+/**
+ * Check if a file exists at the given path
+ */
+async function fileExists(path: string): Promise<boolean> {
+  try {
+    await access(path);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Create a semaphore to limit concurrent operations
+ */
+function createSemaphore(maxConcurrent: number) {
+  let current = 0;
+  const queue: Array<() => void> = [];
+
+  return {
+    async acquire() {
+      if (current >= maxConcurrent) {
+        await new Promise<void>((resolve) => queue.push(resolve));
+      }
+      current++;
+    },
+    release() {
+      current--;
+      const next = queue.shift();
+      if (next) next();
+    },
+  };
+}
+
+/**
+ * Type-check a TypeScript code snippet
+ */
+function typeCheckCode(code: string): { success: boolean; errors: string[] } {
+  const errors: string[] = [];
+
+  // Generate unique ID for the example file
+  const exampleId = randomUUID();
+
+  // Create virtual file just for the example code, using internal path for type checking
+  const virtualFiles = new Map<string, string>([
+    [
+      exampleId,
+      `import AWS from "../alchemy/src/aws/control/index.js";\n\n${code}`,
+    ],
+  ]);
+
+  // Define compiler options
+  const compilerOptions: ts.CompilerOptions = {
+    // Base settings from tsconfig.base.json
+    types: ["@cloudflare/workers-types", "@types/node"],
+    lib: ["ESNext", "DOM"],
+    target: ts.ScriptTarget.ESNext,
+    moduleDetection: ts.ModuleDetectionKind.Force,
+    jsx: ts.JsxEmit.ReactJSX,
+    allowJs: true,
+    esModuleInterop: true,
+    noEmit: true,
+    module: ts.ModuleKind.Preserve,
+    moduleResolution: ts.ModuleResolutionKind.Bundler,
+    verbatimModuleSyntax: true,
+    strict: true,
+    skipLibCheck: true,
+    noFallthroughCasesInSwitch: true,
+    noUnusedLocals: false,
+    noUnusedParameters: false,
+    noPropertyAccessFromIndexSignature: false,
+    noImplicitThis: true,
+    forceConsistentCasingInFileNames: true,
+    resolveJsonModule: true,
+    isolatedModules: true,
+    baseUrl: ".",
+    paths: {
+      "alchemy/*": ["../alchemy/src/*"],
+    },
+  };
+
+  // Create a program with virtual files
+  const program = ts.createProgram({
+    rootNames: [exampleId],
+    options: compilerOptions,
+    host: {
+      ...ts.createCompilerHost(compilerOptions),
+      getSourceFile: (fileName) => {
+        const content = virtualFiles.get(fileName);
+        if (content) {
+          return ts.createSourceFile(
+            fileName,
+            content,
+            ts.ScriptTarget.ESNext,
+            true,
+          );
+        }
+        return undefined;
+      },
+      writeFile: () => {},
+      getCurrentDirectory: () => ".",
+      getDirectories: () => [],
+      fileExists: (fileName) => virtualFiles.has(fileName),
+      readFile: (fileName) => virtualFiles.get(fileName),
+      getCanonicalFileName: (fileName) => fileName,
+      getNewLine: () => "\n",
+      useCaseSensitiveFileNames: () => true,
+    },
+  });
+
+  // Get diagnostics
+  const diagnostics = ts.getPreEmitDiagnostics(program);
+
+  // Convert diagnostics to error messages
+  for (const diagnostic of diagnostics) {
+    if (diagnostic.file) {
+      const { line, character } = diagnostic.file.getLineAndCharacterOfPosition(
+        diagnostic.start!,
+      );
+      const message = ts.flattenDiagnosticMessageText(
+        diagnostic.messageText,
+        "\n",
+      );
+      errors.push(`${line + 1},${character + 1}: ${message}`);
+    }
+  }
+
+  return {
+    success: errors.length === 0,
+    errors,
+  };
+}
+
+/**
+ * Generate complete markdown documentation using OpenAI GPT-4o mini
+ */
+async function generateDocumentationWithAI(
+  service: string,
+  resource: string,
+  resourceType: ResourceType,
+  propsInterface: string,
+  cloudflareExamples: string,
+): Promise<string | null> {
+  const serviceName =
+    service === "ElasticLoadBalancingV2"
+      ? "Application Load Balancer"
+      : service;
+  const title = `Managing AWS ${serviceName} ${resource}s with Alchemy`;
+  const description = `Learn how to create, update, and manage AWS ${serviceName} ${resource}s using Alchemy Cloud Control.`;
+  const docsUrl = getAwsDocsUrl(service, resource);
+
+  // Generate the resource type definition
+  const resourceTypeDef = generateResourceType(resourceType, resource);
+
+  // Maximum number of retries for type checking
+  const MAX_RETRIES = 3;
+  let retryCount = 0;
+  let lastErrors: string[] = [];
+
+  while (retryCount < MAX_RETRIES) {
+    // Prepare the comprehensive prompt
+    const prompt = `You are an expert AWS Cloud Control API developer creating comprehensive documentation for AWS resources using the Alchemy framework.
+
+I need you to generate a complete markdown documentation file for the AWS ${service} ${resource} resource.
+
+Here are the TypeScript types for the resource:
+
+${propsInterface}
+
+${resourceTypeDef}
+
+${
+  cloudflareExamples
+    ? `Here are examples of our documentation conventions from Cloudflare resources (follow this exact structure and style):
+
+${cloudflareExamples}
+
+`
+    : ""
+}
+
+${
+  retryCount > 0
+    ? `Previous attempt had type errors. Please fix these issues:
+${lastErrors.map((err) => `- ${err}`).join("\n")}
+
+`
+    : ""
+}
+
+Please generate a complete markdown document that includes:
+
+1. YAML frontmatter with title and description
+2. A main heading with just the resource name: # ${resource}
+3. A brief introduction paragraph explaining what this resource does and linking to AWS docs
+4. If there's resource documentation, include it as a paragraph
+5. Multiple code examples with ## headings:
+   - ## Minimal Example (required properties + 1-2 common optional ones)
+   - ## Advanced Configuration (if meaningful additional options exist)
+   - Additional specific examples if the resource has distinct use cases
+
+Requirements:
+- Use the exact import: \`import AWS from "alchemy/aws/control";\`
+- Create resources with: \`AWS.${service}.${resource}(id, props)\`
+- Use meaningful, realistic values (not generic "example-*" values)
+- Variable names should be descriptive and follow camelCase
+- Include 1-sentence explanations before each code example explaining what it demonstrates
+- For policy properties, use proper IAM policy JSON structures
+- For network properties, use realistic CIDR blocks, ports, etc.
+- Format code properly with 2-space indentation
+- Make examples practical and educational
+- Follow the exact same structure and tone as the Cloudflare examples provided
+- IMPORTANT: Use proper casing for resource names (e.g., \`AWS.${service}.${resource}\` not \`AWS.${service.toLowerCase()}.${resource.toLowerCase()}\`)
+
+Frontmatter should be:
+---
+title: ${title}
+description: ${description}
+---
+
+Link to AWS docs: [AWS ${serviceName} ${resource}s](${docsUrl})
+
+Wrap your entire response in \`\`\`md fences.`;
+
+    try {
+      const response = await openai.chat.completions.create({
+        model: "gpt-4o-mini",
+        messages: [
+          {
+            role: "system",
+            content:
+              "You are an expert technical writer creating comprehensive AWS resource documentation. Follow the provided examples exactly for structure, tone, and formatting conventions.",
+          },
+          {
+            role: "user",
+            content: prompt,
+          },
+        ],
+        temperature: 0.7,
+        max_tokens: 3000,
+      });
+
+      const content = response.choices[0]?.message?.content || "";
+
+      // Extract markdown content using the helper function
+      const extracted = extractMarkdownContent(content);
+
+      if (extracted.error) {
+        console.error(
+          `Error extracting markdown for ${service}.${resource}:`,
+          extracted.error,
+        );
+        return null;
+      }
+
+      // Extract code blocks and type-check them
+      const codeBlocks =
+        extracted.content.match(/```ts\n([\s\S]*?)\n```/g) || [];
+
+      let hasTypeErrors = false;
+      lastErrors = [];
+
+      for (const block of codeBlocks) {
+        const code = block.replace(/```ts\n/, "").replace(/\n```/, "");
+        // Add the internal import header to the code being type checked
+        const codeWithHeader = `import AWS from "../alchemy/src/aws/control/index.js";\n\n${code}`;
+        console.log(`Type checking code: ${service}.${resource}`);
+        const result = typeCheckCode(codeWithHeader);
+
+        if (!result.success) {
+          hasTypeErrors = true;
+          lastErrors.push(...result.errors);
+        }
+      }
+
+      if (!hasTypeErrors) {
+        return extracted.content;
+      }
+
+      console.log(
+        `Type errors in example for ${service}.${resource} (attempt ${retryCount + 1}/${MAX_RETRIES}):`,
+      );
+      console.log(lastErrors.join("\n"));
+
+      retryCount++;
+    } catch (error) {
+      console.error(
+        `Error generating documentation for ${service}.${resource}:`,
+        error,
+      );
+      return null;
+    }
+  }
+
+  console.error(
+    `Failed to generate type-safe examples for ${service}.${resource} after ${MAX_RETRIES} attempts`,
+  );
+  return null;
+}
+
+/**
+ * Fallback function to generate minimal example (deterministic approach)
+ */
 async function generateMinimalExample(
   service: string,
   resource: string,
@@ -400,6 +793,9 @@ ${formattedCode.trim()}
 \`\`\``;
 }
 
+/**
+ * Generate example value for a property (deterministic approach)
+ */
 function generateExampleValue(
   prop: ResourceTypeProperty,
   propName: string,
@@ -454,6 +850,9 @@ function generateExampleValue(
   return `example-${lowerPropName}`;
 }
 
+/**
+ * Fallback function to generate advanced example (deterministic approach)
+ */
 async function generateSecondExample(
   service: string,
   resource: string,
@@ -523,6 +922,9 @@ ${formattedCode.trim()}
 \`\`\``;
 }
 
+/**
+ * Generate advanced example value for a property (deterministic approach)
+ */
 function generateAdvancedExampleValue(
   prop: ResourceTypeProperty,
   propName: string,
@@ -571,7 +973,10 @@ function generateAdvancedExampleValue(
   return generateExampleValue(prop, propName, resourceName);
 }
 
-async function generateResourceDocumentation(
+/**
+ * Generate fallback documentation using deterministic approach
+ */
+async function generateFallbackDocumentation(
   service: string,
   resource: string,
   resourceType: ResourceType,
@@ -599,17 +1004,15 @@ The ${resource} resource lets you create and manage [AWS ${serviceName} ${resour
     content += `${resourceType.Documentation}\n\n`;
   }
 
+  // Generate minimal example using fallback
   const minimalExample = await generateMinimalExample(
     service,
     resource,
     resourceType,
   );
-  content += `## Minimal Example
+  content += `## Minimal Example\n\n${minimalExample}\n\n`;
 
-${minimalExample}
-
-`;
-
+  // Generate advanced example if available
   const secondExample = await generateSecondExample(
     service,
     resource,
@@ -626,6 +1029,19 @@ async function generateDocumentation(
   resourceTypesByService: Record<string, Record<string, ResourceType>>,
 ): Promise<void> {
   console.log("Generating documentation...");
+  console.log(
+    `Overwrite mode: ${overwrite ? "enabled" : "disabled (will skip existing files)"}`,
+  );
+  console.log(`Maximum concurrent tasks: ${MAX_CONCURRENT_TASKS}`);
+
+  // Load Cloudflare documentation examples once
+  const cloudflareExamples = await loadCloudflareDocsExamples();
+
+  // Create semaphore for controlling concurrency
+  const semaphore = createSemaphore(MAX_CONCURRENT_TASKS);
+
+  // Create all tasks upfront
+  const tasks: Promise<void>[] = [];
 
   for (const [service, resources] of Object.entries(resourceTypesByService)) {
     const serviceDirName = toKebabCase(service);
@@ -635,17 +1051,65 @@ async function generateDocumentation(
     await mkdir(serviceDir, { recursive: true });
 
     for (const [resource, resourceType] of Object.entries(resources)) {
-      const resourceFileName = toKebabCase(resource);
-      const filePath = `${serviceDir}/${resourceFileName}.md`;
+      const task = (async () => {
+        const resourceFileName = toKebabCase(resource);
+        const filePath = `${serviceDir}/${resourceFileName}.md`;
 
-      const documentation = await generateResourceDocumentation(
-        service,
-        resource,
-        resourceType,
-      );
-      await writeFile(filePath, documentation);
+        // Check if file exists and skip if not in overwrite mode
+        if (!overwrite && (await fileExists(filePath))) {
+          console.log(`Skipping existing file: ${filePath}`);
+          return;
+        }
+
+        // Acquire semaphore before starting work
+        await semaphore.acquire();
+        try {
+          console.log(`Generating documentation for ${service}.${resource}...`);
+
+          let documentation: string | null = null;
+
+          // Try AI generation if OpenAI API key is available
+          if (process.env.OPENAI_API_KEY) {
+            const propsInterface = generatePropsInterface(
+              resourceType,
+              resource,
+              service,
+            );
+            documentation = await generateDocumentationWithAI(
+              service,
+              resource,
+              resourceType,
+              propsInterface,
+              cloudflareExamples,
+            );
+          }
+
+          // Fallback to deterministic generation if AI failed or no API key
+          if (!documentation) {
+            console.log(
+              `Falling back to deterministic generation for ${service}.${resource}`,
+            );
+            documentation = await generateFallbackDocumentation(
+              service,
+              resource,
+              resourceType,
+            );
+          }
+
+          await writeFile(filePath, documentation);
+          console.log(`Completed documentation for ${service}.${resource}`);
+        } finally {
+          // Always release semaphore when done
+          semaphore.release();
+        }
+      })();
+
+      tasks.push(task);
     }
   }
+
+  // Wait for all tasks to complete
+  await Promise.all(tasks);
 
   console.log("Successfully generated all documentation");
 }
@@ -858,11 +1322,29 @@ const properties = ${JSON.stringify(properties, null, 2)};
 export default properties;
 `;
 
-  await writeFile(PROPERTIES_FILE, content);
+  // Format the content with prettier
+  const formattedContent = await prettier.format(content, {
+    parser: "typescript",
+    semi: true,
+    singleQuote: false,
+    trailingComma: "es5",
+    printWidth: 100,
+    tabWidth: 2,
+    useTabs: false,
+  });
+
+  await writeFile(PROPERTIES_FILE, formattedContent);
   console.log("Successfully wrote properties file");
 }
 
 try {
+  // Check for OpenAI API key
+  if (!process.env.OPENAI_API_KEY) {
+    console.warn(
+      "Warning: OPENAI_API_KEY not found. Will use deterministic example generation.",
+    );
+  }
+
   const spec = await downloadSpec();
   const types = await generateTypes(spec);
   await writeTypes(types);
