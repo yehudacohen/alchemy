@@ -156,16 +156,18 @@ export default defineConfig({
 		// Process both docs and blogs directories
 		const baseDirs = ["docs", "blogs"];
 		let fileCount = 0;
+		let processedCount = 0;
 
-		for (const dir of baseDirs) {
-			// Process files for this directory
-			await processDirectory(dir, "", publicOgDir);
-		}
+		// Collect all files that need OG images
+		const filesToProcess: Array<{
+			entryFullPath: string;
+			entryRelativePath: string;
+			baseDir: string;
+			ogImagePath: string;
+		}> = [];
 
-		console.log(`OG image generation complete. Processed ${fileCount} files.`);
-
-		// Function to recursively process directories
-		async function processDirectory(
+		// Function to recursively collect files
+		async function collectFiles(
 			baseDir: string,
 			relativePath: string,
 			outputDir: string,
@@ -185,36 +187,11 @@ export default defineConfig({
 
 				if (entry.isDirectory()) {
 					// Recursively process subdirectories
-					await processDirectory(baseDir, entryRelativePath, outputDir);
+					await collectFiles(baseDir, entryRelativePath, outputDir);
 				} else if (entry.name.endsWith(".md")) {
-					// Process markdown files
 					fileCount++;
 
-					// Read the file content
-					const fileContent = await fs.promises.readFile(
-						entryFullPath,
-						"utf-8",
-					);
-
-					// Simple frontmatter extraction (replaces gray-matter)
-					const frontmatter = extractFrontmatter(fileContent);
-
-					const pageTitleRaw =
-						frontmatter.title || path.basename(entry.name, ".md");
-					// A simple title case, adjust if more complex logic is needed
-					const pageTitle = pageTitleRaw
-						.replace(/-/g, " ")
-						.replace(/\b\w/g, (l) => l.toUpperCase());
-					const pageDescription = frontmatter.description;
-
-					if (!pageTitle) {
-						console.warn(
-							`Skipping OG image for ${entryFullPath}: title missing or could not be derived.`,
-						);
-						continue;
-					}
-
-					// Consistent slug generation including directory prefix
+					// Generate image slug
 					const filePath = entryRelativePath;
 					let imageSlug = `${baseDir}-${filePath}`.replace(/\.md$/, "");
 
@@ -230,19 +207,67 @@ export default defineConfig({
 					const ogImageFileName = `${finalImageSlug}.png`;
 					const ogImagePath = path.join(outputDir, ogImageFileName);
 
-					console.log(`Processing ${entryFullPath} -> ${ogImageFileName}`);
-
-					try {
-						await generateOgImage(pageTitle, pageDescription, ogImagePath);
-					} catch (error) {
-						console.error(
-							`Failed to generate OG image for ${entryFullPath}:`,
-							error,
-						);
-					}
+					filesToProcess.push({
+						entryFullPath,
+						entryRelativePath,
+						baseDir,
+						ogImagePath,
+					});
 				}
 			}
 		}
+
+		// Collect all files first
+		for (const dir of baseDirs) {
+			await collectFiles(dir, "", publicOgDir);
+		}
+
+		console.log(`Found ${fileCount} files to process`);
+
+		// Process files in parallel
+		const promises = filesToProcess.map(async ({ entryFullPath, ogImagePath }) => {
+			try {
+				// Check if image already exists
+				try {
+					await fs.promises.access(ogImagePath);
+					processedCount++;
+					console.log(`Skipped (exists) ${processedCount}/${fileCount}: ${entryFullPath}`);
+					return;
+				} catch {
+					// File doesn't exist, continue with generation
+				}
+
+				// Read the file content
+				const fileContent = await fs.promises.readFile(entryFullPath, "utf-8");
+
+				// Extract frontmatter
+				const frontmatter = extractFrontmatter(fileContent);
+
+				const pageTitleRaw = frontmatter.title || path.basename(entryFullPath, ".md");
+				const pageTitle = pageTitleRaw
+					.replace(/-/g, " ")
+					.replace(/\b\w/g, (l) => l.toUpperCase());
+				const pageDescription = frontmatter.description;
+
+				if (!pageTitle) {
+					console.warn(
+						`Skipping OG image for ${entryFullPath}: title missing or could not be derived.`,
+					);
+					return;
+				}
+
+				await generateOgImage(pageTitle, pageDescription, ogImagePath);
+				processedCount++;
+				console.log(`Generated ${processedCount}/${fileCount}: ${entryFullPath}`);
+			} catch (error) {
+				console.error(`Failed to generate OG image for ${entryFullPath}:`, error);
+			}
+		});
+
+		// Wait for all promises to complete
+		await Promise.all(promises);
+
+		console.log(`OG image generation complete. Processed ${processedCount}/${fileCount} files.`);
 
 		// Simple function to extract frontmatter from markdown
 		function extractFrontmatter(content: string) {

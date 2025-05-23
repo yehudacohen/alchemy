@@ -24,6 +24,14 @@ jobs:
         with:
           bun-version: latest
 
+      - name: Cache VitePress cache and OG images
+        uses: actions/cache@v4
+        with:
+          path: |
+            alchemy-web/.vitepress/cache
+            alchemy-web/public/og-images
+          key: ${{ runner.os }}-vitepress-cache
+
       - name: Install dependencies
         run: |
           bun install
