@@ -398,10 +398,17 @@ export const Project = Resource(
           );
         }
 
-        // 409 Conflict: Can't update name, so remove it from the props
-        // 400 Invalid Request: Should NOT have additional property `environmentVariables`
-        const { environmentVariables, ...rest } = props;
-        const response = await api.patch(`/projects/${this.output.id}`, rest);
+        const { environmentVariables, ...updateProps }: any = { ...props };
+        // 409 Conflict: Can't update these properties, so remove them from the updateProps
+        delete updateProps.name;
+        delete updateProps.environmentVariables;
+        delete updateProps.gitRepository;
+        delete updateProps.resourceConfig;
+
+        const response = await api.patch(
+          `/projects/${this.output.id}`,
+          updateProps,
+        );
         const data = (await response.json()) as Project;
 
         if (environmentVariables) {
