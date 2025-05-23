@@ -1,14 +1,13 @@
 import { alchemy } from "./alchemy.js";
 import { context } from "./context.js";
 import {
-  PROVIDERS,
+  resolveDeletionHandler,
+  type Resource,
   ResourceFQN,
   ResourceID,
   ResourceKind,
   ResourceScope,
   ResourceSeq,
-  type Provider,
-  type Resource,
 } from "./resource.js";
 import { Scope } from "./scope.js";
 
@@ -70,9 +69,7 @@ export async function destroy<Type extends string>(
     return await destroy(scope, options);
   }
 
-  const Provider: Provider<Type> | undefined = PROVIDERS.get(
-    instance[ResourceKind],
-  );
+  const Provider = resolveDeletionHandler(instance[ResourceKind]);
   if (!Provider) {
     throw new Error(
       `Cannot destroy resource "${instance[ResourceFQN]}" type ${instance[ResourceKind]} - no provider found. You may need to import the provider in your alchemy.config.ts.`,
@@ -124,7 +121,7 @@ export async function destroy<Type extends string>(
           nestedScope = scope;
           return await Provider.handler.bind(ctx)(
             instance[ResourceID],
-            state.props,
+            state.props!,
           );
         },
       );

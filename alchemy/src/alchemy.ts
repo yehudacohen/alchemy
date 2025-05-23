@@ -1,15 +1,15 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 
-import { destroy, DestroyedSignal } from "./destroy.js";
+import { DestroyedSignal, destroy } from "./destroy.js";
 import { env } from "./env.js";
 import {
+  type PendingResource,
   ResourceFQN,
   ResourceID,
   ResourceKind,
   ResourceScope,
   ResourceSeq,
-  type PendingResource,
 } from "./resource.js";
 import { isRuntime } from "./runtime/global.js";
 import { Scope } from "./scope.js";
@@ -378,7 +378,6 @@ async function run<T>(
     return await _scope.run(async () => fn.bind(_scope)(_scope));
   } catch (error) {
     if (!(error instanceof DestroyedSignal)) {
-      // console.log(error);
       _scope.fail();
     }
     throw error;

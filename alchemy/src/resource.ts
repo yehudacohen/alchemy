@@ -2,7 +2,38 @@ import { apply } from "./apply.js";
 import type { Context } from "./context.js";
 import { Scope as _Scope, type Scope } from "./scope.js";
 
-export const PROVIDERS = new Map<ResourceKind, Provider<string, any>>();
+export const PROVIDERS: Map<ResourceKind, Provider<string, any>> = new Map<
+  ResourceKind,
+  Provider<string, any>
+>();
+const DYNAMIC_RESOURCE_RESOLVERS: DynamicResourceResolver[] = [];
+
+export type DynamicResourceResolver = (
+  typeName: string,
+) => Provider | undefined;
+
+/**
+ * Register a function that will be called if a Resource Type cannot be found during deletion.
+ */
+export function registerDynamicResource(
+  handler: DynamicResourceResolver,
+): void {
+  DYNAMIC_RESOURCE_RESOLVERS.push(handler);
+}
+
+export function resolveDeletionHandler(typeName: string): Provider | undefined {
+  const provider: Provider<string, any> | undefined = PROVIDERS.get(typeName);
+  if (provider) {
+    return provider;
+  }
+  for (const handler of DYNAMIC_RESOURCE_RESOLVERS) {
+    const result = handler(typeName);
+    if (result) {
+      return result;
+    }
+  }
+  return undefined;
+}
 
 export type ResourceID = string;
 export const ResourceID = Symbol.for("alchemy::ResourceID");
