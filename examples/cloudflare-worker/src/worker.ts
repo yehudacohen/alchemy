@@ -1,17 +1,17 @@
+import { env } from "cloudflare:workers";
 import type { queue, worker } from "../alchemy.run.js";
 export * from "./do.js";
 export * from "./workflow.js";
 
 export default {
-  async fetch(_request: Request, env: typeof worker.Env) {
+  async fetch(_request: Request) {
     await env.QUEUE.send({
       name: "John Doe",
       email: "john.doe@example.com",
     });
 
     const obj = env.DO.get(env.DO.idFromName("foo"));
-    await obj.hello();
-    await obj.hello();
+    await obj.increment();
     async function _foo() {
       // @ts-expect-error - foo doesn't exist on the HelloWorldDO class
       await obj.foo();
