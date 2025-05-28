@@ -104,7 +104,6 @@ import { Worker, DurableObjectNamespace } from "alchemy/cloudflare";
 
 // Worker that defines and owns the durable object
 const dataWorker = await Worker("data-worker", {
-  name: "data-worker",
   entrypoint: "./src/data.ts",
   bindings: {
     // Bind to its own durable object
@@ -116,7 +115,6 @@ const dataWorker = await Worker("data-worker", {
 
 // Worker that accesses the durable object from another worker
 const apiWorker = await Worker("api-worker", {
-  name: "api-worker",
   entrypoint: "./src/api.ts", 
   bindings: {
     // Cross-script binding to the data worker's durable object
