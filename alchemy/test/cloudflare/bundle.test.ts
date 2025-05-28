@@ -24,6 +24,7 @@ describe("Bundle Worker Test", () => {
         format: "esm", // Assuming bundle-handler.ts is ESM
         url: true, // Enable workers.dev URL to test the worker
         compatibilityFlags: ["nodejs_compat"],
+        adopt: true,
       });
 
       await new Promise((resolve) => setTimeout(resolve, 1000));
@@ -48,6 +49,7 @@ describe("Bundle Worker Test", () => {
         format: "esm", // Assuming bundle-handler.ts is ESM
         url: true, // Enable workers.dev URL to test the worker
         compatibilityFlags: ["nodejs_als"],
+        adopt: true,
       });
 
       await new Promise((resolve) => setTimeout(resolve, 1000));
@@ -73,6 +75,7 @@ describe("Bundle Worker Test", () => {
           url: true,
           compatibilityDate: "2024-09-22", // v1 mode (before Sept 23rd 2024)
           compatibilityFlags: ["nodejs_compat"],
+          adopt: true,
         }),
       ).rejects.toThrow(
         "You must set your compatibilty date >= 2024-09-23 when using 'nodejs_compat' compatibility flag",
