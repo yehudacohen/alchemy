@@ -41,7 +41,7 @@ export type Binding =
   | Assets
   | D1DatabaseResource
   | AnalyticsEngineDataset
-  | DurableObjectNamespace
+  | DurableObjectNamespace<Rpc.DurableObjectBranded | undefined>
   | HyperdriveResource
   | KVNamespaceResource
   | PipelineResource

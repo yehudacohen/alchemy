@@ -8,6 +8,16 @@ export default {
       name: "John Doe",
       email: "john.doe@example.com",
     });
+
+    const obj = env.DO.get(env.DO.idFromName("foo"));
+    await obj.hello();
+    await obj.hello();
+    async function _foo() {
+      // @ts-expect-error - foo doesn't exist on the HelloWorldDO class
+      await obj.foo();
+    }
+    await obj.fetch(new Request("https://example.com"));
+
     return new Response("Ok");
   },
   async queue(batch: typeof queue.Batch, _env: typeof worker.Env) {
