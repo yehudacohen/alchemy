@@ -1,12 +1,12 @@
 import { exec } from "node:child_process";
 import path from "node:path";
 import { promisify } from "node:util";
-import type { Context } from "../context.js";
-import { Folder } from "../fs/folder.js";
-import { StaticJsonFile } from "../fs/static-json-file.js";
-import { StaticTypeScriptFile } from "../fs/static-typescript-file.js";
-import { Resource } from "../resource.js";
-import { ShadcnComponent } from "./shadcn-component.js";
+import type { Context } from "../context.ts";
+import { Folder } from "../fs/folder.ts";
+import { StaticJsonFile } from "../fs/static-json-file.ts";
+import { StaticTypeScriptFile } from "../fs/static-typescript-file.ts";
+import { Resource } from "../resource.ts";
+import { ShadcnComponent } from "./shadcn-component.ts";
 
 const execAsync = promisify(exec);
 

@@ -1,18 +1,18 @@
-import type { Context } from "../context.js";
-import { slugify } from "../util/slugify.js";
+import type { Context } from "../context.ts";
+import { slugify } from "../util/slugify.ts";
 import {
   Self,
   type Bindings,
   type WorkerBindingDurableObjectNamespace,
   type WorkerBindingSpec,
-} from "./bindings.js";
+} from "./bindings.ts";
 import {
   isDurableObjectNamespace,
   type DurableObjectNamespace,
-} from "./durable-object-namespace.js";
-import { createAssetConfig, type AssetUploadResult } from "./worker-assets.js";
-import type { SingleStepMigration } from "./worker-migration.js";
-import type { AssetsConfig, Worker, WorkerProps } from "./worker.js";
+} from "./durable-object-namespace.ts";
+import { createAssetConfig, type AssetUploadResult } from "./worker-assets.ts";
+import type { SingleStepMigration } from "./worker-migration.ts";
+import type { AssetsConfig, Worker, WorkerProps } from "./worker.ts";
 
 /**
  * Metadata returned by Cloudflare API for a worker script

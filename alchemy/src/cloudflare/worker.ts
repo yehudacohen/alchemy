@@ -1,60 +1,60 @@
 import path from "node:path";
-import type { Context } from "../context.js";
-import type { BundleProps } from "../esbuild/bundle.js";
-import { InnerResourceScope, Resource, ResourceKind } from "../resource.js";
-import { getBindKey, tryGetBinding } from "../runtime/bind.js";
-import { isRuntime } from "../runtime/global.js";
-import { bootstrapPlugin } from "../runtime/plugin.js";
-import { Scope } from "../scope.js";
-import { Secret, secret } from "../secret.js";
-import { serializeScope } from "../serde.js";
-import type { type } from "../type.js";
-import { withExponentialBackoff } from "../util/retry.js";
-import { slugify } from "../util/slugify.js";
-import { CloudflareApiError, handleApiError } from "./api-error.js";
+import type { Context } from "../context.ts";
+import type { BundleProps } from "../esbuild/bundle.ts";
+import { InnerResourceScope, Resource, ResourceKind } from "../resource.ts";
+import { getBindKey, tryGetBinding } from "../runtime/bind.ts";
+import { isRuntime } from "../runtime/global.ts";
+import { bootstrapPlugin } from "../runtime/plugin.ts";
+import { Scope } from "../scope.ts";
+import { Secret, secret } from "../secret.ts";
+import { serializeScope } from "../serde.ts";
+import type { type } from "../type.ts";
+import { withExponentialBackoff } from "../util/retry.ts";
+import { slugify } from "../util/slugify.ts";
+import { CloudflareApiError, handleApiError } from "./api-error.ts";
 import {
   type CloudflareApi,
   type CloudflareApiOptions,
   createCloudflareApi,
-} from "./api.js";
-import type { Assets } from "./assets.js";
+} from "./api.ts";
+import type { Assets } from "./assets.ts";
 import {
   type Binding,
   type Bindings,
   Json,
   type WorkerBindingSpec,
-} from "./bindings.js";
-import type { Bound } from "./bound.js";
-import { isBucket } from "./bucket.js";
-import { bundleWorkerScript } from "./bundle/bundle-worker.js";
-import { isD1Database } from "./d1-database.js";
+} from "./bindings.ts";
+import type { Bound } from "./bound.ts";
+import { isBucket } from "./bucket.ts";
+import { bundleWorkerScript } from "./bundle/bundle-worker.ts";
+import { isD1Database } from "./d1-database.ts";
 import {
   DurableObjectNamespace,
   isDurableObjectNamespace,
-} from "./durable-object-namespace.js";
+} from "./durable-object-namespace.ts";
 import {
   type EventSource,
   type QueueEventSource,
   isQueueEventSource,
-} from "./event-source.js";
-import { isKVNamespace } from "./kv-namespace.js";
-import { isPipeline } from "./pipeline.js";
+} from "./event-source.ts";
+import { isKVNamespace } from "./kv-namespace.ts";
+import { isPipeline } from "./pipeline.ts";
 import {
   QueueConsumer,
   deleteQueueConsumer,
   listQueueConsumers,
-} from "./queue-consumer.js";
-import { type QueueResource, isQueue } from "./queue.js";
-import { isVectorizeIndex } from "./vectorize-index.js";
-import { type AssetUploadResult, uploadAssets } from "./worker-assets.js";
+} from "./queue-consumer.ts";
+import { type QueueResource, isQueue } from "./queue.ts";
+import { isVectorizeIndex } from "./vectorize-index.ts";
+import { type AssetUploadResult, uploadAssets } from "./worker-assets.ts";
 import {
   type WorkerMetadata,
   type WorkerScriptMetadata,
   prepareWorkerMetadata,
-} from "./worker-metadata.js";
-import type { SingleStepMigration } from "./worker-migration.js";
-import { WorkerStub, isWorkerStub } from "./worker-stub.js";
-import { type Workflow, upsertWorkflow } from "./workflow.js";
+} from "./worker-metadata.ts";
+import type { SingleStepMigration } from "./worker-migration.ts";
+import { WorkerStub, isWorkerStub } from "./worker-stub.ts";
+import { type Workflow, upsertWorkflow } from "./workflow.ts";
 
 /**
  * Configuration options for static assets
