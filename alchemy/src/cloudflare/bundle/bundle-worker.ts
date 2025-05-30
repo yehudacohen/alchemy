@@ -48,6 +48,8 @@ export async function bundleWorkerScript<B extends Bindings>(
         loader: {
           ".sql": "text",
           ".json": "json",
+          ...props.bundle?.loader,
+          ...props.bundle?.options?.loader,
         },
         plugins: [
           ...(props.bundle?.plugins ?? []),
