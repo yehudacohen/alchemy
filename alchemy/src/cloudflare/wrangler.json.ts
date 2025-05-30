@@ -1,13 +1,13 @@
-import type { Context } from "../context.ts";
-import { StaticJsonFile } from "../fs/static-json-file.ts";
-import { Resource } from "../resource.ts";
-import { assertNever } from "../util/assert-never.ts";
-import { Self, type Bindings } from "./bindings.ts";
-import type { DurableObjectNamespace } from "./durable-object-namespace.ts";
-import type { EventSource } from "./event-source.ts";
-import { isQueueEventSource } from "./event-source.ts";
-import { isQueue } from "./queue.ts";
-import type { Worker } from "./worker.ts";
+import type { Context } from "../context.js";
+import { StaticJsonFile } from "../fs/static-json-file.js";
+import { Resource } from "../resource.js";
+import { assertNever } from "../util/assert-never.js";
+import { Self, type Bindings } from "./bindings.js";
+import type { DurableObjectNamespace } from "./durable-object-namespace.js";
+import type { EventSource } from "./event-source.js";
+import { isQueueEventSource } from "./event-source.js";
+import { isQueue } from "./queue.js";
+import type { Worker, WorkerProps } from "./worker.js";
 
 /**
  * Properties for wrangler.json configuration file
@@ -17,7 +17,11 @@ export interface WranglerJsonProps {
   /**
    * The worker to generate the wrangler.json file for
    */
-  worker: Worker<any>;
+  worker:
+    | Worker
+    | (WorkerProps<any> & {
+        name: string;
+      });
   /**
    * Path to write the wrangler.json file to
    *
@@ -31,6 +35,16 @@ export interface WranglerJsonProps {
    * @default worker.entrypoint
    */
   main?: string;
+
+  /**
+   * Path to the assets directory
+   *
+   * @default inferred from the worker's Asset bindings
+   */
+  assets?: {
+    binding: string;
+    directory: string;
+  };
 }
 
 /**
@@ -92,6 +106,7 @@ export const WranglerJson = Resource(
       // see: https://developers.cloudflare.com/workers/configuration/compatibility-dates/
       compatibility_date: worker.compatibilityDate,
       compatibility_flags: props.worker.compatibilityFlags,
+      assets: props.assets,
     };
 
     // Process bindings if they exist

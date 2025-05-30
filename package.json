@@ -7,7 +7,7 @@
   "license": "Apache-2.0",
   "scripts": {
     "build": "tsc -b",
-    "check": "tsc -b ./tsconfig.json && biome check",
+    "check": "bun run --filter cloudflare-react-router types && tsc -b ./tsconfig.json && biome check",
     "fix": "biome check --write",
     "deploy:repo": "bun ./stacks/repo.run.ts",
     "deploy:website": "bun ./stacks/website.run.ts",
@@ -21,11 +21,12 @@
     "alchemy",
     "alchemy-web",
     "examples/aws-app",
-    "examples/cloudflare-vite",
     "examples/cloudflare-nuxt-pipeline",
+    "examples/cloudflare-react-router",
     "examples/cloudflare-redwood",
-    "examples/cloudflare-worker",
-    "examples/cloudflare-worker-bootstrap"
+    "examples/cloudflare-vite",
+    "examples/cloudflare-worker-bootstrap",
+    "examples/cloudflare-worker"
   ],
   "devDependencies": {
     "@biomejs/biome": "beta",
