@@ -9,6 +9,7 @@ import { Scope } from "../scope.ts";
 import { Secret, secret } from "../secret.ts";
 import { serializeScope } from "../serde.ts";
 import type { type } from "../type.ts";
+import { getContentType } from "../util/content-type.ts";
 import { withExponentialBackoff } from "../util/retry.ts";
 import { slugify } from "../util/slugify.ts";
 import { CloudflareApiError, handleApiError } from "./api-error.ts";
@@ -26,7 +27,10 @@ import {
 } from "./bindings.ts";
 import type { Bound } from "./bound.ts";
 import { isBucket } from "./bucket.ts";
-import { bundleWorkerScript } from "./bundle/bundle-worker.ts";
+import {
+  type NoBundleResult,
+  bundleWorkerScript,
+} from "./bundle/bundle-worker.ts";
 import { isD1Database } from "./d1-database.ts";
 import {
   DurableObjectNamespace,
@@ -225,14 +229,38 @@ export interface InlineWorkerProps<
 > extends BaseWorkerProps<B, RPC> {
   script: string;
   entrypoint?: undefined;
+  noBundle?: false;
 }
 
 export interface EntrypointWorkerProps<
   B extends Bindings | undefined = Bindings,
   RPC extends Rpc.WorkerEntrypointBranded = Rpc.WorkerEntrypointBranded,
 > extends BaseWorkerProps<B, RPC> {
-  entrypoint: string;
   script?: undefined;
+  /**
+   * The entrypoint for the worker script.
+   */
+  entrypoint: string;
+
+  /**
+   * Whether to disable bundling of the worker script.
+   *
+   * If true, the worker script and any files it imports will be deployed in the Worker.
+   *
+   * @default false
+   */
+  noBundle?: boolean;
+
+  /**
+   * Rules for adding additional files to the bundle.
+   *
+   * If {@link noBundle} is false | undefined, this will be ignored.
+   *
+   * @default - all .js, .mjs, and .wasm files under the entrypoint directory
+   */
+  rules?: {
+    globs: string[];
+  }[];
 }
 
 /**
@@ -695,6 +723,10 @@ export const _Worker = Resource(
     id: string,
     props: WorkerProps<B>,
   ): Promise<Worker<B>> {
+    if (props.noBundle && !props.entrypoint) {
+      throw new Error("entrypoint must be provided when noBundle is true");
+    }
+
     // Create Cloudflare API client with automatic account discovery
     const api = await createCloudflareApi(props);
 
@@ -713,7 +745,7 @@ export const _Worker = Resource(
       const oldTags = oldMetadata?.default_environment?.script?.tags;
 
       // Get the script content - either from props.script, or by bundling
-      const scriptContent =
+      const scriptBundle =
         props.script ??
         (await bundleWorkerScript({
           ...props,
@@ -767,7 +799,7 @@ export const _Worker = Resource(
         assetUploadResult,
       );
 
-      await putWorker(api, workerName, scriptContent, scriptMetadata);
+      await putWorker(api, workerName, scriptBundle, scriptMetadata);
 
       for (const workflow of workflowsBindings) {
         await upsertWorkflow(api, {
@@ -824,16 +856,18 @@ export const _Worker = Resource(
         }
       }
 
-      return { scriptContent, scriptMetadata, workerUrl, now };
+      return { scriptBundle, scriptMetadata, workerUrl, now };
     };
 
     if (this.phase === "delete") {
       // Delete any queue consumers attached to this worker first
       await deleteQueueConsumers(this, api, workerName);
 
+      // @ts-ignore
       await uploadWorkerScript({
         ...props,
         entrypoint: undefined,
+        noBundle: false,
         script:
           props.format === "cjs"
             ? "addEventListener('fetch', event => { event.respondWith(new Response('hello world')); });"
@@ -960,7 +994,7 @@ export async function deleteWorker<B extends Bindings>(
 export async function putWorker(
   api: CloudflareApi,
   workerName: string,
-  scriptContent: string,
+  scriptBundle: string | NoBundleResult,
   scriptMetadata: WorkerMetadata,
 ) {
   return withExponentialBackoff(
@@ -971,16 +1005,29 @@ export async function putWorker(
       // Create FormData for the upload
       const formData = new FormData();
 
-      // Add the actual script content as a named file part
-      formData.append(
-        scriptName,
-        new Blob([scriptContent], {
-          type: scriptMetadata.main_module
-            ? "application/javascript+module"
-            : "application/javascript",
-        }),
-        scriptName,
-      );
+      function addFile(fileName: string, content: Buffer | string) {
+        const contentType = getContentType(fileName) ?? "application/null";
+        formData.append(
+          fileName,
+          new Blob([content], {
+            type:
+              contentType === "application/javascript" &&
+              scriptMetadata.main_module
+                ? "application/javascript+module"
+                : contentType,
+          }),
+          fileName,
+        );
+      }
+
+      if (typeof scriptBundle === "string") {
+        addFile(scriptName, scriptBundle);
+      } else {
+        for (const [fileName, content] of Object.entries(scriptBundle)) {
+          // Add the actual script content as a named file part
+          addFile(fileName, content);
+        }
+      }
 
       // Add metadata as JSON
       formData.append(
