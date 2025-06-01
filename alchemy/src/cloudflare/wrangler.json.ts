@@ -1,5 +1,7 @@
+import fs from "node:fs/promises";
+import path from "node:path";
 import type { Context } from "../context.ts";
-import { StaticJsonFile } from "../fs/static-json-file.ts";
+import { formatJson } from "../fs/static-json-file.ts";
 import { Resource } from "../resource.ts";
 import { assertNever } from "../util/assert-never.ts";
 import { Self, type Bindings } from "./bindings.ts";
@@ -126,7 +128,8 @@ export const WranglerJson = Resource(
       spec.triggers = { crons: worker.crons };
     }
 
-    await StaticJsonFile(filePath, spec);
+    await fs.mkdir(path.dirname(filePath), { recursive: true });
+    await fs.writeFile(filePath, await formatJson(spec));
 
     // Return the resource
     return this({
