@@ -20,7 +20,7 @@
     },
     "alchemy": {
       "name": "alchemy",
-      "version": "0.22.3",
+      "version": "0.22.4",
       "dependencies": {
         "unenv": "2.0.0-rc.15",
       },
