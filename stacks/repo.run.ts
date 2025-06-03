@@ -99,6 +99,7 @@ const secrets = {
   VERCEL_ACCESS_TOKEN: await alchemy.secret.env.VERCEL_ACCESS_TOKEN,
   ALCHEMY_PASSWORD: await alchemy.secret.env.ALCHEMY_PASSWORD,
   NPM_TOKEN: await alchemy.secret.env.NPM_TOKEN,
+  ALCHEMY_STATE_TOKEN: await alchemy.secret.env.ALCHEMY_STATE_TOKEN,
 };
 
 await Promise.all([
