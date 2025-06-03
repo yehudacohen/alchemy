@@ -26,6 +26,11 @@ jobs:
           ref: ${{ github.event_name == 'pull_request_target' && github.event.pull_request.head.sha || github.sha }}
           fetch-depth: 0
 
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
       - name: Setup Bun
         uses: oven-sh/setup-bun@v1
         with:
@@ -77,14 +82,12 @@ jobs:
           fi
 
           echo "Running tests changed since commit: $BASE_COMMIT"
-          bun run test --since "$BASE_COMMIT"
-
-          bun run test:smoke
+          bun run test --since "$BASE_COMMIT" --vitest
         env:
           CI: true
           ALCHEMY_STATE_STORE: cloudflare
           AWS_REGION: us-west-2
-          BRANCH_PREFIX: pr-${{ github.event_name == 'pull_request_target' && github.event.pull_request.number || github.ref_name }}
+          BRANCH_PREFIX: pr-${{ github.event_name == 'pull_request' && github.event.pull_request.number || github.ref_name }}
           # All secrets are now loaded from SSM parameter via the previous step
           # Fallback to GitHub secrets if SSM parameter is not available
           ALCHEMY_PASSWORD: ${{ env.ALCHEMY_PASSWORD || secrets.ALCHEMY_PASSWORD }}

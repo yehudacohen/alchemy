@@ -1,10 +1,10 @@
-import { describe, expect } from "bun:test";
+import { describe, expect } from "vitest";
 import { alchemy } from "../../src/alchemy.js";
 import { createCloudflareApi } from "../../src/cloudflare/api.js";
 import { KVNamespace } from "../../src/cloudflare/kv-namespace.js";
 import { BRANCH_PREFIX } from "../util.js";
 
-import "../../src/test/bun.js";
+import "../../src/test/vitest.js";
 
 const test = alchemy.test(import.meta, {
   prefix: BRANCH_PREFIX,
@@ -17,6 +17,7 @@ describe("KV Namespace Resource", () => {
     let kvNamespace: KVNamespace | undefined;
     try {
       kvNamespace = await KVNamespace(testId, {
+        adopt: true,
         title: `${BRANCH_PREFIX}-Test Namespace ${testId}`,
         values: [
           {
@@ -86,6 +87,7 @@ describe("KV Namespace Resource", () => {
     try {
       kvNamespace = await KVNamespace("kv", {
         title: `${testId}-adopt`,
+        adopt: true,
       });
 
       await alchemy.run("nested", async () => {
@@ -106,12 +108,13 @@ describe("KV Namespace Resource", () => {
     let kvNamespace: KVNamespace | undefined;
     try {
       kvNamespace = await KVNamespace("kv", {
-        title: `${testId}-adopt`,
+        title: `${testId}-adopt-no-delete`,
+        adopt: true,
       });
 
       await alchemy.run("nested", async (scope) => {
         const adoptedNamespace = await KVNamespace("kv", {
-          title: `${testId}-adopt`,
+          title: `${testId}-adopt-no-delete`,
           adopt: true,
           delete: false,
         });
