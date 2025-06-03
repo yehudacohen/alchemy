@@ -1,3 +1,27 @@
+## v0.23.0
+
+### &nbsp;&nbsp;&nbsp;🚀 Features
+
+- **aws**:
+  - SSMParameter &nbsp;-&nbsp; by **Sam Goodwin** [<samp>(3202a)</samp>](https://github.com/sam-goodwin/alchemy/commit/3202a51)
+- **cloudflare**:
+  - Implement Cloudflare Version Metadata binding &nbsp;-&nbsp; in https://github.com/sam-goodwin/alchemy/issues/240 [<samp>(de057)</samp>](https://github.com/sam-goodwin/alchemy/commit/de05723)
+  - Support cross-binding to Workflow &nbsp;-&nbsp; by **Sam Goodwin** in https://github.com/sam-goodwin/alchemy/issues/254 [<samp>(abaea)</samp>](https://github.com/sam-goodwin/alchemy/commit/abaeae7)
+  - Default Worker.url to true &nbsp;-&nbsp; by **Sam Goodwin** in https://github.com/sam-goodwin/alchemy/issues/255 [<samp>(d9403)</samp>](https://github.com/sam-goodwin/alchemy/commit/d94031a)
+
+### &nbsp;&nbsp;&nbsp;🐞 Bug Fixes
+
+- Export analytics engine dataset binding from cloudflare &nbsp;-&nbsp; by **Oliver Stenbom** in https://github.com/sam-goodwin/alchemy/issues/267 [<samp>(2f79e)</samp>](https://github.com/sam-goodwin/alchemy/commit/2f79e9e)
+- **aws**:
+  - Include types.d.ts file in lib &nbsp;-&nbsp; by **Tyler van Hensbergen** in https://github.com/sam-goodwin/alchemy/issues/264 [<samp>(47bc4)</samp>](https://github.com/sam-goodwin/alchemy/commit/47bc4d3)
+  - Include typeName when destroying Cloud Control Resources &nbsp;-&nbsp; by **Sam Goodwin** in https://github.com/sam-goodwin/alchemy/issues/256 [<samp>(cb4b9)</samp>](https://github.com/sam-goodwin/alchemy/commit/cb4b966)
+- **cloudflare**:
+  - Always write wrangler.json &nbsp;-&nbsp; by **Sam Goodwin** [<samp>(b1830)</samp>](https://github.com/sam-goodwin/alchemy/commit/b183081)
+
+##### &nbsp;&nbsp;&nbsp;&nbsp;[View changes on GitHub](https://github.com/sam-goodwin/alchemy/compare/v0.22.3...v0.23.0)
+
+---
+
 ## v0.22.4
 
 ### &nbsp;&nbsp;&nbsp;🚀 Features
