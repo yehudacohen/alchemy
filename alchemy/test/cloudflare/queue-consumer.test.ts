@@ -29,6 +29,7 @@ describe("QueueConsumer Resource", () => {
     try {
       queue = await Queue(`${testId}-queue`, {
         name: queueName,
+        adopt: true,
       });
 
       expect(queue.id).toBeTruthy();
@@ -64,7 +65,9 @@ describe("QueueConsumer Resource", () => {
 
       // Verify consumers were deleted
       try {
-        await listQueueConsumers(api, queue!.id);
+        if (queue?.id) {
+          await listQueueConsumers(api, queue.id);
+        }
       } catch (err) {
         if (err instanceof CloudflareApiError && err.status === 404) {
           // expected
