@@ -46,7 +46,7 @@ Please provide a comprehensive document of all the Resources for this provider w
 > [!NOTE]
 > Follow rules and conventions laid out in thge [cursorrules](./.cursorrules).
 
-````ts
+```ts
 // ./alchemy/src/{provider}/{resource}.ts
 import { Context } from "../context.ts";
 
@@ -66,9 +66,7 @@ export interface {Resource} extends Resource<"{provider}::{resource}"> {
  *
  * {concise description}
  *
- * ```ts
  * {example snippet}
- * ```
  *
  * @example
  * // .. repeated for all examples
@@ -79,7 +77,12 @@ export const {Resource} = Resource(
     // Create, Update, Delete lifecycle
   }
 );
-````
+```
+
+> [!CAUTION]
+> When designing input props, there is the common case of having a property that references another entity in the {provider} domain by Id, e.g. tableId, bucketArn, etc.
+>
+> In these cases, you should instead opt to represent this as `{resource}: string | {Resource}`, e.g. `table: string | Table`. This "lifts" the Resource into the alchemy abstraction without sacraficing support for referencing external entities by name.
 
 ## Test Suite
 
@@ -99,6 +102,7 @@ const test = alchemy.test(import.meta, {
 
 describe("{Provider}", () => {
   test("{test case}", async (scope) => {
+    const resourceId = `${BRANCH_PREFIX}-{id}` // an ID that is: 1) deterministic (non-random), 2) unique across all tests and all test suites
     let resource: {Resource}
     try {
       // create
@@ -163,12 +167,11 @@ An example project is effectiveley a whole NPM package that demon
 examples/
   {provider}-{qualifier?}/
     package.json
-    tsconfig.json # extends
+    tsconfig.json # extends ../../tsconfig.base.json
     alchemy.run.ts
     README.md
     src/
       # code
-
 tsconfig.json # is updated to reference examples/{provider}-{qualifer?}
 ```
 
