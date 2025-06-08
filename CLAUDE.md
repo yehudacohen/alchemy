@@ -299,3 +299,17 @@ If that fails, consider running (but be careful):
 ```sh
 bun biome check --fix --unsafe
 ```
+
+Then run tests:
+
+```sh
+bun run test
+```
+
+> [!TIP] > `bun run test` will diff with `main` and only run the tests that have changed since main. You must be on a branch for this to work.
+
+It is usually better to be targeted with the tests you run instead. That way you can iterate quickly:
+
+```sh
+bun vitest ./alchemy/test/.. -t "..."
+```
