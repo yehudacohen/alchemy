@@ -35,6 +35,7 @@ export * from "./r2-rest-state-store.ts";
 export * from "./react-router.ts";
 export * from "./redwood.ts";
 export * from "./route.ts";
+export * from "./sveltekit.ts";
 export * from "./tanstack-start.ts";
 export * from "./vectorize-index.ts";
 export * from "./vectorize-metadata-index.ts";
