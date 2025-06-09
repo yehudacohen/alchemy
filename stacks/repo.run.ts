@@ -101,6 +101,8 @@ const secrets = {
   NPM_TOKEN: await alchemy.secret.env.NPM_TOKEN,
   ALCHEMY_STATE_TOKEN: await alchemy.secret.env.ALCHEMY_STATE_TOKEN,
   ANTHROPIC_API_KEY: await alchemy.secret.env.ANTHROPIC_API_KEY,
+  PLANETSCALE_ORG_ID: await alchemy.secret.env.PLANETSCALE_ORG_ID,
+  PLANETSCALE_API_TOKEN: await alchemy.secret.env.PLANETSCALE_API_TOKEN,
 };
 
 await Promise.all([
