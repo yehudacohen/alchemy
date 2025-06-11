@@ -245,7 +245,7 @@ const REPLACERS: Array<[RegExp, (this: string, ...args: any[]) => string]> = [
 
     // `\` is escaped by step 3
     /(\\)?\[([^\]/]*?)(\\*)($|\])/g,
-    (match, leadEscape, range, endEscape, close) =>
+    (_match, leadEscape, range, endEscape, close) =>
       leadEscape === ESCAPE
         ? // '\\[bar]' -> '\\\\[bar\\]'
           `\\[${range}${cleanRangeBackSlash(endEscape)}${close}`
@@ -398,7 +398,7 @@ class IgnoreRuleImpl implements IgnoreRule {
   }
 
   get regex(): RegExp {
-    const key = UNDERSCORE + MODE_IGNORE;
+    const _key = UNDERSCORE + MODE_IGNORE;
 
     if (this._regex) {
       return this._regex;
@@ -408,7 +408,7 @@ class IgnoreRuleImpl implements IgnoreRule {
   }
 
   get checkRegex(): RegExp {
-    const key = UNDERSCORE + MODE_CHECK_IGNORE;
+    const _key = UNDERSCORE + MODE_CHECK_IGNORE;
 
     if (this._checkRegex) {
       return this._checkRegex;
