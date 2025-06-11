@@ -22,6 +22,7 @@ import type { VersionMetadata } from "./version-metadata.ts";
 import type { WorkerStub } from "./worker-stub.ts";
 import type { Worker, WorkerRef } from "./worker.ts";
 import type { Workflow } from "./workflow.ts";
+import type { Images } from "./images.ts";
 
 export type Bindings = {
   [bindingName: string]: Binding;
@@ -44,6 +45,7 @@ export type Binding =
   | AnalyticsEngineDataset
   | DurableObjectNamespace<Rpc.DurableObjectBranded | undefined>
   | HyperdriveResource
+  | Images
   | KVNamespaceResource
   | PipelineResource
   | QueueResource
@@ -91,6 +93,7 @@ export type WorkerBindingSpec =
   | WorkerBindingDispatchNamespace
   | WorkerBindingDurableObjectNamespace
   | WorkerBindingHyperdrive
+  | WorkerBindingImages
   | WorkerBindingJson
   | WorkerBindingKVNamespace
   | WorkerBindingMTLSCertificate
@@ -382,6 +385,16 @@ export interface WorkerBindingWorkflow {
    * @default - the name of the script it is bound to
    */
   script_name?: string;
+}
+
+/**
+ * Images binding type
+ */
+export interface WorkerBindingImages {
+  /** The name of the binding */
+  name: string;
+  /** Type identifier for Images binding */
+  type: "images";
 }
 
 /**
