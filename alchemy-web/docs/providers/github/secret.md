@@ -1,5 +1,5 @@
 ---
-title: Managing GitHub Secrets with Alchemy
+title: GitHub Secret
 description: Learn how to create, update, and manage secrets for GitHub Actions and Dependabot using Alchemy.
 ---
 
@@ -16,9 +16,9 @@ import { GitHubSecret } from "alchemy/github";
 
 const secret = await GitHubSecret("api-key", {
   owner: "my-org",
-  repository: "my-repo", 
+  repository: "my-repo",
   name: "API_KEY",
-  value: alchemy.secret("my-secret-value")
+  value: alchemy.secret("my-secret-value"),
 });
 ```
 
@@ -34,7 +34,7 @@ const secret = await GitHubSecret("prod-secret", {
   repository: "my-repo",
   name: "DEPLOY_KEY",
   value: alchemy.secret("secret-value"),
-  environment: "production"
+  environment: "production",
 });
 ```
 
@@ -50,13 +50,13 @@ const secrets = await Promise.all([
     owner: "my-org",
     repository: "my-repo",
     name: "AWS_KEY",
-    value: alchemy.secret(process.env.AWS_KEY)
+    value: alchemy.secret(process.env.AWS_KEY),
   }),
   GitHubSecret("db-secret", {
-    owner: "my-org", 
+    owner: "my-org",
     repository: "my-repo",
     name: "DB_PASSWORD",
-    value: alchemy.secret(process.env.DB_PASSWORD)
-  })
+    value: alchemy.secret(process.env.DB_PASSWORD),
+  }),
 ]);
 ```

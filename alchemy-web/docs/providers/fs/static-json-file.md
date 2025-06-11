@@ -1,5 +1,5 @@
 ---
-title: Managing Static JSON Files with Alchemy FS Provider
+title: Static JSON File
 description: Learn how to create and manage static JSON (.json) files with proper formatting using Alchemy's FS provider.
 ---
 
@@ -16,7 +16,7 @@ import { StaticJsonFile } from "alchemy/fs";
 
 const config = await StaticJsonFile("config.json", {
   name: "my-app",
-  version: "1.0.0"
+  version: "1.0.0",
 });
 ```
 
@@ -30,9 +30,9 @@ import { StaticJsonFile } from "alchemy/fs";
 const config = await StaticJsonFile("config", "config/settings.json", {
   api: {
     endpoint: "https://api.example.com",
-    version: "v1"
+    version: "v1",
   },
-  features: ["auth", "logging"]
+  features: ["auth", "logging"],
 });
 ```
 
@@ -49,21 +49,17 @@ const config = await StaticJsonFile("app-config.json", {
     version: "1.0.0",
     settings: {
       theme: "dark",
-      notifications: true
-    }
+      notifications: true,
+    },
   },
   database: {
     host: "localhost",
     port: 5432,
     credentials: {
       user: "admin",
-      password: "secret"
-    }
+      password: "secret",
+    },
   },
-  features: [
-    "authentication",
-    "authorization",
-    "logging"
-  ]
+  features: ["authentication", "authorization", "logging"],
 });
 ```

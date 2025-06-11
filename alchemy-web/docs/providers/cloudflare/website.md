@@ -1,5 +1,5 @@
 ---
-title: Managing Cloudflare Pages Websites with Alchemy
+title: Deploy a Website to Cloudflare
 description: Learn how to deploy and manage Cloudflare Pages websites using Alchemy for static and dynamic site hosting.
 ---
 
@@ -17,7 +17,7 @@ import { Website } from "alchemy/cloudflare";
 const site = await Website("my-site", {
   name: "my-site",
   command: "npm run build",
-  assets: "./dist"
+  assets: "./dist",
 });
 ```
 
@@ -27,14 +27,14 @@ Add server-side functionality with a Worker:
 
 ```ts
 const site = await Website("my-site", {
-  name: "my-site", 
+  name: "my-site",
   command: "npm run build",
   assets: "./dist",
   main: "./src/worker.ts",
   bindings: {
     DB: database,
-    API_KEY: alchemy.secret(process.env.API_KEY)
-  }
+    API_KEY: alchemy.secret(process.env.API_KEY),
+  },
 });
 ```
 
@@ -51,10 +51,10 @@ const site = await Website("my-site", {
     html_handling: "force-trailing-slash",
     not_found_handling: "single-page-application",
     _headers: "/*\n  Cache-Control: public, max-age=3600",
-    _redirects: "/old/* /new/:splat 301"
+    _redirects: "/old/* /new/:splat 301",
   },
   compatibilityFlags: ["nodejs_compat"],
-  wrangler: true
+  wrangler: true,
 });
 ```
 
@@ -67,14 +67,14 @@ import { Worker, Website } from "alchemy/cloudflare";
 
 const site = await Website("my-site", {
   command: "npm run build",
-  assets: "./dist"
+  assets: "./dist",
 });
 
 await Worker("api", {
   name: "api-worker",
   script: "console.log('Hello')",
   bindings: {
-    ASSETS: site 
-  }
+    ASSETS: site,
+  },
 });
 ```

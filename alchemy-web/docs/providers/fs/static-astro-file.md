@@ -1,5 +1,5 @@
 ---
-title: Managing Static Astro Files with Alchemy FS Provider
+title: Static Astro File
 description: Learn how to create and manage static Astro (.astro) files with proper formatting using Alchemy's FS provider.
 ---
 
@@ -14,13 +14,16 @@ Creates a basic Astro component file:
 ```ts
 import { StaticAstroFile } from "alchemy/fs";
 
-const component = await StaticAstroFile("Header.astro", `
+const component = await StaticAstroFile(
+  "Header.astro",
+  `
 ---
 const title = "Hello World";
 ---
 
 <h1>{title}</h1>
-`);
+`
+);
 ```
 
 ## Custom Path
@@ -30,7 +33,8 @@ Creates an Astro component in a specific directory:
 ```ts
 import { StaticAstroFile } from "alchemy/fs";
 
-const component = await StaticAstroFile("header", 
+const component = await StaticAstroFile(
+  "header",
   "src/components/Header.astro",
   `---
   import Logo from '../components/Logo.astro';
@@ -45,7 +49,8 @@ const component = await StaticAstroFile("header",
       ))}
     </nav>
   </header>
-`);
+`
+);
 ```
 
 ## Full Component Example
@@ -55,7 +60,9 @@ Creates a complete Astro component with styles:
 ```ts
 import { StaticAstroFile } from "alchemy/fs";
 
-const component = await StaticAstroFile("Header.astro", `
+const component = await StaticAstroFile(
+  "Header.astro",
+  `
 ---
 import Logo from '../components/Logo.astro';
 const navItems = ['Home', 'About', 'Contact'];
@@ -79,5 +86,6 @@ const navItems = ['Home', 'About', 'Contact'];
     padding: 1rem;
   }
 </style>
-`);
+`
+);
 ```

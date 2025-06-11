@@ -1,5 +1,5 @@
 ---
-title: Deploying RedwoodJS Applications to Cloudflare with Alchemy
+title: RedwoodSDK on Cloudflare
 description: Learn how to deploy RedwoodJS applications to Cloudflare Pages/Workers using Alchemy for full-stack serverless.
 ---
 
@@ -28,8 +28,8 @@ const database = await D1Database("redwood-db");
 
 const redwoodApp = await Redwood("redwood-with-db", {
   bindings: {
-    DB: database
-  }
+    DB: database,
+  },
 });
 ```
 
@@ -43,12 +43,12 @@ import { Redwood } from "alchemy/cloudflare";
 const redwoodApp = await Redwood("custom-redwood", {
   command: "bun run test && RWSDK_DEPLOY=1 bun run build:production",
   bindings: {
-    API_KEY: alchemy.secret("api-key-secret")
+    API_KEY: alchemy.secret("api-key-secret"),
   },
   vars: {
     NODE_ENV: "production",
-    APP_ENV: "staging"
-  }
+    APP_ENV: "staging",
+  },
 });
 ```
 
@@ -61,14 +61,14 @@ import { Worker, Redwood } from "alchemy/cloudflare";
 
 const redwoodApp = await Redwood("my-redwood-app", {
   name: "redwood-worker",
-  command: "bun run build"
+  command: "bun run build",
 });
 
 await Worker("my-worker", {
-  name: "my-worker", 
+  name: "my-worker",
   script: "console.log('Hello from worker')",
   bindings: {
-    REDWOOD: redwoodApp
-  }
+    REDWOOD: redwoodApp,
+  },
 });
 ```

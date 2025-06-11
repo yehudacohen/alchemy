@@ -1,5 +1,5 @@
 ---
-title: Managing Stripe Promotion Codes with Alchemy
+title: Stripe Promotion Code
 description: Learn how to create and manage Stripe Promotion Codes for coupons using Alchemy.
 ---
 
@@ -17,7 +17,7 @@ import { PromotionCode } from "alchemy/stripe";
 const basicPromoCode = await PromotionCode("summer-promo", {
   coupon: "SUMMER25",
   code: "SAVE25NOW",
-  active: true
+  active: true,
 });
 ```
 
@@ -36,8 +36,8 @@ const customerPromoCode = await PromotionCode("vip-discount", {
   expiresAt: Math.floor(Date.now() / 1000) + 86400 * 30,
   metadata: {
     type: "vip_exclusive",
-    tier: "gold"
-  }
+    tier: "gold",
+  },
 });
 ```
 
@@ -54,12 +54,12 @@ const restrictedPromoCode = await PromotionCode("first-time-buyer", {
   restrictions: {
     firstTimeTransaction: true,
     minimumAmount: 5000,
-    minimumAmountCurrency: "usd"
+    minimumAmountCurrency: "usd",
   },
   maxRedemptions: 1000,
   metadata: {
     campaign: "new_customer_acquisition",
-    minimum_order: "50_usd"
-  }
+    minimum_order: "50_usd",
+  },
 });
 ```

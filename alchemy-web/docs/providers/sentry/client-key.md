@@ -1,5 +1,5 @@
 ---
-title: Managing Sentry Client Keys with Alchemy
+title: Sentry Client Keys
 description: Learn how to create, configure, and manage Sentry client keys using Alchemy.
 ---
 
@@ -43,7 +43,7 @@ import { ClientKey } from "alchemy/sentry";
 const key = await ClientKey("my-key", {
   name: "My Key",
   project: "my-project",
-  organization: "my-org"
+  organization: "my-org",
 });
 ```
 
@@ -60,8 +60,8 @@ const key = await ClientKey("rate-limited-key", {
   organization: "my-org",
   rateLimit: {
     window: 3600, // 1 hour
-    count: 1000   // 1000 events per hour
-  }
+    count: 1000, // 1000 events per hour
+  },
 });
 ```
 
@@ -76,7 +76,7 @@ const key = await ClientKey("profiling-key", {
   name: "Profiling Key",
   project: "my-project",
   organization: "my-org",
-  useCase: "profiling"
+  useCase: "profiling",
 });
 ```
 
@@ -93,4 +93,4 @@ const key = await ClientKey("existing-key", {
   project: "my-project",
   organization: "my-org",
 });
-``` 
+```

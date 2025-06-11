@@ -1,5 +1,5 @@
 ---
-title: Managing Cloudflare Wrangler Configuration (wrangler.json) with Alchemy
+title: Cloudflare wrangler.json
 description: Learn how to generate and manage wrangler.json configuration files for your Cloudflare Workers using Alchemy.
 ---
 
@@ -15,12 +15,12 @@ Creates a basic wrangler.json file for a Worker:
 import { Worker, WranglerJson } from "alchemy/cloudflare";
 
 const worker = await Worker("api", {
-  name: "api-worker", 
-  entrypoint: "./src/index.ts"
+  name: "api-worker",
+  entrypoint: "./src/index.ts",
 });
 
 await WranglerJson("wrangler", {
-  worker
+  worker,
 });
 ```
 
@@ -31,7 +31,7 @@ Specify a custom path for the wrangler.json file:
 ```ts
 await WranglerJson("wrangler", {
   worker,
-  path: "./config/wrangler.dev.json"
+  path: "./config/wrangler.dev.json",
 });
 ```
 
@@ -41,11 +41,11 @@ Generate wrangler.json with Worker bindings:
 
 ```ts
 const kv = await KVNamespace("cache", {
-  title: "cache-store"
+  title: "cache-store",
 });
 
 const queue = await Queue("tasks", {
-  name: "task-queue"
+  name: "task-queue",
 });
 
 const worker = await Worker("api", {
@@ -53,12 +53,12 @@ const worker = await Worker("api", {
   entrypoint: "./src/index.ts",
   bindings: {
     CACHE: kv,
-    TASKS: queue
-  }
+    TASKS: queue,
+  },
 });
 
 await WranglerJson("wrangler", {
-  worker
+  worker,
 });
 ```
 

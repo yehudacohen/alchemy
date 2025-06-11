@@ -1,5 +1,5 @@
 ---
-title: Managing Upstash Redis Databases with Alchemy
+title: Upstash Redis
 description: Learn how to create and manage Upstash Redis databases with global replication.
 ---
 
@@ -16,7 +16,7 @@ import { UpstashRedis } from "alchemy/upstash";
 
 const redis = await UpstashRedis("my-redis", {
   name: "my-redis",
-  primaryRegion: "us-east-1"
+  primaryRegion: "us-east-1",
 });
 ```
 
@@ -30,7 +30,7 @@ import { UpstashRedis } from "alchemy/upstash";
 const redis = await UpstashRedis("my-redis", {
   name: "my-redis",
   primaryRegion: "us-east-1",
-  readRegions: ["us-west-1", "us-west-2"]
+  readRegions: ["us-west-1", "us-west-2"],
 });
 ```
 
@@ -44,7 +44,7 @@ import { UpstashRedis } from "alchemy/upstash";
 const redis = await UpstashRedis("my-redis", {
   name: "my-redis",
   primaryRegion: "us-east-1",
-  budget: 100
+  budget: 100,
 });
 ```
 
@@ -58,7 +58,7 @@ import { UpstashRedis } from "alchemy/upstash";
 const redis = await UpstashRedis("my-redis", {
   name: "my-redis",
   primaryRegion: "us-east-1",
-  eviction: true
+  eviction: true,
 });
 ```
 
@@ -73,6 +73,6 @@ const redis = await UpstashRedis("my-redis", {
   name: "my-redis",
   primaryRegion: "us-east-1",
   apiKey: alchemy.secret(process.env.CUSTOM_UPSTASH_API_KEY),
-  email: "custom@example.com"
+  email: "custom@example.com",
 });
 ```

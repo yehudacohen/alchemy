@@ -1,5 +1,5 @@
 ---
-title: Managing Neon Serverless Postgres Projects with Alchemy
+title: Neon Project
 description: Learn how to create, configure, and manage Neon serverless Postgres projects and databases using Alchemy.
 ---
 
@@ -15,7 +15,7 @@ Create a basic Neon project with default settings:
 import { NeonProject } from "alchemy/neon";
 
 const project = await NeonProject("my-project", {
-  name: "My Project"
+  name: "My Project",
 });
 ```
 
@@ -28,9 +28,9 @@ import { NeonProject } from "alchemy/neon";
 
 const project = await NeonProject("eu-project", {
   name: "EU Project",
-  region_id: "aws-eu-west-1", 
+  region_id: "aws-eu-west-1",
   pg_version: 16,
-  apiKey: alchemy.secret(process.env.NEON_API_KEY)
+  apiKey: alchemy.secret(process.env.NEON_API_KEY),
 });
 ```
 
@@ -43,6 +43,6 @@ import { NeonProject } from "alchemy/neon";
 
 const project = await NeonProject("dev-project", {
   name: "Development Project",
-  default_branch_name: "development"
+  default_branch_name: "development",
 });
 ```

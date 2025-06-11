@@ -1,5 +1,5 @@
 ---
-title: Managing Sentry Projects with Alchemy
+title: Sentry Project
 description: Learn how to create, configure, and manage Sentry projects using Alchemy.
 ---
 
@@ -12,6 +12,7 @@ Create and manage Sentry projects.
 You can authenticate with Sentry in two ways:
 
 1. Environment variable (recommended):
+
    ```bash
    # .env
    SENTRY_AUTH_TOKEN=your_auth_token
@@ -29,7 +30,7 @@ You can authenticate with Sentry in two ways:
 
 Get your auth token from [Sentry's API settings](https://sentry.io/settings/account/api/auth-tokens/).
 
-## Examples 
+## Examples
 
 ### Minimal
 
@@ -53,4 +54,5 @@ const project = await Project("my-project", {
   name: "My Project",
   organization: "my-org",
   team: "my-team",
-})
+});
+```

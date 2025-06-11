@@ -1,5 +1,5 @@
 ---
-title: Managing Cloudflare Email Routing with Alchemy
+title: Cloudflare Email Routing
 description: Learn how to enable and configure email routing for your Cloudflare zone using Alchemy.
 ---
 
@@ -9,6 +9,7 @@ Enable and configure email routing for your Cloudflare zone to start receiving a
 
 > [!CAUTION]
 > Email Routing resources do not work with `wrangler login` (OAuth tokens) due to permission limitations. You must use an API token instead with the following scopes:
+>
 > - **Zone:Read** - to read zone information
 > - **Zone:Edit** - to manage email routing settings
 >
@@ -23,7 +24,7 @@ import { EmailRouting } from "alchemy/cloudflare";
 
 await EmailRouting("my-email-routing", {
   zone: "example.com",
-  enabled: true
+  enabled: true,
 });
 ```
 
@@ -35,13 +36,13 @@ Use an existing Zone resource reference:
 import { EmailRouting, Zone } from "alchemy/cloudflare";
 
 const zone = await Zone("my-zone", {
-  name: "example.com"
+  name: "example.com",
 });
 
 await EmailRouting("my-email-routing", {
   zone: zone,
   enabled: true,
-  skipWizard: true
+  skipWizard: true,
 });
 ```
 
@@ -55,7 +56,7 @@ import { EmailRouting } from "alchemy/cloudflare";
 await EmailRouting("custom-email-routing", {
   zone: "example.com",
   enabled: true,
-  skipWizard: true  // Skip DNS setup wizard
+  skipWizard: true, // Skip DNS setup wizard
 });
 ```
 
@@ -68,7 +69,7 @@ import { EmailRouting } from "alchemy/cloudflare";
 
 await EmailRouting("my-email-routing", {
   zone: "example.com",
-  enabled: false
+  enabled: false,
 });
 ```
 

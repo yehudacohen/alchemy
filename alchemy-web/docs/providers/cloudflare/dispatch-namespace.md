@@ -1,5 +1,5 @@
 ---
-title: Managing Cloudflare Dispatch Namespaces with Alchemy
+title: Cloudflare Dispatch Namespace
 description: Learn how to create and manage Cloudflare Workers for Platforms dispatch namespaces for multi-tenant architectures.
 ---
 

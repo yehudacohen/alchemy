@@ -1,5 +1,5 @@
 ---
-title: Deploying Vite Applications to Cloudflare with Alchemy
+title: Vite.js on Cloudflare
 description: Learn how to deploy Vite.js applications to Cloudflare Pages/Workers using Alchemy for fast and efficient builds.
 ---
 
@@ -16,7 +16,7 @@ import { Vite } from "alchemy/cloudflare";
 
 const app = await Vite("my-vite-app", {
   name: "my-vite-app",
-  command: "bun run build"
+  command: "bun run build",
 });
 ```
 
@@ -28,15 +28,15 @@ Add database and environment bindings to the Vite app.
 import { Vite, D1Database } from "alchemy/cloudflare";
 
 const db = await D1Database("my-db", {
-  name: "my-db"
+  name: "my-db",
 });
 
 const app = await Vite("my-vite-app", {
   name: "my-vite-app",
   bindings: {
     DB: db,
-    API_KEY: alchemy.secret(process.env.API_KEY)
-  }
+    API_KEY: alchemy.secret(process.env.API_KEY),
+  },
 });
 ```
 
@@ -51,6 +51,6 @@ const app = await Vite("my-vite-app", {
   name: "my-vite-app",
   command: "bun run test && bun run build:production",
   main: "./dist/worker.js",
-  assets: "./dist/client"
+  assets: "./dist/client",
 });
 ```

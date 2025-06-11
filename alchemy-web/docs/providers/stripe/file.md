@@ -1,5 +1,5 @@
 ---
-title: Managing Stripe Files with Alchemy
+title: Stripe File
 description: Learn how to create and manage Stripe Files for uploads using Alchemy.
 ---
 
@@ -17,7 +17,7 @@ import fs from "fs";
 
 const disputeEvidence = await File("dispute-evidence", {
   file: fs.readFileSync("./evidence.pdf"),
-  purpose: "dispute_evidence"
+  purpose: "dispute_evidence",
 });
 ```
 
@@ -31,7 +31,7 @@ import fs from "fs";
 
 const identityDocument = await File("identity-doc", {
   file: fs.readFileSync("./passport.jpg"),
-  purpose: "identity_document"
+  purpose: "identity_document",
 });
 ```
 
@@ -50,8 +50,8 @@ const businessLogo = await File("business-logo", {
     create: true,
     expiresAt: Math.floor(Date.now() / 1000) + 86400,
     metadata: {
-      brand: "company_logo"
-    }
-  }
+      brand: "company_logo",
+    },
+  },
 });
 ```

@@ -1,5 +1,5 @@
 ---
-title: Managing Stripe Meters with Alchemy
+title: Stripe Meter
 description: Learn how to create and manage Stripe Meters for usage-based billing using Alchemy in your applications.
 ---
 
@@ -18,15 +18,15 @@ const apiCallMeter = await Meter("apiUsageMeter", {
   displayName: "API Call Usage",
   eventName: "api.call.recorded",
   defaultAggregation: {
-    formula: "sum"
+    formula: "sum",
   },
   customerMapping: {
     eventPayloadKey: "customer_id",
-    type: "by_id"
+    type: "by_id",
   },
   valueSettings: {
-    eventPayloadKey: "count"
-  }
+    eventPayloadKey: "count",
+  },
 });
 ```
 
@@ -41,15 +41,15 @@ const storageMeter = await Meter("dataStorageMeter", {
   displayName: "Data Storage GB",
   eventName: "data.storage.reported",
   defaultAggregation: {
-    formula: "last_during_period"
+    formula: "last_during_period",
   },
   customerMapping: {
     eventPayloadKey: "user_stripe_id",
-    type: "by_id"
+    type: "by_id",
   },
   valueSettings: {
-    eventPayloadKey: "gb_used"
-  }
+    eventPayloadKey: "gb_used",
+  },
 });
 ```
 
@@ -65,14 +65,14 @@ const inactiveFeatureMeter = await Meter("featureUsageMeter", {
   eventName: "feature.usage.recorded",
   status: "inactive",
   defaultAggregation: {
-    formula: "sum"
+    formula: "sum",
   },
   customerMapping: {
     eventPayloadKey: "customer_id",
-    type: "by_id"
+    type: "by_id",
   },
   valueSettings: {
-    eventPayloadKey: "feature_count"
-  }
+    eventPayloadKey: "feature_count",
+  },
 });
 ```

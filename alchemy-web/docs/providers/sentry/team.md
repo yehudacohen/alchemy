@@ -1,5 +1,5 @@
 ---
-title: Managing Sentry Teams with Alchemy
+title: Sentry Team
 description: Learn how to create, configure, and manage Sentry teams using Alchemy.
 ---
 
@@ -12,6 +12,7 @@ Create and manage Sentry teams.
 You can authenticate with Sentry in two ways:
 
 1. Environment variable (recommended):
+
    ```bash
    # .env
    SENTRY_AUTH_TOKEN=your_auth_token
@@ -28,7 +29,7 @@ You can authenticate with Sentry in two ways:
 
 Get your auth token from [Sentry's API settings](https://sentry.io/settings/account/api/auth-tokens/).
 
-## Examples 
+## Examples
 
 ### Minimal
 

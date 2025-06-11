@@ -1,5 +1,5 @@
 ---
-title: Managing Cloudflare Routes with Alchemy
+title: Cloudflare Routes
 description: Learn how to configure Cloudflare Routes for your Workers using Alchemy to map URL patterns to Worker scripts.
 ---
 

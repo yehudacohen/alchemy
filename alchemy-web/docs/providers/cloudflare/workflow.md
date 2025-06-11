@@ -1,5 +1,5 @@
 ---
-title: Managing Cloudflare Workflows with Alchemy
+title: Cloudflare Workflow
 description: Learn how to create and manage Cloudflare Workflows using Alchemy to orchestrate and automate tasks.
 ---
 
@@ -16,7 +16,7 @@ import { Workflow } from "alchemy/cloudflare";
 
 const workflow = await Workflow("my-workflow", {
   workflowName: "my-workflow",
-  className: "MyWorkflow"
+  className: "MyWorkflow",
 });
 ```
 
@@ -30,7 +30,7 @@ import { Workflow } from "alchemy/cloudflare";
 const workflow = await Workflow("shared-workflow", {
   workflowName: "my-workflow",
   className: "MyWorkflow",
-  scriptName: "shared-worker"
+  scriptName: "shared-worker",
 });
 ```
 
@@ -42,15 +42,15 @@ Bind a workflow to a Worker to use its functionality.
 import { Worker, Workflow } from "alchemy/cloudflare";
 
 const workflow = await Workflow("my-workflow", {
-  workflowName: "my-workflow", 
-  className: "MyWorkflow"
+  workflowName: "my-workflow",
+  className: "MyWorkflow",
 });
 
 await Worker("my-worker", {
   name: "my-worker",
   script: "console.log('Hello, world!')",
   bindings: {
-    WORKFLOW: workflow
-  }
+    WORKFLOW: workflow,
+  },
 });
 ```

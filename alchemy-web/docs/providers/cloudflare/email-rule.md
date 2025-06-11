@@ -1,5 +1,5 @@
 ---
-title: Managing Cloudflare Email Routing Rules with Alchemy
+title: Cloudflare Email Rule
 description: Learn how to create and manage email routing rules that define how emails are processed in Cloudflare.
 ---
 
@@ -9,6 +9,7 @@ Create email routing rules that define how emails sent to your domain are proces
 
 > [!CAUTION]
 > Email Routing resources do not work with `wrangler login` (OAuth tokens) due to permission limitations. You must use an API token instead with the following scopes:
+>
 > - **Zone:Read** - to read zone information
 > - **Zone:Edit** - to manage email routing settings
 >
@@ -28,15 +29,15 @@ await EmailRule("info-forwarding", {
     {
       type: "literal",
       field: "to",
-      value: "info@example.com"
-    }
+      value: "info@example.com",
+    },
   ],
   actions: [
     {
       type: "forward",
-      value: ["admin@company.com"]
-    }
-  ]
+      value: ["admin@company.com"],
+    },
+  ],
 });
 ```
 
@@ -54,15 +55,15 @@ await EmailRule("support-forwarding", {
     {
       type: "literal",
       field: "to",
-      value: "support@example.com"
-    }
+      value: "support@example.com",
+    },
   ],
   actions: [
     {
       type: "forward",
-      value: ["support@company.com", "backup@company.com"]
-    }
-  ]
+      value: ["support@company.com", "backup@company.com"],
+    },
+  ],
 });
 ```
 
@@ -81,15 +82,15 @@ await EmailRule("worker-processing", {
     {
       type: "literal",
       field: "to",
-      value: "webhook@example.com"
-    }
+      value: "webhook@example.com",
+    },
   ],
   actions: [
     {
       type: "worker",
-      value: ["email-processor"]
-    }
-  ]
+      value: ["email-processor"],
+    },
+  ],
 });
 ```
 
@@ -108,14 +109,14 @@ await EmailRule("spam-filter", {
     {
       type: "literal",
       field: "subject",
-      value: "SPAM"
-    }
+      value: "SPAM",
+    },
   ],
   actions: [
     {
-      type: "drop"
-    }
-  ]
+      type: "drop",
+    },
+  ],
 });
 ```
 
@@ -134,20 +135,20 @@ await EmailRule("vip-routing", {
     {
       type: "literal",
       field: "to",
-      value: "sales@example.com"
+      value: "sales@example.com",
     },
     {
       type: "literal",
       field: "from",
-      value: "important@partner.com"
-    }
+      value: "important@partner.com",
+    },
   ],
   actions: [
     {
       type: "forward",
-      value: ["vip-sales@company.com"]
-    }
-  ]
+      value: ["vip-sales@company.com"],
+    },
+  ],
 });
 ```
 
@@ -165,19 +166,19 @@ await EmailRule("complex-routing", {
     {
       type: "literal",
       field: "to",
-      value: "orders@example.com"
-    }
+      value: "orders@example.com",
+    },
   ],
   actions: [
     {
       type: "forward",
-      value: ["sales@company.com"]
+      value: ["sales@company.com"],
     },
     {
       type: "worker",
-      value: ["order-logger"]
-    }
-  ]
+      value: ["order-logger"],
+    },
+  ],
 });
 ```
 
@@ -197,35 +198,35 @@ await EmailRule("urgent-rule", {
     {
       type: "literal",
       field: "subject",
-      value: "URGENT"
-    }
+      value: "URGENT",
+    },
   ],
   actions: [
     {
       type: "forward",
-      value: ["urgent@company.com"]
-    }
-  ]
+      value: ["urgent@company.com"],
+    },
+  ],
 });
 
 // Lower priority rule (evaluated later)
 await EmailRule("general-rule", {
-  zone: "example.com", 
+  zone: "example.com",
   name: "General emails",
   priority: 10,
   matchers: [
     {
       type: "literal",
       field: "to",
-      value: "contact@example.com"
-    }
+      value: "contact@example.com",
+    },
   ],
   actions: [
     {
       type: "forward",
-      value: ["general@company.com"]
-    }
-  ]
+      value: ["general@company.com"],
+    },
+  ],
 });
 ```
 
@@ -249,7 +250,7 @@ Match all emails (typically used in catch-all rules):
 
 ```ts
 {
-  type: "all"
+  type: "all";
   // No field or value needed
 }
 ```
@@ -284,7 +285,7 @@ Drop/reject emails:
 
 ```ts
 {
-  type: "drop"
+  type: "drop";
   // No value needed
 }
 ```

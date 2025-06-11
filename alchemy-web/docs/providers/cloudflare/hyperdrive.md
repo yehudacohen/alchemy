@@ -1,5 +1,5 @@
 ---
-title: Managing Cloudflare Hyperdrive with Alchemy
+title: Cloudflare Hyperdrive
 description: Learn how to configure and use Cloudflare Hyperdrive using Alchemy to accelerate access to your existing databases.
 ---
 
@@ -15,14 +15,14 @@ Create a basic Hyperdrive connection to a PostgreSQL database.
 import { Hyperdrive } from "alchemy/cloudflare";
 
 const db = await Hyperdrive("my-postgres-db", {
-  name: "my-postgres-db", 
+  name: "my-postgres-db",
   origin: {
     database: "postgres",
     host: "database.example.com",
     password: alchemy.secret("your-password"),
     port: 5432,
-    user: "postgres"
-  }
+    user: "postgres",
+  },
 });
 ```
 
@@ -35,14 +35,14 @@ const noCacheDb = await Hyperdrive("no-cache-db", {
   name: "no-cache-db",
   origin: {
     database: "postgres",
-    host: "database.example.com", 
+    host: "database.example.com",
     password: alchemy.secret(process.env.DB_PASSWORD),
     port: 5432,
-    user: "postgres"
+    user: "postgres",
   },
   caching: {
-    disabled: true
-  }
+    disabled: true,
+  },
 });
 ```
 
@@ -58,13 +58,13 @@ const secureDb = await Hyperdrive("secure-db", {
     host: "database.example.com",
     password: alchemy.secret(process.env.DB_PASSWORD),
     port: 5432,
-    user: "postgres"
+    user: "postgres",
   },
   mtls: {
     ca_certificate_id: "00000000-0000-0000-0000-0000000000",
     mtls_certificate_id: "00000000-0000-0000-0000-0000000000",
-    sslmode: "verify-full"
-  }
+    sslmode: "verify-full",
+  },
 });
 ```
 
@@ -81,8 +81,8 @@ const accessDb = await Hyperdrive("access-db", {
     access_client_id: "client-id",
     access_client_secret: alchemy.secret(process.env.ACCESS_CLIENT_SECRET),
     port: 5432,
-    user: "postgres"
-  }
+    user: "postgres",
+  },
 });
 ```
 
@@ -99,15 +99,15 @@ const db = await Hyperdrive("my-db", {
     database: "postgres",
     host: "database.example.com",
     password: alchemy.secret("password"),
-    user: "postgres"
-  }
+    user: "postgres",
+  },
 });
 
 await Worker("my-worker", {
   name: "my-worker",
   script: "console.log('Hello, world!')",
   bindings: {
-    DB: db
-  }
+    DB: db,
+  },
 });
 ```

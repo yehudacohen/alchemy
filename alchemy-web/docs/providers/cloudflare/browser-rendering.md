@@ -1,5 +1,5 @@
 ---
-title: Managing Cloudflare Browser Rendering with Alchemy
+title: Cloudflare Browser Rendering
 description: Learn how to use Cloudflare Browser Rendering with Alchemy for taking screenshots and automating browser tasks at the edge.
 ---
 
@@ -19,8 +19,8 @@ const worker = await Worker("browser-worker", {
   entrypoint: "./src/browser.ts",
   compatibilityFlags: ["nodejs_compat"],
   bindings: {
-    BROWSER: new BrowserRendering()
-  }
+    BROWSER: new BrowserRendering(),
+  },
 });
 ```
 

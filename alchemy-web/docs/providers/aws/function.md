@@ -1,5 +1,5 @@
 ---
-title: Managing AWS Lambda Functions with Alchemy
+title: AWS Lambda Function
 description: Learn how to deploy, update, and manage AWS Lambda Functions using Alchemy for serverless compute in your applications.
 ---
 
@@ -18,7 +18,7 @@ const func = await Function("api", {
   functionName: "my-api",
   bundle: bundle,
   roleArn: role.arn,
-  handler: "index.handler"
+  handler: "index.handler",
 });
 ```
 
@@ -28,14 +28,14 @@ Add environment variables to configure the function:
 
 ```ts
 const func = await Function("api", {
-  functionName: "my-api", 
+  functionName: "my-api",
   bundle: bundle,
   roleArn: role.arn,
   handler: "index.handler",
   environment: {
     TABLE_NAME: table.name,
     QUEUE_URL: queue.url,
-  }
+  },
 });
 ```
 
@@ -54,9 +54,9 @@ const func = await Function("api", {
     cors: {
       allowOrigins: ["*"],
       allowMethods: ["GET", "POST"],
-      allowHeaders: ["content-type"]
-    }
-  }
+      allowHeaders: ["content-type"],
+    },
+  },
 });
 ```
 
@@ -75,7 +75,7 @@ const func = await Function("worker", {
   memorySize: 512,
   timeout: 30,
   tags: {
-    Environment: "production"
-  }
+    Environment: "production",
+  },
 });
 ```

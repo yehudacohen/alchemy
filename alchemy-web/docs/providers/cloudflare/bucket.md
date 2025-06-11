@@ -1,5 +1,5 @@
 ---
-title: Managing Cloudflare R2 Buckets with Alchemy
+title: Cloudflare R2 Bucket
 description: Learn how to create, configure, and manage Cloudflare R2 Buckets using Alchemy for scalable object storage.
 ---
 
@@ -15,7 +15,7 @@ Create a basic R2 bucket with default settings:
 import { R2Bucket } from "alchemy/cloudflare";
 
 const bucket = await R2Bucket("my-bucket", {
-  name: "my-bucket"
+  name: "my-bucket",
 });
 ```
 
@@ -27,9 +27,9 @@ Create a bucket with location hint for optimal performance:
 import { R2Bucket } from "alchemy/cloudflare";
 
 const euBucket = await R2Bucket("eu-bucket", {
-  name: "eu-bucket", 
+  name: "eu-bucket",
   locationHint: "eu",
-  jurisdiction: "eu"
+  jurisdiction: "eu",
 });
 ```
 
@@ -42,7 +42,7 @@ import { R2Bucket } from "alchemy/cloudflare";
 
 const publicBucket = await R2Bucket("public-assets", {
   name: "public-assets",
-  allowPublicAccess: true
+  allowPublicAccess: true,
 });
 ```
 
@@ -55,7 +55,7 @@ import { R2Bucket } from "alchemy/cloudflare";
 
 const tempBucket = await R2Bucket("temp-storage", {
   name: "temp-storage",
-  empty: true // All objects will be deleted when this resource is destroyed
+  empty: true, // All objects will be deleted when this resource is destroyed
 });
 ```
 
@@ -65,14 +65,14 @@ const tempBucket = await R2Bucket("temp-storage", {
 import { Worker, R2Bucket } from "alchemy/cloudflare";
 
 const bucket = await R2Bucket("my-bucket", {
-  name: "my-bucket"
+  name: "my-bucket",
 });
 
 await Worker("my-worker", {
   name: "my-worker",
   script: "console.log('Hello, world!')",
   bindings: {
-    BUCKET: bucket
-  }
+    BUCKET: bucket,
+  },
 });
 ```

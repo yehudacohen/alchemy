@@ -1,5 +1,5 @@
 ---
-title: Managing Cloudflare KV Namespaces with Alchemy
+title: Cloudflare KV Namespaces
 description: Learn how to create and manage Cloudflare KV Namespaces using Alchemy for key-value data storage at the edge.
 ---
 
@@ -15,7 +15,7 @@ Create a basic KV namespace for storing user data.
 import { KVNamespace } from "alchemy/cloudflare";
 
 const users = await KVNamespace("users", {
-  title: "user-data"
+  title: "user-data",
 });
 ```
 
@@ -27,12 +27,14 @@ Create a KV namespace with initial values and expiration.
 import { KVNamespace } from "alchemy/cloudflare";
 
 const sessions = await KVNamespace("sessions", {
-  title: "user-sessions", 
-  values: [{
-    key: "session_123",
-    value: { userId: "user_456", role: "admin" },
-    expirationTtl: 3600 // Expires in 1 hour
-  }]
+  title: "user-sessions",
+  values: [
+    {
+      key: "session_123",
+      value: { userId: "user_456", role: "admin" },
+      expirationTtl: 3600, // Expires in 1 hour
+    },
+  ],
 });
 ```
 
@@ -45,14 +47,16 @@ import { KVNamespace } from "alchemy/cloudflare";
 
 const assets = await KVNamespace("assets", {
   title: "static-assets",
-  values: [{
-    key: "main.js",
-    value: "content...",
-    metadata: {
-      contentType: "application/javascript",
-      etag: "abc123"
-    }
-  }]
+  values: [
+    {
+      key: "main.js",
+      value: "content...",
+      metadata: {
+        contentType: "application/javascript",
+        etag: "abc123",
+      },
+    },
+  ],
 });
 ```
 
@@ -64,14 +68,14 @@ Bind a KV namespace to a Worker for data access.
 import { Worker, KVNamespace } from "alchemy/cloudflare";
 
 const store = await KVNamespace("store", {
-  title: "data-store"
+  title: "data-store",
 });
 
 await Worker("api", {
   name: "api-worker",
   script: "console.log('Hello, world!')",
   bindings: {
-    STORE: store
-  }
+    STORE: store,
+  },
 });
 ```

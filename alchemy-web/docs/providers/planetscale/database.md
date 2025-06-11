@@ -1,5 +1,5 @@
 ---
-title: Managing PlanetScale Databases with Alchemy
+title: PlanetScale Database
 description: Learn how to create, configure, and manage PlanetScale serverless MySQL databases using Alchemy.
 ---
 
@@ -17,7 +17,7 @@ import { Database } from "alchemy/planetscale";
 const database = await Database("my-app-db", {
   name: "my-app-db",
   organizationId: "my-org",
-  clusterSize: "PS_10"
+  clusterSize: "PS_10",
 });
 ```
 
@@ -32,12 +32,12 @@ const database = await Database("eu-app-db", {
   name: "eu-app-db",
   organizationId: "my-org",
   region: {
-    slug: "eu-west"
+    slug: "eu-west",
   },
   clusterSize: "PS_20",
   allowDataBranching: true,
   automaticMigrations: true,
-  requireApprovalForDeploy: true
+  requireApprovalForDeploy: true,
 });
 ```
 
@@ -52,7 +52,7 @@ const prodDatabase = await Database("production-db", {
   name: "production-db",
   organizationId: "my-org",
   region: {
-    slug: "us-east"
+    slug: "us-east",
   },
   clusterSize: "PS_40",
   defaultBranch: "production",
@@ -63,7 +63,7 @@ const prodDatabase = await Database("production-db", {
   insightsRawQueries: true,
   productionBranchWebConsole: false,
   migrationFramework: "rails",
-  migrationTableName: "schema_migrations"
+  migrationTableName: "schema_migrations",
 });
 ```
 
@@ -78,7 +78,7 @@ const database = await Database("custom-auth-db", {
   name: "custom-auth-db",
   organizationId: "my-org",
   clusterSize: "PS_10",
-  apiKey: alchemy.secret(process.env.CUSTOM_PLANETSCALE_TOKEN)
+  apiKey: alchemy.secret(process.env.CUSTOM_PLANETSCALE_TOKEN),
 });
 ```
 
@@ -95,6 +95,6 @@ const existingDatabase = await Database("existing-db", {
   clusterSize: "PS_20",
   adopt: true,
   allowDataBranching: false,
-  automaticMigrations: true
+  automaticMigrations: true,
 });
 ```

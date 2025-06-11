@@ -1,5 +1,5 @@
 ---
-title: Managing Stripe Coupons with Alchemy
+title: Stripe Coupon
 description: Learn how to create and manage Stripe Coupons for discounts using Alchemy.
 ---
 
@@ -18,7 +18,7 @@ const percentageCoupon = await Coupon("summer-sale", {
   id: "SUMMER25",
   duration: "once",
   percentOff: 25,
-  name: "Summer Sale 25% Off"
+  name: "Summer Sale 25% Off",
 });
 ```
 
@@ -37,8 +37,8 @@ const fixedAmountCoupon = await Coupon("new-customer", {
   name: "Welcome $10 Off",
   metadata: {
     type: "welcome",
-    target: "new_customers"
-  }
+    target: "new_customers",
+  },
 });
 ```
 
@@ -58,7 +58,7 @@ const subscriptionCoupon = await Coupon("loyal-customer", {
   maxRedemptions: 100,
   metadata: {
     type: "loyalty",
-    tier: "premium"
-  }
+    tier: "premium",
+  },
 });
 ```

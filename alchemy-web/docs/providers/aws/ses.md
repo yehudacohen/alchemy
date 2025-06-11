@@ -1,5 +1,5 @@
 ---
-title: Managing AWS SES with Alchemy
+title: AWS SES
 description: Learn how to configure AWS Simple Email Service (SES) for sending emails using Alchemy in your applications.
 ---
 
@@ -17,8 +17,8 @@ import { SES } from "alchemy/aws";
 const configSet = await SES("email-config", {
   configurationSetName: "my-email-config",
   sendingOptions: {
-    SendingEnabled: true
-  }
+    SendingEnabled: true,
+  },
 });
 ```
 
@@ -28,11 +28,11 @@ Create and verify a domain identity with DKIM signing enabled:
 
 ```ts
 const domainIdentity = await SES("domain-identity", {
-  emailIdentity: "example.com", 
+  emailIdentity: "example.com",
   enableDkim: true,
   tags: {
-    Environment: "production"
-  }
+    Environment: "production",
+  },
 });
 ```
 
@@ -44,10 +44,10 @@ Set up tracking options for open and click tracking:
 const emailConfig = await SES("tracking-config", {
   configurationSetName: "tracking-config",
   trackingOptions: {
-    CustomRedirectDomain: "click.example.com"
+    CustomRedirectDomain: "click.example.com",
   },
   suppressionOptions: {
-    SuppressedReasons: ["BOUNCE", "COMPLAINT"]
-  }
+    SuppressedReasons: ["BOUNCE", "COMPLAINT"],
+  },
 });
 ```

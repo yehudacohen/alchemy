@@ -1,5 +1,5 @@
 ---
-title: Managing Cloudflare Email Catch-All Rules with Alchemy
+title: Cloudflare Email Catch All
 description: Learn how to configure catch-all email routing rules that handle emails not matched by other rules.
 ---
 
@@ -9,6 +9,7 @@ Configure a catch-all email routing rule that handles emails not matched by othe
 
 > [!CAUTION]
 > Email Routing resources do not work with `wrangler login` (OAuth tokens) due to permission limitations. You must use an API token instead with the following scopes:
+>
 > - **Zone:Read** - to read zone information
 > - **Zone:Edit** - to manage email routing settings
 >
@@ -27,9 +28,9 @@ await EmailCatchAll("default-catchall", {
   actions: [
     {
       type: "forward",
-      value: ["admin@company.com"]
-    }
-  ]
+      value: ["admin@company.com"],
+    },
+  ],
 });
 ```
 
@@ -45,9 +46,9 @@ await EmailCatchAll("drop-catchall", {
   enabled: true,
   actions: [
     {
-      type: "drop"
-    }
-  ]
+      type: "drop",
+    },
+  ],
 });
 ```
 
@@ -65,9 +66,9 @@ await EmailCatchAll("worker-catchall", {
   actions: [
     {
       type: "worker",
-      value: ["email-processor"]
-    }
-  ]
+      value: ["email-processor"],
+    },
+  ],
 });
 ```
 
@@ -85,9 +86,9 @@ await EmailCatchAll("multi-forward-catchall", {
   actions: [
     {
       type: "forward",
-      value: ["admin@company.com", "backup@company.com"]
-    }
-  ]
+      value: ["admin@company.com", "backup@company.com"],
+    },
+  ],
 });
 ```
 
@@ -105,13 +106,13 @@ await EmailCatchAll("multi-action-catchall", {
   actions: [
     {
       type: "forward",
-      value: ["admin@company.com"]
+      value: ["admin@company.com"],
     },
     {
       type: "worker",
-      value: ["email-logger"]
-    }
-  ]
+      value: ["email-logger"],
+    },
+  ],
 });
 ```
 
@@ -130,15 +131,15 @@ await EmailCatchAll("custom-catchall", {
     {
       type: "literal",
       field: "to",
-      value: "*@example.com"
-    }
+      value: "*@example.com",
+    },
   ],
   actions: [
     {
       type: "forward",
-      value: ["admin@company.com"]
-    }
-  ]
+      value: ["admin@company.com"],
+    },
+  ],
 });
 ```
 
@@ -154,9 +155,9 @@ await EmailCatchAll("disabled-catchall", {
   enabled: false,
   actions: [
     {
-      type: "drop"
-    }
-  ]
+      type: "drop",
+    },
+  ],
 });
 ```
 
@@ -168,7 +169,7 @@ Reference an existing Zone resource:
 import { EmailCatchAll, Zone } from "alchemy/cloudflare";
 
 const zone = await Zone("my-zone", {
-  name: "example.com"
+  name: "example.com",
 });
 
 await EmailCatchAll("zone-ref-catchall", {
@@ -177,9 +178,9 @@ await EmailCatchAll("zone-ref-catchall", {
   actions: [
     {
       type: "forward",
-      value: ["admin@company.com"]
-    }
-  ]
+      value: ["admin@company.com"],
+    },
+  ],
 });
 ```
 
@@ -225,9 +226,9 @@ await EmailCatchAll("admin-notification", {
   actions: [
     {
       type: "forward",
-      value: ["admin@company.com"]
-    }
-  ]
+      value: ["admin@company.com"],
+    },
+  ],
 });
 ```
 
@@ -242,9 +243,9 @@ await EmailCatchAll("spam-prevention", {
   name: "Drop unmatched emails",
   actions: [
     {
-      type: "drop"
-    }
-  ]
+      type: "drop",
+    },
+  ],
 });
 ```
 
@@ -260,9 +261,9 @@ await EmailCatchAll("custom-processing", {
   actions: [
     {
       type: "worker",
-      value: ["unmatched-email-handler"]
-    }
-  ]
+      value: ["unmatched-email-handler"],
+    },
+  ],
 });
 ```
 
@@ -316,7 +317,7 @@ Drop/reject unmatched emails:
 
 ```ts
 {
-  type: "drop"
+  type: "drop";
   // No value needed
 }
 ```

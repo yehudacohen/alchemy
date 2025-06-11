@@ -1,5 +1,5 @@
 ---
-title: Managing Stripe Webhooks with Alchemy
+title: Stripe Webhook Endpoint
 description: Learn how to create and manage Stripe Webhook Endpoints using Alchemy to receive events from Stripe.
 ---
 
@@ -17,7 +17,7 @@ import { WebhookEndpoint } from "alchemy/stripe";
 const webhook = await WebhookEndpoint("payments", {
   url: "https://api.example.com/webhooks/stripe",
   enabledEvents: ["payment_intent.succeeded", "payment_intent.payment_failed"],
-  description: "Payment notifications webhook"
+  description: "Payment notifications webhook",
 });
 ```
 
@@ -29,17 +29,17 @@ Create a webhook to monitor subscription lifecycle events:
 import { WebhookEndpoint } from "alchemy/stripe";
 
 const webhook = await WebhookEndpoint("subscriptions", {
-  url: "https://api.example.com/webhooks/subscriptions", 
+  url: "https://api.example.com/webhooks/subscriptions",
   enabledEvents: [
     "customer.subscription.created",
     "customer.subscription.updated",
     "customer.subscription.deleted",
     "invoice.payment_succeeded",
-    "invoice.payment_failed"
+    "invoice.payment_failed",
   ],
   metadata: {
-    type: "subscription-events"
-  }
+    type: "subscription-events",
+  },
 });
 ```
 
@@ -54,13 +54,13 @@ const webhook = await WebhookEndpoint("connect", {
   url: "https://api.example.com/webhooks/connect",
   enabledEvents: [
     "account.updated",
-    "account.application.deauthorized", 
+    "account.application.deauthorized",
     "payout.created",
-    "payout.failed"
+    "payout.failed",
   ],
   connect: true,
   metadata: {
-    platform: "connect"
-  }
+    platform: "connect",
+  },
 });
 ```

@@ -1,5 +1,5 @@
 ---
-title: Managing Cloudflare Email Destination Addresses with Alchemy
+title: Cloudflare Email Address
 description: Learn how to manage destination email addresses for Cloudflare email routing using Alchemy.
 ---
 
@@ -9,6 +9,7 @@ Manage destination email addresses that can receive emails forwarded by Cloudfla
 
 > [!CAUTION]
 > Email Routing resources do not work with `wrangler login` (OAuth tokens) due to permission limitations. You must use an API token instead with the following scopes:
+>
 > - **Zone:Read** - to read zone information
 > - **Zone:Edit** - to manage email routing settings
 >
@@ -22,7 +23,7 @@ Add a destination email address:
 import { EmailAddress } from "alchemy/cloudflare";
 
 await EmailAddress("admin-email", {
-  email: "admin@company.com"
+  email: "admin@company.com",
 });
 ```
 
@@ -34,15 +35,15 @@ Create multiple destination addresses for different purposes:
 import { EmailAddress } from "alchemy/cloudflare";
 
 const supportEmail = await EmailAddress("support-email", {
-  email: "support@company.com"
+  email: "support@company.com",
 });
 
 const salesEmail = await EmailAddress("sales-email", {
-  email: "sales@company.com"
+  email: "sales@company.com",
 });
 
 const adminEmail = await EmailAddress("admin-email", {
-  email: "admin@company.com"
+  email: "admin@company.com",
 });
 ```
 
@@ -54,7 +55,7 @@ Email addresses must be verified before they can receive forwarded emails:
 import { EmailAddress } from "alchemy/cloudflare";
 
 const emailAddress = await EmailAddress("my-email", {
-  email: "destination@company.com"
+  email: "destination@company.com",
 });
 
 // Check verification status
@@ -69,11 +70,11 @@ Handle email addresses with special characters:
 import { EmailAddress } from "alchemy/cloudflare";
 
 await EmailAddress("special-email", {
-  email: "user+tag@example.com"
+  email: "user+tag@example.com",
 });
 
 await EmailAddress("subdomain-email", {
-  email: "admin@subdomain.example.com"
+  email: "admin@subdomain.example.com",
 });
 ```
 
@@ -107,7 +108,7 @@ Destination addresses are used in email routing rules:
 import { EmailAddress, EmailRule } from "alchemy/cloudflare";
 
 const adminEmail = await EmailAddress("admin-email", {
-  email: "admin@company.com"
+  email: "admin@company.com",
 });
 
 await EmailRule("admin-forwarding", {
@@ -116,16 +117,16 @@ await EmailRule("admin-forwarding", {
   matchers: [
     {
       type: "literal",
-      field: "to", 
-      value: "admin@example.com"
-    }
+      field: "to",
+      value: "admin@example.com",
+    },
   ],
   actions: [
     {
       type: "forward",
-      value: [adminEmail.email]
-    }
-  ]
+      value: [adminEmail.email],
+    },
+  ],
 });
 ```
 

@@ -1,5 +1,5 @@
 ---
-title: Managing PlanetScale Database Branches with Alchemy
+title: PlanetScale Branch
 description: Learn how to create and manage PlanetScale database branches for development workflows and production scaling.
 ---
 
@@ -19,7 +19,7 @@ const devBranch = await Branch("feature-123", {
   organizationId: "my-org",
   databaseName: "my-database",
   parentBranch: "main",
-  isProduction: false
+  isProduction: false,
 });
 ```
 
@@ -36,7 +36,7 @@ const prodBranch = await Branch("production", {
   databaseName: "my-database",
   parentBranch: "main",
   isProduction: true,
-  clusterSize: "PS_20"
+  clusterSize: "PS_20",
 });
 ```
 
@@ -52,7 +52,7 @@ const stagingBranch = await Branch("staging", {
   organizationId: "my-org",
   databaseName: "my-database",
   parentBranch: "main",
-  isProduction: false
+  isProduction: false,
 });
 
 const featureBranch = await Branch("feature-456", {
@@ -60,7 +60,7 @@ const featureBranch = await Branch("feature-456", {
   organizationId: "my-org",
   databaseName: "my-database",
   parentBranch: stagingBranch, // Using Branch object
-  isProduction: false
+  isProduction: false,
 });
 ```
 
@@ -78,7 +78,7 @@ const restoredBranch = await Branch("restored-data", {
   parentBranch: "main",
   isProduction: true,
   backupId: "backup-123",
-  clusterSize: "PS_10"
+  clusterSize: "PS_10",
 });
 ```
 
@@ -95,7 +95,7 @@ const safeBranch = await Branch("safe-migrations", {
   databaseName: "my-database",
   parentBranch: "main",
   isProduction: false,
-  safeMigrations: true
+  safeMigrations: true,
 });
 ```
 
@@ -113,7 +113,7 @@ const existingBranch = await Branch("existing-feature", {
   parentBranch: "main",
   isProduction: false,
   adopt: true,
-  safeMigrations: false
+  safeMigrations: false,
 });
 ```
 
@@ -130,6 +130,6 @@ const seededBranch = await Branch("seeded-dev", {
   databaseName: "my-database",
   parentBranch: "main",
   isProduction: false,
-  seedData: "last_successful_backup"
+  seedData: "last_successful_backup",
 });
 ```

@@ -1,5 +1,5 @@
 ---
-title: Managing AWS IAM Roles with Alchemy
+title: AWS IAM Role
 description: Learn how to create, update, and manage AWS IAM Roles using Alchemy to grant permissions to services and applications.
 ---
 
@@ -17,30 +17,36 @@ import { Role } from "alchemy/aws";
 const role = await Role("lambda-role", {
   roleName: "lambda-role",
   assumeRolePolicy: {
-    Version: "2012-10-17", 
-    Statement: [{
-      Effect: "Allow",
-      Principal: {
-        Service: "lambda.amazonaws.com"
-      },
-      Action: "sts:AssumeRole"
-    }]
-  },
-  policies: [{
-    policyName: "logs",
-    policyDocument: {
-      Version: "2012-10-17",
-      Statement: [{
+    Version: "2012-10-17",
+    Statement: [
+      {
         Effect: "Allow",
-        Action: [
-          "logs:CreateLogGroup",
-          "logs:CreateLogStream", 
-          "logs:PutLogEvents"
+        Principal: {
+          Service: "lambda.amazonaws.com",
+        },
+        Action: "sts:AssumeRole",
+      },
+    ],
+  },
+  policies: [
+    {
+      policyName: "logs",
+      policyDocument: {
+        Version: "2012-10-17",
+        Statement: [
+          {
+            Effect: "Allow",
+            Action: [
+              "logs:CreateLogGroup",
+              "logs:CreateLogStream",
+              "logs:PutLogEvents",
+            ],
+            Resource: "*",
+          },
         ],
-        Resource: "*"
-      }]
-    }
-  }]
+      },
+    },
+  ],
 });
 ```
 
@@ -52,20 +58,20 @@ Attach AWS managed policies to grant common permissions:
 import { Role } from "alchemy/aws";
 
 const role = await Role("readonly-role", {
-  roleName: "readonly-role", 
+  roleName: "readonly-role",
   assumeRolePolicy: {
     Version: "2012-10-17",
-    Statement: [{
-      Effect: "Allow",
-      Principal: {
-        Service: "lambda.amazonaws.com"
+    Statement: [
+      {
+        Effect: "Allow",
+        Principal: {
+          Service: "lambda.amazonaws.com",
+        },
+        Action: "sts:AssumeRole",
       },
-      Action: "sts:AssumeRole"
-    }]
+    ],
   },
-  managedPolicyArns: [
-    "arn:aws:iam::aws:policy/ReadOnlyAccess"
-  ]
+  managedPolicyArns: ["arn:aws:iam::aws:policy/ReadOnlyAccess"],
 });
 ```
 
@@ -80,13 +86,15 @@ const role = await Role("custom-role", {
   roleName: "custom-role",
   assumeRolePolicy: {
     Version: "2012-10-17",
-    Statement: [{
-      Effect: "Allow",
-      Principal: {
-        Service: "lambda.amazonaws.com"
+    Statement: [
+      {
+        Effect: "Allow",
+        Principal: {
+          Service: "lambda.amazonaws.com",
+        },
+        Action: "sts:AssumeRole",
       },
-      Action: "sts:AssumeRole"
-    }]
+    ],
   },
   maxSessionDuration: 7200,
   policies: [
@@ -94,28 +102,32 @@ const role = await Role("custom-role", {
       policyName: "logs",
       policyDocument: {
         Version: "2012-10-17",
-        Statement: [{
-          Effect: "Allow",
-          Action: [
-            "logs:CreateLogGroup",
-            "logs:CreateLogStream",
-            "logs:PutLogEvents"
-          ],
-          Resource: "*"
-        }]
-      }
+        Statement: [
+          {
+            Effect: "Allow",
+            Action: [
+              "logs:CreateLogGroup",
+              "logs:CreateLogStream",
+              "logs:PutLogEvents",
+            ],
+            Resource: "*",
+          },
+        ],
+      },
     },
     {
       policyName: "s3",
       policyDocument: {
-        Version: "2012-10-17", 
-        Statement: [{
-          Effect: "Allow",
-          Action: "s3:ListBucket",
-          Resource: "*"
-        }]
-      }
-    }
-  ]
+        Version: "2012-10-17",
+        Statement: [
+          {
+            Effect: "Allow",
+            Action: "s3:ListBucket",
+            Resource: "*",
+          },
+        ],
+      },
+    },
+  ],
 });
 ```

@@ -1,5 +1,5 @@
 ---
-title: Copying Files with Alchemy FS Provider
+title: Copy File
 description: Learn how to copy files and directories within your project using Alchemy's FS (File System) provider.
 ---
 
@@ -15,8 +15,8 @@ Copy a file to a new location:
 import { CopyFile } from "alchemy/fs";
 
 const copiedFile = await CopyFile("config-copy", {
-  src: "config.json", 
-  dest: "backup/config.json"
+  src: "config.json",
+  dest: "backup/config.json",
 });
 ```
 
@@ -29,7 +29,7 @@ import { CopyFile } from "alchemy/fs";
 
 const safeCopy = await CopyFile("safe-copy", {
   src: "data.json",
-  dest: "backup/data.json", 
-  overwrite: false
+  dest: "backup/data.json",
+  overwrite: false,
 });
 ```

@@ -1,5 +1,5 @@
 ---
-title: Managing Stripe Shipping Rates with Alchemy
+title: Stripe Shipping Rate
 description: Learn how to create and manage Stripe Shipping Rates for checkout and invoices using Alchemy.
 ---
 
@@ -19,12 +19,12 @@ const standardShipping = await ShippingRate("standard-shipping", {
   type: "fixed_amount",
   fixedAmount: {
     amount: 500,
-    currency: "usd"
+    currency: "usd",
   },
   deliveryEstimate: {
     minimum: { unit: "business_day", value: 5 },
-    maximum: { unit: "business_day", value: 7 }
-  }
+    maximum: { unit: "business_day", value: 7 },
+  },
 });
 ```
 
@@ -40,17 +40,17 @@ const expressShipping = await ShippingRate("express-shipping", {
   type: "fixed_amount",
   fixedAmount: {
     amount: 1500,
-    currency: "usd"
+    currency: "usd",
   },
   deliveryEstimate: {
     minimum: { unit: "business_day", value: 1 },
-    maximum: { unit: "business_day", value: 2 }
+    maximum: { unit: "business_day", value: 2 },
   },
   taxBehavior: "exclusive",
   metadata: {
     priority: "high",
-    service_level: "express"
-  }
+    service_level: "express",
+  },
 });
 ```
 
@@ -66,14 +66,14 @@ const freeShipping = await ShippingRate("free-shipping", {
   type: "fixed_amount",
   fixedAmount: {
     amount: 0,
-    currency: "usd"
+    currency: "usd",
   },
   deliveryEstimate: {
     minimum: { unit: "business_day", value: 7 },
-    maximum: { unit: "business_day", value: 10 }
+    maximum: { unit: "business_day", value: 10 },
   },
   metadata: {
-    promotion: "free_shipping_over_50"
-  }
+    promotion: "free_shipping_over_50",
+  },
 });
 ```

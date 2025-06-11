@@ -1,5 +1,5 @@
 ---
-title: Managing Cloudflare DNS Records with Alchemy
+title: Cloudflare DNS Records
 description: Learn how to create, update, and manage Cloudflare DNS Records for your domains using Alchemy.
 ---
 
@@ -16,12 +16,14 @@ import { DnsRecords } from "alchemy/cloudflare";
 
 const records = await DnsRecords("example-dns", {
   zoneId: "YOUR_ZONE_ID",
-  records: [{
-    name: "www.example.com", 
-    type: "A",
-    content: "192.0.2.1",
-    proxied: true
-  }]
+  records: [
+    {
+      name: "www.example.com",
+      type: "A",
+      content: "192.0.2.1",
+      proxied: true,
+    },
+  ],
 });
 ```
 
@@ -33,20 +35,20 @@ Create MX and TXT records for email routing.
 import { DnsRecords } from "alchemy/cloudflare";
 
 const emailRecords = await DnsRecords("email-dns", {
-  zoneId: "YOUR_ZONE_ID", 
+  zoneId: "YOUR_ZONE_ID",
   records: [
     {
       name: "example.com",
       type: "MX",
       content: "aspmx.l.google.com",
-      priority: 1
+      priority: 1,
     },
     {
-      name: "example.com", 
+      name: "example.com",
       type: "TXT",
-      content: "v=spf1 include:_spf.google.com ~all"
-    }
-  ]
+      content: "v=spf1 include:_spf.google.com ~all",
+    },
+  ],
 });
 ```
 
@@ -62,17 +64,17 @@ const proxiedRecords = await DnsRecords("proxied-dns", {
   records: [
     {
       name: "www.example.com",
-      type: "A", 
+      type: "A",
       content: "192.0.2.1",
       proxied: true,
-      ttl: 1 // Auto TTL when proxied
+      ttl: 1, // Auto TTL when proxied
     },
     {
       name: "blog.example.com",
       type: "CNAME",
       content: "www.example.com",
-      proxied: true
-    }
-  ]
+      proxied: true,
+    },
+  ],
 });
 ```

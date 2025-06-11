@@ -1,5 +1,5 @@
 ---
-title: Managing AWS S3 Buckets with Alchemy
+title: AWS S3 Bucket
 description: Learn how to create, configure, and manage AWS S3 Buckets using Alchemy for object storage in your cloud applications.
 ---
 
@@ -17,8 +17,8 @@ import { Bucket } from "alchemy/aws";
 const bucket = await Bucket("storage", {
   bucketName: "my-app-storage",
   tags: {
-    Environment: "production"
-  }
+    Environment: "production",
+  },
 });
 ```
 
@@ -34,8 +34,8 @@ const versionedBucket = await Bucket("document-archive", {
   tags: {
     Environment: "production",
     Purpose: "document-storage",
-    Versioning: "enabled"
-  }
+    Versioning: "enabled",
+  },
 });
 ```
 
@@ -50,7 +50,7 @@ const devBucket = await Bucket("dev-testing", {
   bucketName: "dev-testing",
   tags: {
     Environment: "development",
-    Temporary: "true"
-  }
+    Temporary: "true",
+  },
 });
 ```

@@ -1,5 +1,5 @@
 ---
-title: Managing Static TypeScript Files with Alchemy FS Provider
+title: Static TypeScript File
 description: Learn how to create and manage static TypeScript (.ts, .tsx) files with proper formatting using Alchemy's FS provider.
 ---
 
@@ -14,13 +14,16 @@ Creates a TypeScript file with automatic formatting.
 ```ts
 import { StaticTypeScriptFile } from "alchemy/fs";
 
-const file = await StaticTypeScriptFile("types.ts", `
+const file = await StaticTypeScriptFile(
+  "types.ts",
+  `
   interface User {
     id: string;
     name: string;
     email: string;
   }
-`);
+`
+);
 ```
 
 ## Create File with Custom Path
@@ -30,7 +33,9 @@ Creates a TypeScript file at a specific path.
 ```ts
 import { StaticTypeScriptFile } from "alchemy/fs";
 
-const component = await StaticTypeScriptFile("components/Button.tsx", `
+const component = await StaticTypeScriptFile(
+  "components/Button.tsx",
+  `
   interface ButtonProps {
     text: string;
     onClick: () => void;
@@ -39,7 +44,8 @@ const component = await StaticTypeScriptFile("components/Button.tsx", `
   export function Button({ text, onClick }: ButtonProps) {
     return <button onClick={onClick}>{text}</button>;
   }
-`);
+`
+);
 ```
 
 ## Create React Component
@@ -49,7 +55,9 @@ Creates a TypeScript React component with proper formatting.
 ```ts
 import { StaticTypeScriptFile } from "alchemy/fs";
 
-const component = await StaticTypeScriptFile("UserProfile.tsx", `
+const component = await StaticTypeScriptFile(
+  "UserProfile.tsx",
+  `
   interface Props {
     user: {
       name: string;
@@ -65,5 +73,6 @@ const component = await StaticTypeScriptFile("UserProfile.tsx", `
       </div>
     );
   }
-`);
+`
+);
 ```

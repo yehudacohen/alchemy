@@ -1,5 +1,5 @@
 ---
-title: Managing Stripe Portal Configurations with Alchemy
+title: Stripe Portal Configuration
 description: Learn how to create and manage Stripe Customer Portal Configurations using Alchemy.
 ---
 
@@ -18,12 +18,12 @@ const basicPortal = await PortalConfiguration("basic-portal", {
   businessProfile: {
     headline: "Manage your subscription",
     privacyPolicyUrl: "https://example.com/privacy",
-    termsOfServiceUrl: "https://example.com/terms"
+    termsOfServiceUrl: "https://example.com/terms",
   },
   features: {
     invoiceHistory: { enabled: true },
-    paymentMethodUpdate: { enabled: true }
-  }
+    paymentMethodUpdate: { enabled: true },
+  },
 });
 ```
 
@@ -40,14 +40,14 @@ const subscriptionPortal = await PortalConfiguration("subscription-portal", {
     subscriptionCancel: {
       enabled: true,
       mode: "at_period_end",
-      prorationBehavior: "none"
+      prorationBehavior: "none",
     },
     subscriptionUpdate: {
       enabled: true,
       defaultAllowedUpdates: ["price", "quantity"],
-      prorationBehavior: "create_prorations"
-    }
-  }
+      prorationBehavior: "create_prorations",
+    },
+  },
 });
 ```
 
@@ -62,13 +62,13 @@ const fullPortal = await PortalConfiguration("full-portal", {
   businessProfile: {
     headline: "Manage your Acme Corp subscription",
     privacyPolicyUrl: "https://acme.com/privacy",
-    termsOfServiceUrl: "https://acme.com/terms"
+    termsOfServiceUrl: "https://acme.com/terms",
   },
   defaultReturnUrl: "https://acme.com/dashboard",
   features: {
     customerUpdate: {
       enabled: true,
-      allowedUpdates: ["email", "address", "shipping", "phone", "tax_id"]
+      allowedUpdates: ["email", "address", "shipping", "phone", "tax_id"],
     },
     invoiceHistory: { enabled: true },
     paymentMethodUpdate: { enabled: true },
@@ -77,9 +77,9 @@ const fullPortal = await PortalConfiguration("full-portal", {
       mode: "immediately",
       cancellationReason: {
         enabled: true,
-        options: ["too_expensive", "missing_features", "switched_service"]
-      }
-    }
-  }
+        options: ["too_expensive", "missing_features", "switched_service"],
+      },
+    },
+  },
 });
 ```

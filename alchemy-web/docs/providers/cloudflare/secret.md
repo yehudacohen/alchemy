@@ -1,5 +1,5 @@
 ---
-title: Managing Cloudflare Secrets with Alchemy
+title: Cloudflare Secret
 description: Learn how to add individual secrets to Cloudflare Secrets Store for fine-grained secret management.
 ---
 
@@ -19,18 +19,18 @@ import alchemy from "alchemy";
 
 // Create a secrets store first
 const store = await SecretsStore("my-store", {
-  name: "production-secrets"
+  name: "production-secrets",
 });
 
 // Add individual secrets to the store
 const apiKey = await Secret("api-key", {
   store: store,
-  value: alchemy.secret(process.env.API_KEY)
+  value: alchemy.secret(process.env.API_KEY),
 });
 
 const dbUrl = await Secret("database-url", {
   store: store,
-  value: process.env.DATABASE_URL
+  value: process.env.DATABASE_URL,
 });
 ```
 
@@ -42,28 +42,28 @@ Add multiple secrets to the same store:
 import { SecretsStore, Secret } from "alchemy/cloudflare";
 
 const store = await SecretsStore("shared-store", {
-  name: "shared-secrets"
+  name: "shared-secrets",
 });
 
 // Add various secrets incrementally
 await Secret("oauth-client-id", {
   store: store,
-  value: alchemy.secret(process.env.OAUTH_CLIENT_ID)
+  value: alchemy.secret(process.env.OAUTH_CLIENT_ID),
 });
 
 await Secret("oauth-client-secret", {
   store: store,
-  value: alchemy.secret(process.env.OAUTH_CLIENT_SECRET)
+  value: alchemy.secret(process.env.OAUTH_CLIENT_SECRET),
 });
 
 await Secret("webhook-secret", {
   store: store,
-  value: alchemy.secret(process.env.WEBHOOK_SECRET)
+  value: alchemy.secret(process.env.WEBHOOK_SECRET),
 });
 
 await Secret("encryption-key", {
   store: store,
-  value: alchemy.secret(process.env.ENCRYPTION_KEY)
+  value: alchemy.secret(process.env.ENCRYPTION_KEY),
 });
 ```
 
@@ -77,7 +77,7 @@ import { Secret } from "alchemy/cloudflare";
 const preservedSecret = await Secret("preserve-secret", {
   store: myStore,
   value: "preserved-value",
-  delete: false
+  delete: false,
 });
 ```
 
@@ -89,23 +89,23 @@ Once secrets are added to a store, access them in your Worker code:
 import { SecretsStore, Secret, Worker } from "alchemy/cloudflare";
 
 const store = await SecretsStore("app-secrets", {
-  name: "app-secrets"
+  name: "app-secrets",
 });
 
 // Add secrets using the Secret resource
 await Secret("stripe-secret-key", {
   store: store,
-  value: alchemy.secret(process.env.STRIPE_SECRET_KEY)
+  value: alchemy.secret(process.env.STRIPE_SECRET_KEY),
 });
 
 await Secret("sendgrid-api-key", {
   store: store,
-  value: alchemy.secret(process.env.SENDGRID_API_KEY)
+  value: alchemy.secret(process.env.SENDGRID_API_KEY),
 });
 
 const worker = await Worker("api-worker", {
   bindings: {
-    SECRETS: store
+    SECRETS: store,
   },
   code: `
     export default {
@@ -117,7 +117,7 @@ const worker = await Worker("api-worker", {
         return new Response("Secrets loaded successfully");
       }
     }
-  `
+  `,
 });
 ```
 
@@ -133,19 +133,19 @@ const store = await SecretsStore("mixed-secrets", {
   name: "mixed-secrets",
   secrets: {
     API_KEY: alchemy.secret(process.env.API_KEY),
-    DATABASE_URL: alchemy.secret(process.env.DATABASE_URL)
-  }
+    DATABASE_URL: alchemy.secret(process.env.DATABASE_URL),
+  },
 });
 
 // Add additional secrets individually
 await Secret("third-party-token", {
   store: store,
-  value: alchemy.secret(process.env.THIRD_PARTY_TOKEN)
+  value: alchemy.secret(process.env.THIRD_PARTY_TOKEN),
 });
 
 await Secret("webhook-signing-secret", {
   store: store,
-  value: alchemy.secret(process.env.WEBHOOK_SIGNING_SECRET)
+  value: alchemy.secret(process.env.WEBHOOK_SIGNING_SECRET),
 });
 ```
 

@@ -1,5 +1,5 @@
 ---
-title: Managing Cloudflare Zones (Domains) with Alchemy
+title: Cloudflare Zone
 description: Learn how to manage your Cloudflare Zones (domains) including DNS settings and other configurations using Alchemy.
 ---
 
@@ -17,7 +17,7 @@ import { Zone } from "alchemy/cloudflare";
 const zone = await Zone("example-zone", {
   name: "example.com",
   type: "full",
-  delete: true //Default true: Delete's Zone on --destroy
+  delete: true, //Default true: Delete's Zone on --destroy
 });
 ```
 
@@ -30,10 +30,10 @@ const secureZone = await Zone("secure-zone", {
   name: "secure.example.com",
   settings: {
     ssl: "strict",
-    alwaysUseHttps: "on", 
+    alwaysUseHttps: "on",
     minTlsVersion: "1.3",
-    tls13: "zrt"
-  }
+    tls13: "zrt",
+  },
 });
 ```
 
@@ -43,13 +43,13 @@ Create a zone optimized for performance with HTTP/3 and caching.
 
 ```ts
 const fastZone = await Zone("fast-zone", {
-  name: "fast.example.com", 
+  name: "fast.example.com",
   settings: {
     browserCacheTtl: 7200,
     brotli: "on",
     http3: "on",
-    earlyHints: "on"
-  }
+    earlyHints: "on",
+  },
 });
 ```
 
@@ -63,7 +63,7 @@ const devZone = await Zone("dev-zone", {
   settings: {
     developmentMode: "on",
     websockets: "on",
-    hotlinkProtection: "on"
-  }
+    hotlinkProtection: "on",
+  },
 });
 ```

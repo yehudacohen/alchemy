@@ -1,5 +1,5 @@
 ---
-title: Bundling Code with esbuild in Alchemy
+title: Bundle (with ES Build)
 description: Learn how to use Alchemy's esbuild provider to bundle JavaScript and TypeScript code for your serverless functions and web applications.
 ---
 
@@ -16,7 +16,7 @@ import { Bundle } from "alchemy/esbuild";
 
 const bundle = await Bundle("handler", {
   entryPoint: "src/handler.ts",
-  format: "esm"
+  format: "esm",
 });
 ```
 
@@ -26,13 +26,13 @@ Specify an output directory and additional build options:
 
 ```ts
 const bundle = await Bundle("api", {
-  entryPoint: "src/api.ts", 
+  entryPoint: "src/api.ts",
   outdir: ".build",
   format: "esm",
   platform: "node",
   target: "node18",
   minify: true,
-  sourcemap: true
+  sourcemap: true,
 });
 ```
 
@@ -45,7 +45,7 @@ const bundle = await Bundle("app", {
   entryPoint: "src/app.ts",
   format: "esm",
   external: ["aws-sdk", "lodash"],
-  platform: "node"
+  platform: "node",
 });
 ```
 
@@ -57,9 +57,9 @@ Create a browser-compatible IIFE bundle:
 const bundle = await Bundle("web", {
   entryPoint: "src/main.ts",
   outfile: "dist/bundle.js",
-  format: "iife", 
+  format: "iife",
   platform: "browser",
   minify: true,
-  sourcemap: "external"
+  sourcemap: "external",
 });
 ```

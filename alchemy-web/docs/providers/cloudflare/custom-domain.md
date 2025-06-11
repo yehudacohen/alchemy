@@ -1,5 +1,5 @@
 ---
-title: Managing Cloudflare Custom Domains with Alchemy
+title: Cloudflare Custom Domain
 description: Learn how to configure and manage Custom Domains for your Cloudflare services (like Pages, Workers) using Alchemy.
 ---
 
@@ -16,13 +16,13 @@ import { Worker, CustomDomain } from "alchemy/cloudflare";
 
 const worker = await Worker("api", {
   name: "api-worker",
-  entrypoint: "./src/api.ts"
+  entrypoint: "./src/api.ts",
 });
 
 const domain = await CustomDomain("api-domain", {
-  name: "api.example.com", 
+  name: "api.example.com",
   zoneId: "YOUR_ZONE_ID",
-  workerName: worker.name
+  workerName: worker.name,
 });
 ```
 
@@ -35,8 +35,8 @@ import { Worker, CustomDomain } from "alchemy/cloudflare";
 
 const domain = await CustomDomain("staging-domain", {
   name: "staging.example.com",
-  zoneId: "YOUR_ZONE_ID", 
+  zoneId: "YOUR_ZONE_ID",
   workerName: "my-worker",
-  environment: "staging"
+  environment: "staging",
 });
 ```

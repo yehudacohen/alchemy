@@ -1,5 +1,5 @@
 ---
-title: Managing Cloudflare Workers AI with Alchemy
+title: Cloudflare AI
 description: Learn how to use Cloudflare Workers AI binding with Alchemy to run machine learning models on Cloudflare's global network.
 ---
 
@@ -20,8 +20,8 @@ await Worker("ai-worker", {
   name: "ai-worker",
   entrypoint: "./src/worker.ts",
   bindings: {
-    AI: ai
-  }
+    AI: ai,
+  },
 });
 ```
 
@@ -38,8 +38,8 @@ await Worker("text-generator", {
   name: "text-generator",
   entrypoint: "./src/text.ts",
   bindings: {
-    AI: ai
-  }
+    AI: ai,
+  },
 });
 ```
 
@@ -50,11 +50,11 @@ Worker implementation:
 export default {
   async fetch(request: Request, env: { AI: Ai }): Promise<Response> {
     const response = await env.AI.run("@cf/meta/llama-3.1-8b-instruct", {
-      prompt: "What is the capital of France?"
+      prompt: "What is the capital of France?",
     });
-    
+
     return new Response(JSON.stringify(response));
-  }
+  },
 };
 ```
 
@@ -71,8 +71,8 @@ await Worker("embeddings-worker", {
   name: "embeddings-worker",
   entrypoint: "./src/embeddings.ts",
   bindings: {
-    AI: ai
-  }
+    AI: ai,
+  },
 });
 ```
 
@@ -83,11 +83,11 @@ Worker implementation:
 export default {
   async fetch(request: Request, env: { AI: Ai }): Promise<Response> {
     const response = await env.AI.run("@cf/baai/bge-base-en-v1.5", {
-      text: ["Hello world", "Goodbye world"]
+      text: ["Hello world", "Goodbye world"],
     });
-    
+
     return new Response(JSON.stringify(response));
-  }
+  },
 };
 ```
 
@@ -104,8 +104,8 @@ await Worker("image-classifier", {
   name: "image-classifier",
   entrypoint: "./src/image.ts",
   bindings: {
-    AI: ai
-  }
+    AI: ai,
+  },
 });
 ```
 
@@ -116,13 +116,13 @@ Worker implementation:
 export default {
   async fetch(request: Request, env: { AI: Ai }): Promise<Response> {
     const imageArrayBuffer = await request.arrayBuffer();
-    
+
     const response = await env.AI.run("@cf/microsoft/resnet-50", {
-      image: imageArrayBuffer
+      image: imageArrayBuffer,
     });
-    
+
     return new Response(JSON.stringify(response));
-  }
+  },
 };
 ```
 
@@ -134,7 +134,7 @@ Combine AI binding with AI Gateway for observability and control. Learn more abo
 import { Worker, Ai, AiGateway } from "alchemy/cloudflare";
 
 const aiGateway = await AiGateway("my-gateway", {
-  name: "my-ai-gateway"
+  name: "my-ai-gateway",
 });
 
 const ai = new Ai();
@@ -144,8 +144,8 @@ await Worker("gateway-ai-worker", {
   entrypoint: "./src/gateway.ts",
   bindings: {
     AI: ai,
-    GATEWAY: aiGateway
-  }
+    GATEWAY: aiGateway,
+  },
 });
 ```
 
@@ -155,18 +155,22 @@ Worker implementation with gateway:
 // src/gateway.ts
 export default {
   async fetch(request: Request, env: { AI: Ai }): Promise<Response> {
-    const response = await env.AI.run("@cf/meta/llama-3.1-8b-instruct", {
-      prompt: "Explain quantum computing"
-    }, {
-      gateway: {
-        id: "my-ai-gateway",
-        cacheKey: "quantum-explanation",
-        cacheTtl: 3600
+    const response = await env.AI.run(
+      "@cf/meta/llama-3.1-8b-instruct",
+      {
+        prompt: "Explain quantum computing",
+      },
+      {
+        gateway: {
+          id: "my-ai-gateway",
+          cacheKey: "quantum-explanation",
+          cacheTtl: 3600,
+        },
       }
-    });
-    
+    );
+
     return new Response(JSON.stringify(response));
-  }
+  },
 };
 ```
 
@@ -183,11 +187,15 @@ The AI binding provides several methods in your Worker runtime. See the [Workers
 Run inference on a specific model:
 
 ```ts
-const response = await env.AI.run("@cf/meta/llama-3.1-8b-instruct", {
-  prompt: "Your prompt here"
-}, {
-  gateway: { id: "my-gateway" }
-});
+const response = await env.AI.run(
+  "@cf/meta/llama-3.1-8b-instruct",
+  {
+    prompt: "Your prompt here",
+  },
+  {
+    gateway: { id: "my-gateway" },
+  }
+);
 ```
 
 ### `models(params?)`
@@ -234,7 +242,7 @@ await Worker("my-worker", {
   name: "my-worker",
   entrypoint: "./src/worker.ts",
   bindings: {
-    AI: ai
-  }
+    AI: ai,
+  },
 });
 ```

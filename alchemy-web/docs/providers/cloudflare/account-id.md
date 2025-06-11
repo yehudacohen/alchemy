@@ -1,5 +1,5 @@
 ---
-title: Getting Cloudflare Account ID with Alchemy
+title: Cloudflare Accout ID
 description: Learn how to retrieve your Cloudflare Account ID programmatically using Alchemy for use in other resource configurations.
 ---
 
@@ -21,12 +21,12 @@ const accountId = await AccountId("my-account");
 
 Provide an API key and email directly:
 
-```ts 
+```ts
 import { AccountId } from "alchemy/cloudflare";
 
 const accountId = await AccountId("my-account", {
   apiKey: alchemy.secret(process.env.CF_API_KEY),
-  email: "user@example.com"
+  email: "user@example.com",
 });
 ```
 
@@ -42,6 +42,6 @@ const accountId = await AccountId("my-account");
 await Worker("my-worker", {
   name: "my-worker",
   script: "console.log('Hello, world!')",
-  accountId: accountId
+  accountId: accountId,
 });
 ```

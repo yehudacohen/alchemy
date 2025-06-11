@@ -1,5 +1,5 @@
 ---
-title: Managing Static HTML Files with Alchemy FS Provider
+title: Static HTML File
 description: Learn how to create and manage static HTML (.html) files with proper formatting using Alchemy's FS provider.
 ---
 
@@ -14,13 +14,16 @@ Creates a basic HTML file:
 ```ts
 import { StaticHTMLFile } from "alchemy/fs";
 
-const page = await StaticHTMLFile("index.html", `
+const page = await StaticHTMLFile(
+  "index.html",
+  `
   <!DOCTYPE html>
   <html>
     <head><title>My Page</title></head>
     <body>Hello World</body>
   </html>
-`);
+`
+);
 ```
 
 ## Custom Path
@@ -30,7 +33,10 @@ Creates an HTML file at a specific path:
 ```ts
 import { StaticHTMLFile } from "alchemy/fs";
 
-const page = await StaticHTMLFile("home", "pages/index.html", `
+const page = await StaticHTMLFile(
+  "home",
+  "pages/index.html",
+  `
   <!DOCTYPE html>
   <html>
     <head>
@@ -42,5 +48,6 @@ const page = await StaticHTMLFile("home", "pages/index.html", `
       <p>This is my homepage.</p>
     </body>
   </html>
-`);
+`
+);
 ```

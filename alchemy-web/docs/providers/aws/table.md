@@ -1,5 +1,5 @@
 ---
-title: Managing AWS DynamoDB Tables with Alchemy
+title: AWS DynamoDB Table
 description: Learn how to create, configure, and manage AWS DynamoDB Tables using Alchemy for NoSQL database solutions.
 ---
 
@@ -17,9 +17,9 @@ import { Table } from "alchemy/aws";
 const table = await Table("users", {
   tableName: "users",
   partitionKey: {
-    name: "userId", 
-    type: "S"
-  }
+    name: "userId",
+    type: "S",
+  },
 });
 ```
 
@@ -32,12 +32,12 @@ const table = await Table("events", {
   tableName: "events",
   partitionKey: {
     name: "deviceId",
-    type: "S"
+    type: "S",
   },
   sortKey: {
     name: "timestamp",
-    type: "N"
-  }
+    type: "N",
+  },
 });
 ```
 
@@ -50,13 +50,13 @@ const table = await Table("orders", {
   tableName: "orders",
   partitionKey: {
     name: "orderId",
-    type: "S"
+    type: "S",
   },
   billingMode: "PROVISIONED",
   readCapacity: 100,
   writeCapacity: 50,
   tags: {
-    Environment: "production"
-  }
+    Environment: "production",
+  },
 });
 ```

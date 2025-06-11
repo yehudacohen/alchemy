@@ -1,5 +1,5 @@
 ---
-title: Managing Cloudflare Secrets Store with Alchemy
+title: Cloudflare Secrets Store
 description: Learn how to create and manage Cloudflare Secrets Store for secure, centralized secret storage.
 ---
 
@@ -18,8 +18,8 @@ import alchemy from "alchemy";
 const store = await SecretsStore("my-secrets", {
   name: "production-secrets",
   secrets: {
-    API_KEY: alchemy.secret("my-secret-api-key")
-  }
+    API_KEY: alchemy.secret("my-secret-api-key"),
+  },
 });
 ```
 
@@ -36,8 +36,8 @@ const store = await SecretsStore("my-secrets", {
   secrets: {
     API_KEY: alchemy.secret(process.env.API_KEY),
     DATABASE_URL: alchemy.secret(process.env.DATABASE_URL),
-    JWT_SECRET: alchemy.secret(process.env.JWT_SECRET)
-  }
+    JWT_SECRET: alchemy.secret(process.env.JWT_SECRET),
+  },
 });
 ```
 
@@ -52,8 +52,8 @@ const existingStore = await SecretsStore("existing-store", {
   name: "existing-secrets-store",
   adopt: true,
   secrets: {
-    NEW_SECRET: alchemy.secret("new-value")
-  }
+    NEW_SECRET: alchemy.secret("new-value"),
+  },
 });
 ```
 
@@ -66,7 +66,7 @@ import { SecretsStore } from "alchemy/cloudflare";
 
 const preservedStore = await SecretsStore("preserve-store", {
   name: "preserved-secrets-store",
-  delete: false
+  delete: false,
 });
 ```
 
@@ -81,15 +81,15 @@ const store = await SecretsStore("secrets", {
   name: "production-secrets",
   secrets: {
     API_KEY: alchemy.secret(process.env.API_KEY),
-    DATABASE_URL: alchemy.secret(process.env.DATABASE_URL)
-  }
+    DATABASE_URL: alchemy.secret(process.env.DATABASE_URL),
+  },
 });
 
 const worker = await Worker("my-worker", {
   bindings: {
-    SECRETS: store
+    SECRETS: store,
   },
-  entrypoint: "./src/worker.ts"
+  entrypoint: "./src/worker.ts",
 });
 ```
 
@@ -101,7 +101,7 @@ export default {
     const apiKey = await env.SECRETS.get("API_KEY");
     const dbUrl = await env.SECRETS.get("DATABASE_URL");
     return new Response(apiKey ? "Secrets found" : "No secrets");
-  }
+  },
 };
 ```
 
@@ -113,18 +113,18 @@ Use the [Secret](./secret.md) resource to add individual secrets to an existing 
 import { SecretsStore, Secret } from "alchemy/cloudflare";
 
 const store = await SecretsStore("my-store", {
-  name: "production-secrets"
+  name: "production-secrets",
 });
 
 // Add individual secrets
 await Secret("oauth-secret", {
   store: store,
-  value: alchemy.secret(process.env.OAUTH_SECRET)
+  value: alchemy.secret(process.env.OAUTH_SECRET),
 });
 
 await Secret("webhook-secret", {
   store: store,
-  value: alchemy.secret(process.env.WEBHOOK_SECRET)
+  value: alchemy.secret(process.env.WEBHOOK_SECRET),
 });
 ```
 
@@ -139,19 +139,19 @@ export default {
     // Get individual secrets
     const apiKey = await env.SECRETS.get("API_KEY");
     const dbUrl = await env.SECRETS.get("DATABASE_URL");
-    
+
     if (!apiKey || !dbUrl) {
       return new Response("Missing required secrets", { status: 500 });
     }
-    
+
     // Use secrets in your application logic
     const response = await fetch("https://api.example.com/data", {
       headers: {
-        "Authorization": `Bearer ${apiKey}`
-      }
+        Authorization: `Bearer ${apiKey}`,
+      },
     });
-    
+
     return new Response("Success");
-  }
+  },
 };
 ```

@@ -1,5 +1,5 @@
 ---
-title: Executing OS Commands with Alchemy
+title: Execute Command
 description: Learn how to run operating system commands during your Alchemy deployments using the OS Exec provider.
 ---
 
@@ -15,7 +15,7 @@ Execute a simple shell command:
 import { Exec } from "alchemy/os";
 
 const result = await Exec("list-files", {
-  command: "ls -la"
+  command: "ls -la",
 });
 
 console.log(result.stdout);
@@ -31,13 +31,13 @@ import { Exec } from "alchemy/os";
 const build = await Exec("build-project", {
   command: "npm run build",
   cwd: "./my-project",
-  env: { 
-    NODE_ENV: "production"
-  }
+  env: {
+    NODE_ENV: "production",
+  },
 });
 ```
 
-## Command Memoization 
+## Command Memoization
 
 ### Basic Memoization
 
@@ -48,13 +48,14 @@ import { Exec } from "alchemy/os";
 
 const status = await Exec("git-status", {
   command: "git status",
-  memoize: true
+  memoize: true,
 });
 ```
 
 ### File-Based Memoization
 
 Memoize commands based on file contents. The command will be re-executed if either:
+
 1. The command string changes, or
 2. The contents of any files matching the glob patterns change
 
@@ -65,8 +66,8 @@ import { Exec } from "alchemy/os";
 const migrate = await Exec("db-migrate", {
   command: "drizzle-kit push:pg",
   memoize: {
-    patterns: ["./src/db/schema/**"]
-  }
+    patterns: ["./src/db/schema/**"],
+  },
 });
 ```
 
@@ -79,9 +80,11 @@ import { Exec } from "alchemy/os";
 
 const build = await Exec("build", {
   command: "vite build",
-  memoize: process.env.CI ? false : {
-    patterns: ["./src/**"]
-  }
+  memoize: process.env.CI
+    ? false
+    : {
+        patterns: ["./src/**"],
+      },
 });
 ```
 
@@ -93,7 +96,7 @@ Handle large command output by increasing the buffer size:
 import { Exec } from "alchemy/os";
 
 const logs = await Exec("get-logs", {
-  command: "cat large-log-file.log", 
-  maxBuffer: 10 * 1024 * 1024 // 10MB
+  command: "cat large-log-file.log",
+  maxBuffer: 10 * 1024 * 1024, // 10MB
 });
 ```

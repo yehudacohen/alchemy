@@ -1,5 +1,5 @@
 ---
-title: Managing Stripe Entitlements Features with Alchemy
+title: Stripe Entitlement Features
 description: Learn how to create and manage Stripe Entitlements Features for product access control using Alchemy.
 ---
 
@@ -16,7 +16,7 @@ import { EntitlementsFeature } from "alchemy/stripe";
 
 const apiFeature = await EntitlementsFeature("api-access", {
   name: "API Access",
-  lookupKey: "api_access_v1"
+  lookupKey: "api_access_v1",
 });
 ```
 
@@ -32,8 +32,8 @@ const analyticsFeature = await EntitlementsFeature("advanced-analytics", {
   lookupKey: "analytics_advanced",
   metadata: {
     tier: "enterprise",
-    category: "analytics"
-  }
+    category: "analytics",
+  },
 });
 ```
 
@@ -50,7 +50,7 @@ const integrationsFeature = await EntitlementsFeature("custom-integrations", {
   metadata: {
     tier: "enterprise",
     category: "integrations",
-    limit: "unlimited"
-  }
+    limit: "unlimited",
+  },
 });
 ```

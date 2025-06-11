@@ -1,5 +1,5 @@
 ---
-title: Managing AWS SQS Queues with Alchemy
+title: AWS SQS Queue
 description: Learn how to create, configure, and manage AWS Simple Queue Service (SQS) queues using Alchemy for message queuing.
 ---
 
@@ -17,8 +17,8 @@ import { Queue } from "alchemy/aws";
 const queue = await Queue("my-queue", {
   queueName: "my-queue",
   tags: {
-    Environment: "production"
-  }
+    Environment: "production",
+  },
 });
 ```
 
@@ -30,10 +30,10 @@ Create a FIFO queue with content-based deduplication:
 import { Queue } from "alchemy/aws";
 
 const fifoQueue = await Queue("orders-queue", {
-  queueName: "orders-queue.fifo", 
+  queueName: "orders-queue.fifo",
   fifo: true,
   contentBasedDeduplication: true,
-  visibilityTimeout: 30
+  visibilityTimeout: 30,
 });
 ```
 
@@ -47,9 +47,9 @@ import { Queue } from "alchemy/aws";
 const customQueue = await Queue("large-messages", {
   queueName: "large-messages",
   messageRetentionPeriod: 345600, // 4 days
-  maximumMessageSize: 262144,     // 256 KB
+  maximumMessageSize: 262144, // 256 KB
   visibilityTimeout: 60,
   delaySeconds: 5,
-  receiveMessageWaitTimeSeconds: 20
+  receiveMessageWaitTimeSeconds: 20,
 });
 ```

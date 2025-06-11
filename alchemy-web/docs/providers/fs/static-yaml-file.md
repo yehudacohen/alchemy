@@ -1,5 +1,5 @@
 ---
-title: Managing Static YAML Files with Alchemy FS Provider
+title: Static YAML File
 description: Learn how to create and manage static YAML (.yaml, .yml) files with proper formatting using Alchemy's FS provider.
 ---
 
@@ -17,8 +17,8 @@ import { StaticYamlFile } from "alchemy/fs";
 const config = await StaticYamlFile("config.yaml", {
   server: {
     host: "localhost",
-    port: 3000
-  }
+    port: 3000,
+  },
 });
 ```
 
@@ -32,15 +32,15 @@ import { StaticYamlFile } from "alchemy/fs";
 const config = await StaticYamlFile("config.yaml", {
   server: {
     host: "localhost",
-    port: 3000
+    port: 3000,
   },
   database: {
     url: "postgresql://localhost:5432/db",
     pool: {
-      min: 1, 
-      max: 10
-    }
-  }
+      min: 1,
+      max: 10,
+    },
+  },
 });
 ```
 
@@ -53,6 +53,6 @@ import { StaticYamlFile } from "alchemy/fs";
 
 const config = await StaticYamlFile("config", "config/app.yaml", {
   environment: "production",
-  features: ["auth", "api", "storage"]
+  features: ["auth", "api", "storage"],
 });
 ```

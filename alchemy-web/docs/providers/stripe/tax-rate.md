@@ -1,5 +1,5 @@
 ---
-title: Managing Stripe Tax Rates with Alchemy
+title: Stripe Tax Rate
 description: Learn how to create and manage Stripe Tax Rates for automatic tax calculations using Alchemy.
 ---
 
@@ -20,7 +20,7 @@ const salesTax = await TaxRate("ca-sales-tax", {
   inclusive: false,
   active: true,
   country: "US",
-  state: "CA"
+  state: "CA",
 });
 ```
 
@@ -41,8 +41,8 @@ const vatTax = await TaxRate("uk-vat", {
   taxType: "vat",
   metadata: {
     region: "europe",
-    tax_authority: "hmrc"
-  }
+    tax_authority: "hmrc",
+  },
 });
 ```
 
@@ -65,7 +65,7 @@ const cityTax = await TaxRate("nyc-tax", {
   taxType: "sales_tax",
   metadata: {
     locality: "nyc",
-    tax_level: "city"
-  }
+    tax_level: "city",
+  },
 });
 ```

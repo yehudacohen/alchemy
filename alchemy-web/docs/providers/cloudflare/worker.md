@@ -1,5 +1,5 @@
 ---
-title: Managing Cloudflare Workers with Alchemy
+title: Cloudflare Workers
 description: Learn how to deploy, configure, and manage Cloudflare Workers using Alchemy for serverless functions at the edge.
 ---
 

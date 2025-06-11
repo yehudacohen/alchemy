@@ -1,5 +1,5 @@
 ---
-title: Managing Cloudflare Permission Groups with Alchemy
+title: Cloudflare Pemission Groups
 description: Learn how to retrieve Cloudflare API Permission Groups using Alchemy to help construct API token policies.
 ---
 
@@ -27,15 +27,19 @@ import { PermissionGroups, AccountApiToken } from "alchemy/cloudflare";
 const permissions = await PermissionGroups("cloudflare-permissions");
 
 const token = await AccountApiToken("r2-token", {
-  name: "R2 Read-Only Token", 
-  policies: [{
-    effect: "allow",
-    resources: {
-      "com.cloudflare.edge.r2.bucket.abc123_default_my-bucket": "*"
+  name: "R2 Read-Only Token",
+  policies: [
+    {
+      effect: "allow",
+      resources: {
+        "com.cloudflare.edge.r2.bucket.abc123_default_my-bucket": "*",
+      },
+      permissionGroups: [
+        {
+          id: permissions["Workers R2 Storage Bucket Item Read"].id,
+        },
+      ],
     },
-    permissionGroups: [{
-      id: permissions["Workers R2 Storage Bucket Item Read"].id
-    }]
-  }]
+  ],
 });
 ```

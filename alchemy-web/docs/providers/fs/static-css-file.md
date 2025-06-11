@@ -1,5 +1,5 @@
 ---
-title: Managing Static CSS Files with Alchemy FS Provider
+title: Static CSS File
 description: Learn how to create and manage static CSS (.css) files with proper formatting using Alchemy's FS provider.
 ---
 
@@ -14,13 +14,16 @@ Creates a basic CSS file with styles:
 ```ts
 import { StaticCSSFile } from "alchemy/fs";
 
-const styles = await StaticCSSFile("styles.css", `
+const styles = await StaticCSSFile(
+  "styles.css",
+  `
   .container {
     max-width: 1200px;
     margin: 0 auto;
     padding: 0 1rem;
   }
-`);
+`
+);
 ```
 
 ## Custom Path
@@ -30,7 +33,8 @@ Creates a CSS file at a specific path:
 ```ts
 import { StaticCSSFile } from "alchemy/fs";
 
-const styles = await StaticCSSFile("main", 
+const styles = await StaticCSSFile(
+  "main",
   "src/styles/main.css",
   `.button {
     background-color: #0062ff;

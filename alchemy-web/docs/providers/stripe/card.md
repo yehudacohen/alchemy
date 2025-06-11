@@ -1,5 +1,5 @@
 ---
-title: Managing Stripe Cards with Alchemy
+title: Stripe Card
 description: Learn how to create and manage Stripe Cards attached to customers using Alchemy.
 ---
 
@@ -20,7 +20,7 @@ const customerCard = await Card("customer-card", {
   expMonth: 12,
   expYear: 2025,
   cvc: "123",
-  name: "John Doe"
+  name: "John Doe",
 });
 ```
 
@@ -42,7 +42,7 @@ const cardWithAddress = await Card("card-with-address", {
   addressCity: "San Francisco",
   addressState: "CA",
   addressZip: "94105",
-  addressCountry: "US"
+  addressCountry: "US",
 });
 ```
 
@@ -58,7 +58,7 @@ const tokenCard = await Card("token-card", {
   source: "tok_visa",
   metadata: {
     type: "primary",
-    source: "mobile_app"
-  }
+    source: "mobile_app",
+  },
 });
 ```

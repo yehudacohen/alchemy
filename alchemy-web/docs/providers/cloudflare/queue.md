@@ -1,5 +1,5 @@
 ---
-title: Managing Cloudflare Queues with Alchemy
+title: Cloudflare Queue
 description: Learn how to create, configure, and manage Cloudflare Queues using Alchemy for reliable message delivery.
 ---
 
@@ -15,7 +15,7 @@ Create a basic queue with default settings.
 import { Queue } from "alchemy/cloudflare";
 
 const queue = await Queue("my-queue", {
-  name: "my-queue"
+  name: "my-queue",
 });
 ```
 
@@ -31,8 +31,8 @@ const queue = await Queue("delayed-queue", {
   settings: {
     deliveryDelay: 30, // 30 second delay
     messageRetentionPeriod: 86400, // Store messages for 1 day
-    deliveryPaused: false
-  }
+    deliveryPaused: false,
+  },
 });
 ```
 
@@ -44,15 +44,15 @@ Attach a queue to a worker for processing messages.
 import { Worker, Queue } from "alchemy/cloudflare";
 
 const queue = await Queue("my-queue", {
-  name: "my-queue"
+  name: "my-queue",
 });
 
 await Worker("my-worker", {
-  name: "my-worker", 
+  name: "my-worker",
   script: "console.log('Hello, world!')",
   bindings: {
-    MY_QUEUE: queue
-  }
+    MY_QUEUE: queue,
+  },
 });
 ```
 
@@ -65,12 +65,12 @@ import { Queue } from "alchemy/cloudflare";
 
 // Create the dead letter queue first
 const dlq = await Queue("dlq", {
-  name: "failed-messages-dlq"
+  name: "failed-messages-dlq",
 });
 
 // Create main queue with DLQ reference
 const queue = await Queue("main-queue", {
   name: "main-queue",
-  dlq: dlq  // or dlq: "failed-messages-dlq"
+  dlq: dlq, // or dlq: "failed-messages-dlq"
 });
 ```

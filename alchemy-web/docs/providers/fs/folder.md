@@ -1,5 +1,5 @@
 ---
-title: Managing Folders (Directories) with Alchemy FS Provider
+title: Folder
 description: Learn how to create, manage, and delete folders (directories) using Alchemy's FS (File System) provider.
 ---
 
@@ -25,7 +25,7 @@ Create a directory with an explicit path:
 import { Folder } from "alchemy/fs";
 
 const logs = await Folder("logs", {
-  path: "var/log/app"
+  path: "var/log/app",
 });
 ```
 
@@ -38,7 +38,7 @@ import { Folder } from "alchemy/fs";
 
 const nested = await Folder("nested", {
   path: "path/to/nested/dir",
-  recursive: true 
+  recursive: true,
 });
 ```
 
@@ -52,6 +52,6 @@ import { Folder } from "alchemy/fs";
 const temp = await Folder("temp", {
   path: "temp",
   delete: true, // Delete on destroy (default)
-  clean: true // Remove contents on delete
+  clean: true, // Remove contents on delete
 });
 ```

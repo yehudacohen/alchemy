@@ -1,5 +1,5 @@
 ---
-title: Managing GitHub Repository Environments with Alchemy
+title: GitHub Repository Environment
 description: Learn how to create and manage deployment environments in your GitHub repositories using Alchemy.
 ---
 
@@ -16,8 +16,8 @@ import { RepositoryEnvironment } from "alchemy/github";
 
 const devEnv = await RepositoryEnvironment("dev-environment", {
   owner: "my-org",
-  repository: "my-repo", 
-  name: "development"
+  repository: "my-repo",
+  name: "development",
 });
 ```
 
@@ -36,12 +36,12 @@ const prodEnv = await RepositoryEnvironment("prod-environment", {
   preventSelfReview: true,
   reviewers: {
     teams: ["platform-team"], // team name
-    users: ["security-admin"] // username
+    users: ["security-admin"], // username
   },
   deploymentBranchPolicy: {
     protectedBranches: true,
-    customBranchPolicies: false
-  }
+    customBranchPolicies: false,
+  },
 });
 ```
 
@@ -58,12 +58,12 @@ const stagingEnv = await RepositoryEnvironment("staging-environment", {
   name: "staging",
   reviewers: {
     teams: [1234567], // team ID
-    users: [7654321]  // user ID
+    users: [7654321], // user ID
   },
   deploymentBranchPolicy: {
     protectedBranches: false,
-    customBranchPolicies: true
+    customBranchPolicies: true,
   },
-  branchPatterns: ["main", "release/*"]
+  branchPatterns: ["main", "release/*"],
 });
 ```

@@ -1,5 +1,5 @@
 ---
-title: Deploying TanStack Start Applications to Cloudflare with Alchemy
+title: Tanstack Start on Cloudflare
 description: Learn how to deploy TanStack Start applications to Cloudflare Workers using Alchemy for modern web development.
 ---
 
@@ -21,7 +21,7 @@ const app = await TanStackStart("my-app");
 import { TanStackStart } from "alchemy/cloudflare";
 
 const app = await TanStackStart("my-app", {
-  command: "bun run test && bun run build:production"
+  command: "bun run test && bun run build:production",
 });
 ```
 
@@ -31,13 +31,13 @@ const app = await TanStackStart("my-app", {
 import { TanStackStart, D1Database } from "alchemy/cloudflare";
 
 const database = await D1Database("my-db", {
-  name: "my-db"
+  name: "my-db",
 });
 
 const app = await TanStackStart("my-app", {
   bindings: {
-    DB: database
-  }
+    DB: database,
+  },
 });
 ```
 
@@ -48,12 +48,12 @@ import { TanStackStart } from "alchemy/cloudflare";
 
 const app = await TanStackStart("my-app", {
   bindings: {
-    API_KEY: alchemy.secret(process.env.API_KEY)
+    API_KEY: alchemy.secret(process.env.API_KEY),
   },
   vars: {
     NODE_ENV: "production",
-    APP_ENV: "staging"
-  }
+    APP_ENV: "staging",
+  },
 });
 ```
 
@@ -68,7 +68,7 @@ await Worker("my-worker", {
   name: "my-worker",
   script: "console.log('Hello, world!')",
   bindings: {
-    APP: app
-  }
+    APP: app,
+  },
 });
 ```

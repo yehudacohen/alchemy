@@ -1,5 +1,5 @@
 ---
-title: Managing Files with Alchemy FS Provider
+title: File
 description: Learn how to create, read, update, and delete files using Alchemy's FS (File System) provider in your projects.
 ---
 
@@ -15,8 +15,8 @@ Create a simple text file:
 import { File } from "alchemy/fs";
 
 const config = await File("config.txt", {
-  path: "config.txt", 
-  content: "some configuration data"
+  path: "config.txt",
+  content: "some configuration data",
 });
 ```
 
@@ -29,7 +29,7 @@ import { File } from "alchemy/fs";
 
 const log = await File("logs/app.log", {
   path: "logs/app.log",
-  content: "application log entry"
+  content: "application log entry",
 });
 ```
 
@@ -42,13 +42,13 @@ import { File } from "alchemy/fs";
 
 let file = await File("config.json", {
   path: "config.json",
-  content: '{ "version": "1.0.0" }'
+  content: '{ "version": "1.0.0" }',
 });
 
 // Later, update path and content (old file will be removed)
 file = await File("config.json", {
-  path: "config/config.json", 
-  content: '{ "version": "1.0.1" }'
+  path: "config/config.json",
+  content: '{ "version": "1.0.1" }',
 });
 ```
 
@@ -57,22 +57,29 @@ file = await File("config.json", {
 The fs service provides specialized file types for common formats:
 
 ```ts
-import { StaticJsonFile, StaticTypeScriptFile, StaticYamlFile } from "alchemy/fs";
+import {
+  StaticJsonFile,
+  StaticTypeScriptFile,
+  StaticYamlFile,
+} from "alchemy/fs";
 
 // Create formatted JSON file
 const config = await StaticJsonFile("config.json", {
-  api: { endpoint: "https://api.example.com" }
+  api: { endpoint: "https://api.example.com" },
 });
 
-// Create formatted TypeScript file 
-const component = await StaticTypeScriptFile("Component.ts", `
+// Create formatted TypeScript file
+const component = await StaticTypeScriptFile(
+  "Component.ts",
+  `
   export function Component() {
     return <div>Hello</div>
   }
-`);
+`
+);
 
 // Create YAML file
 const deployment = await StaticYamlFile("deploy.yaml", {
-  service: { replicas: 3 }
+  service: { replicas: 3 },
 });
 ```

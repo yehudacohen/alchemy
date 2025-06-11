@@ -1,5 +1,5 @@
 ---
-title: Managing Static Text Files with Alchemy FS Provider
+title: Static Text File
 description: Learn how to create and manage static text (.txt) files using Alchemy's FS provider.
 ---
 
@@ -14,7 +14,8 @@ Creates a simple text file with content:
 ```ts
 import { StaticTextFile } from "alchemy/fs";
 
-const readme = await StaticTextFile("README.md", 
+const readme = await StaticTextFile(
+  "README.md",
   "# Project Name\n\nProject description goes here."
 );
 ```
@@ -26,7 +27,8 @@ Creates a text file at a specific path:
 ```ts
 import { StaticTextFile } from "alchemy/fs";
 
-const changelog = await StaticTextFile("CHANGELOG.md",
+const changelog = await StaticTextFile(
+  "CHANGELOG.md",
   "docs/CHANGELOG.md",
   "# Changelog\n\n## v1.0.0\n\n- Initial release"
 );
@@ -39,8 +41,9 @@ Creates a text file in a nested directory structure (directories are created aut
 ```ts
 import { StaticTextFile } from "alchemy/fs";
 
-const log = await StaticTextFile("app.log",
-  "logs/app/app.log", 
+const log = await StaticTextFile(
+  "app.log",
+  "logs/app/app.log",
   "Application started successfully"
 );
 ```

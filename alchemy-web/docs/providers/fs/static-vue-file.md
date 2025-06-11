@@ -1,5 +1,5 @@
 ---
-title: Managing Static Vue Files with Alchemy FS Provider
+title: Static Vue File
 description: Learn how to create and manage static Vue (.vue) single-file components with proper formatting using Alchemy's FS provider.
 ---
 
@@ -14,7 +14,9 @@ Creates a basic Vue component file with template, script and style sections.
 ```ts
 import { StaticVueFile } from "alchemy/fs";
 
-const button = await StaticVueFile("Button.vue", `
+const button = await StaticVueFile(
+  "Button.vue",
+  `
 <template>
   <button class="btn">{{ text }}</button>
 </template>
@@ -32,7 +34,8 @@ export default {
   padding: 0.5rem 1rem;
 }
 </style>
-`);
+`
+);
 ```
 
 ## Custom Path
@@ -42,7 +45,8 @@ Creates a Vue component file at a specific path.
 ```ts
 import { StaticVueFile } from "alchemy/fs";
 
-const header = await StaticVueFile("Header", 
+const header = await StaticVueFile(
+  "Header",
   "components/Header.vue",
   `<template>
     <header>
@@ -60,5 +64,6 @@ const header = await StaticVueFile("Header",
     }
   }
   </script>
-`);
+`
+);
 ```

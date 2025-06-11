@@ -1,5 +1,5 @@
 ---
-title: Managing Cloudflare Account API Tokens with Alchemy
+title: Cloudflare API Token
 description: Learn how to create and manage Cloudflare Account API Tokens using Alchemy for secure access to the Cloudflare API.
 ---
 
@@ -16,13 +16,15 @@ import { AccountApiToken } from "alchemy/cloudflare";
 
 const token = await AccountApiToken("readonly-token", {
   name: "Readonly Zone Token",
-  policies: [{
-    effect: "allow",
-    permissionGroups: ["Zone Read", "Analytics Read"],
-    resources: {
-      "com.cloudflare.api.account.zone.*": "*"
-    }
-  }]
+  policies: [
+    {
+      effect: "allow",
+      permissionGroups: ["Zone Read", "Analytics Read"],
+      resources: {
+        "com.cloudflare.api.account.zone.*": "*",
+      },
+    },
+  ],
 });
 ```
 
@@ -34,22 +36,24 @@ Create a token with time-based and IP address restrictions.
 import { AccountApiToken } from "alchemy/cloudflare";
 
 const restrictedToken = await AccountApiToken("restricted-token", {
-  name: "Restricted Access Token", 
-  policies: [{
-    effect: "allow",
-    permissionGroups: ["Worker Routes Edit"],
-    resources: {
-      "com.cloudflare.api.account.worker.route.*": "*"
-    }
-  }],
+  name: "Restricted Access Token",
+  policies: [
+    {
+      effect: "allow",
+      permissionGroups: ["Worker Routes Edit"],
+      resources: {
+        "com.cloudflare.api.account.worker.route.*": "*",
+      },
+    },
+  ],
   notBefore: "2024-01-01T00:00:00Z",
   expiresOn: "2024-12-31T23:59:59Z",
   condition: {
     requestIp: {
       in: ["192.168.1.0/24"],
-      notIn: ["192.168.1.100/32"]
-    }
-  }
+      notIn: ["192.168.1.100/32"],
+    },
+  },
 });
 ```
 
@@ -83,20 +87,22 @@ import { Worker, AccountApiToken } from "alchemy/cloudflare";
 
 const token = await AccountApiToken("api-token", {
   name: "Worker API Token",
-  policies: [{
-    effect: "allow", 
-    permissionGroups: ["Zone Read"],
-    resources: {
-      "com.cloudflare.api.account.zone.*": "*" 
-    }
-  }]
+  policies: [
+    {
+      effect: "allow",
+      permissionGroups: ["Zone Read"],
+      resources: {
+        "com.cloudflare.api.account.zone.*": "*",
+      },
+    },
+  ],
 });
 
 await Worker("my-worker", {
   name: "my-worker",
   script: "console.log('Hello, world!')",
   bindings: {
-    API_TOKEN: token
-  }
+    API_TOKEN: token,
+  },
 });
 ```

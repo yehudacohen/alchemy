@@ -1,5 +1,5 @@
 ---
-title: Managing AWS IAM Policies with Alchemy
+title: AWS IAM Policy
 description: Learn how to create, update, and manage AWS IAM Policies using Alchemy to define permissions for your AWS resources.
 ---
 
@@ -15,18 +15,17 @@ Create a basic policy that allows S3 bucket access:
 import { Policy } from "alchemy/aws";
 
 const s3Policy = await Policy("bucket-access", {
-  policyName: "s3-bucket-access", 
+  policyName: "s3-bucket-access",
   document: {
     Version: "2012-10-17",
-    Statement: [{
-      Effect: "Allow",
-      Action: [
-        "s3:GetObject",
-        "s3:PutObject"
-      ],
-      Resource: `${bucket.arn}/*`
-    }]
-  }
+    Statement: [
+      {
+        Effect: "Allow",
+        Action: ["s3:GetObject", "s3:PutObject"],
+        Resource: `${bucket.arn}/*`,
+      },
+    ],
+  },
 });
 ```
 
@@ -40,7 +39,7 @@ import { Policy } from "alchemy/aws";
 const apiPolicy = await Policy("api-access", {
   policyName: "api-gateway-access",
   document: {
-    Version: "2012-10-17", 
+    Version: "2012-10-17",
     Statement: [
       {
         Sid: "InvokeAPI",
@@ -49,26 +48,23 @@ const apiPolicy = await Policy("api-access", {
         Resource: `${api.executionArn}/*`,
         Condition: {
           StringEquals: {
-            "aws:SourceVpc": vpc.id
-          }
-        }
+            "aws:SourceVpc": vpc.id,
+          },
+        },
       },
       {
         Sid: "ReadLogs",
-        Effect: "Allow", 
-        Action: [
-          "logs:GetLogEvents",
-          "logs:FilterLogEvents"
-        ],
-        Resource: `${api.logGroupArn}:*`
-      }
-    ]
+        Effect: "Allow",
+        Action: ["logs:GetLogEvents", "logs:FilterLogEvents"],
+        Resource: `${api.logGroupArn}:*`,
+      },
+    ],
   },
   description: "Allows invoking API Gateway endpoints and reading logs",
   tags: {
     Service: "API Gateway",
-    Environment: "production" 
-  }
+    Environment: "production",
+  },
 });
 ```
 
@@ -83,16 +79,18 @@ const denyPolicy = await Policy("deny-production", {
   policyName: "deny-production-access",
   document: {
     Version: "2012-10-17",
-    Statement: [{
-      Effect: "Deny",
-      Action: "*", 
-      Resource: "*",
-      Condition: {
-        StringEquals: {
-          "aws:ResourceTag/Environment": "production"
-        }
-      }
-    }]
-  }
+    Statement: [
+      {
+        Effect: "Deny",
+        Action: "*",
+        Resource: "*",
+        Condition: {
+          StringEquals: {
+            "aws:ResourceTag/Environment": "production",
+          },
+        },
+      },
+    ],
+  },
 });
 ```
