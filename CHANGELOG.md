@@ -1,3 +1,13 @@
+## v0.26.1
+
+### &nbsp;&nbsp;&nbsp;🚀 Features
+
+- **cloudflare**: Implement DispatchNamespace resource and Worker dispatch namespace support &nbsp;-&nbsp; by **Sam Goodwin** in https://github.com/sam-goodwin/alchemy/issues/343 [<samp>(0a13a)</samp>](https://github.com/sam-goodwin/alchemy/commit/0a13aa15)
+
+##### &nbsp;&nbsp;&nbsp;&nbsp;[View changes on GitHub](https://github.com/sam-goodwin/alchemy/compare/v0.26.0...v0.26.1)
+
+---
+
 ## v0.26.0
 
 ### &nbsp;&nbsp;&nbsp;🚀 Features
