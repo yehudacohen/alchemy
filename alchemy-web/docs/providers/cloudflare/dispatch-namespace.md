@@ -34,7 +34,7 @@ const namespace = await DispatchNamespace("tenant-workers", {
 const tenantWorker = await Worker("tenant-handler", {
   name: "tenant-handler",
   entrypoint: "./src/tenant.ts",
-  dispatchNamespace: namespace,
+  namespace: namespace,
 });
 ```
 
@@ -91,7 +91,7 @@ import {
 } from "alchemy/cloudflare";
 
 // Create a dispatch namespace for tenant workers
-const tenantNamespace = await DispatchNamespace("tenants", {
+const tenants = await DispatchNamespace("tenants", {
   namespace: "customer-workers",
 });
 
@@ -104,7 +104,7 @@ const tenantData = await KVNamespace("tenant-data", {
 const tenantWorkerA = await Worker("tenant-a", {
   name: "customer-a-worker",
   entrypoint: "./src/tenant-worker.ts",
-  dispatchNamespace: tenantNamespace,
+  namespace: tenants,
   bindings: {
     CONFIG: Json({
       customerId: "customer-a",
@@ -116,7 +116,7 @@ const tenantWorkerA = await Worker("tenant-a", {
 const tenantWorkerB = await Worker("tenant-b", {
   name: "customer-b-worker",
   entrypoint: "./src/tenant-worker.ts",
-  dispatchNamespace: tenantNamespace,
+  namespace: tenants,
   bindings: {
     CONFIG: Json({
       customerId: "customer-b",
@@ -130,7 +130,7 @@ const mainRouter = await Worker("main-router", {
   name: "platform-router",
   entrypoint: "./src/main-router.ts",
   bindings: {
-    TENANT_NAMESPACE: tenantNamespace,
+    TENANT_NAMESPACE: tenants,
     TENANT_DATA: tenantData,
   },
   routes: [

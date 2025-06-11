@@ -257,7 +257,7 @@ export interface BaseWorkerProps<
    *
    * This allows workers to be routed to via dispatch namespace routing rules
    */
-  dispatchNamespace?: string | DispatchNamespaceResource;
+  namespace?: string | DispatchNamespaceResource;
 }
 
 export interface InlineWorkerProps<
@@ -428,7 +428,7 @@ export type Worker<
     /**
      * The dispatch namespace this worker is deployed to
      */
-    dispatchNamespace?: string | DispatchNamespaceResource;
+    namespace?: string | DispatchNamespaceResource;
   };
 
 /**
@@ -898,10 +898,10 @@ export const _Worker = Resource(
       );
 
       // Get dispatch namespace if specified
-      const dispatchNamespace = props.dispatchNamespace
-        ? typeof props.dispatchNamespace === "string"
-          ? props.dispatchNamespace
-          : props.dispatchNamespace.namespace
+      const dispatchNamespace = props.namespace
+        ? typeof props.namespace === "string"
+          ? props.namespace
+          : props.namespace.namespace
         : undefined;
 
       await putWorker(
@@ -995,7 +995,7 @@ export const _Worker = Resource(
         // queue consumers will no longer exist by this point
         eventSources: undefined,
         // stub worker doesn't need dispatch namespace
-        dispatchNamespace: undefined,
+        namespace: undefined,
       });
 
       await withExponentialBackoff(
@@ -1110,7 +1110,7 @@ export const _Worker = Resource(
       // Include the created routes in the output
       routes: createdRoutes.length > 0 ? createdRoutes : undefined,
       // Include the dispatch namespace in the output
-      dispatchNamespace: props.dispatchNamespace,
+      namespace: props.namespace,
       // phantom property
       Env: undefined!,
     } as unknown as Worker<B>);

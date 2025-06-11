@@ -98,7 +98,7 @@ describe("Dispatch Namespace Resource", () => {
             }
           }
         `,
-        dispatchNamespace: dispatchNamespace,
+        namespace: dispatchNamespace,
         url: false,
       });
 
@@ -171,3 +171,20 @@ describe("Dispatch Namespace Resource", () => {
     expect(response.status).toEqual(404);
   }
 });
+
+const tenants = await DispatchNamespace("tenants");
+
+const dispatcher = await Worker("tenants-worker", {
+  entrypoint: "./src/dispatcher.ts",
+  bindings: {
+    TENANTS: tenants,
+  },
+});
+
+const tenant = await Worker("tenant-worker", {
+  entrypoint: "./src/tenant.ts",
+  namespace: tenants,
+});
+
+dispatcher.url;
+tenant.url;

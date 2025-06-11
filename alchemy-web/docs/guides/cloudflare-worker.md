@@ -306,7 +306,7 @@ Deploy workers to dispatch namespaces for multi-tenant architectures using Cloud
 import { Worker, DispatchNamespace } from "alchemy/cloudflare";
 
 // Create a dispatch namespace
-const tenantNamespace = await DispatchNamespace("tenants", {
+const tenants = await DispatchNamespace("tenants", {
   namespace: "customer-workers",
 });
 
@@ -314,7 +314,7 @@ const tenantNamespace = await DispatchNamespace("tenants", {
 const tenantWorker = await Worker("tenant-app", {
   name: "tenant-app-worker",
   entrypoint: "./src/tenant.ts",
-  dispatchNamespace: tenantNamespace,
+  namespace: tenants,
 });
 
 // Create a router that binds to the dispatch namespace
@@ -322,7 +322,7 @@ const router = await Worker("platform-router", {
   name: "main-router",
   entrypoint: "./src/router.ts",
   bindings: {
-    TENANT_WORKERS: tenantNamespace,
+    TENANT_WORKERS: tenants,
   },
 });
 ```
