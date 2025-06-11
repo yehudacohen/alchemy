@@ -175,7 +175,7 @@ function copyCode() {
 }
 
 .name {
-  font-size: 3.6rem;
+  font-size: 4rem;
   font-weight: 700;
   line-height: 1;
   background: var(--vp-home-hero-name-background);
@@ -189,7 +189,7 @@ function copyCode() {
 }
 
 .text {
-  font-size: 2.8rem;
+  font-size: 3.2rem;
   font-weight: 700;
   line-height: 1.1;
   margin-top: 0.625rem;
@@ -483,11 +483,11 @@ function copyCode() {
   }
 
   .name {
-    font-size: 3.2rem;
+    font-size: 3.6rem;
   }
 
   .text {
-    font-size: 2.5rem;
+    font-size: 2.8rem;
   }
 }
 
@@ -510,11 +510,11 @@ function copyCode() {
   }
 
   .name {
-    font-size: 2.8rem;
+    font-size: 3.2rem;
   }
 
   .text {
-    font-size: 2.2rem;
+    font-size: 2.5rem;
     white-space: normal;
   }
 
@@ -543,11 +543,11 @@ function copyCode() {
   }
 
   .name {
-    font-size: 2.4rem;
+    font-size: 2.8rem;
   }
 
   .text {
-    font-size: 1.8rem;
+    font-size: 2.2rem;
     white-space: normal;
   }
 
@@ -584,11 +584,11 @@ function copyCode() {
   }
 
   .name {
-    font-size: 2rem;
+    font-size: 2.4rem;
   }
 
   .text {
-    font-size: 1.5rem;
+    font-size: 1.8rem;
     white-space: normal;
   }
 
@@ -640,11 +640,11 @@ function copyCode() {
   }
 
   .name {
-    font-size: 1.6rem;
+    font-size: 2rem;
   }
 
   .text {
-    font-size: 1.2rem;
+    font-size: 1.5rem;
     margin-top: 0.5rem;
     white-space: normal;
   }

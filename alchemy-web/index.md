@@ -1,13 +1,13 @@
 ---
 layout: home
 title: Alchemy
-description: Wrangle the Cloud with pure TypeScript
+description: Control the Cloud with pure TypeScript
 # Custom hero component instead of the default hero
 ---
 
 <CodeSnippetHero 
   name="Alchemy 🪄" 
-  text="Wrangle the Cloud with pure TypeScript" 
+  text="Control the Cloud with pure TypeScript" 
   tagline="Built-in support for Cloudflare, AWS, Stripe and more — or generate your own in minutes with AI"
   :actions="[
     { theme: 'brand', text: 'Get Started', link: '/docs/getting-started' },
