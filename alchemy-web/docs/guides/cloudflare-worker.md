@@ -369,7 +369,7 @@ const callerWorker = await Worker("caller", {
 ```
 
 > [!NOTE]
-> Learn more in the [Route Documentation](./route.md)
+> Learn more in the [Route Documentation](../providers/cloudflare/route.md)
 
 ### RPC Type
 

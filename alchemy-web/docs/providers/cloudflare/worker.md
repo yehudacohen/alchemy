@@ -117,7 +117,7 @@ And register `env.ts` in your `tsconfig.json`'s `types`.
 ```
 
 > [!TIP]
-> See [Bindings](../concepts/bindings.md) for more information.
+> See [Bindings](../../concepts/bindings.md) for more information.
 
 ## Static Assets
 
@@ -235,7 +235,7 @@ export default {
 ## Durable Object
 
 > [!TIP]
-> See the [Durable Object Guide](./cloudflare-durable-objects.md) for more information.
+> See the [Durable Object Guide](../../guides/cloudflare-durable-objects.md) for more information.
 
 ### Cross-Script Durable Object
 
@@ -295,7 +295,7 @@ const worker = await Worker("api", {
 ```
 
 > [!TIP]
-> See the [Route](../providers/cloudflare/route.md) for more information.
+> See the [Route](./route.md) for more information.
 
 ## Workers for Platforms
 

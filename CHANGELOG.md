@@ -1,3 +1,13 @@
+## v0.27.0
+
+### &nbsp;&nbsp;&nbsp;🐞 Bug Fixes
+
+- **cloudflare**: Rename dispatchNamespace property to namespace &nbsp;-&nbsp; by **Sam Goodwin** [<samp>(3e6c6)</samp>](https://github.com/sam-goodwin/alchemy/commit/3e6c6f6f)
+
+##### &nbsp;&nbsp;&nbsp;&nbsp;[View changes on GitHub](https://github.com/sam-goodwin/alchemy/compare/v0.26.1...v0.27.0)
+
+---
+
 ## v0.26.1
 
 ### &nbsp;&nbsp;&nbsp;🚀 Features
