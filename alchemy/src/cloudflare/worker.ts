@@ -34,6 +34,7 @@ import {
   bundleWorkerScript,
 } from "./bundle/bundle-worker.ts";
 import { isD1Database } from "./d1-database.ts";
+import type { DispatchNamespaceResource } from "./dispatch-namespace.ts";
 import {
   DurableObjectNamespace,
   isDurableObjectNamespace,
@@ -250,6 +251,13 @@ export interface BaseWorkerProps<
    * This is only used when using the rpc property.
    */
   rpc?: (new (...args: any[]) => RPC) | type<RPC>;
+
+  /**
+   * Deploy this worker to a dispatch namespace
+   *
+   * This allows workers to be routed to via dispatch namespace routing rules
+   */
+  dispatchNamespace?: string | DispatchNamespaceResource;
 }
 
 export interface InlineWorkerProps<
@@ -416,6 +424,11 @@ export type Worker<
      * The compatibility flags for the worker
      */
     compatibilityFlags: string[];
+
+    /**
+     * The dispatch namespace this worker is deployed to
+     */
+    dispatchNamespace?: string | DispatchNamespaceResource;
   };
 
 /**
@@ -884,7 +897,20 @@ export const _Worker = Resource(
         assetUploadResult,
       );
 
-      await putWorker(api, workerName, scriptBundle, scriptMetadata);
+      // Get dispatch namespace if specified
+      const dispatchNamespace = props.dispatchNamespace
+        ? typeof props.dispatchNamespace === "string"
+          ? props.dispatchNamespace
+          : props.dispatchNamespace.namespace
+        : undefined;
+
+      await putWorker(
+        api,
+        workerName,
+        scriptBundle,
+        scriptMetadata,
+        dispatchNamespace,
+      );
 
       for (const workflow of workflowsBindings) {
         if (
@@ -968,6 +994,8 @@ export const _Worker = Resource(
         // we are writing a stub worker (to remove binding/event source dependencies)
         // queue consumers will no longer exist by this point
         eventSources: undefined,
+        // stub worker doesn't need dispatch namespace
+        dispatchNamespace: undefined,
       });
 
       await withExponentialBackoff(
@@ -1081,6 +1109,8 @@ export const _Worker = Resource(
       crons: props.crons,
       // Include the created routes in the output
       routes: createdRoutes.length > 0 ? createdRoutes : undefined,
+      // Include the dispatch namespace in the output
+      dispatchNamespace: props.dispatchNamespace,
       // phantom property
       Env: undefined!,
     } as unknown as Worker<B>);
@@ -1128,6 +1158,7 @@ export async function putWorker(
   workerName: string,
   scriptBundle: string | NoBundleResult,
   scriptMetadata: WorkerMetadata,
+  dispatchNamespace?: string,
 ) {
   return withExponentialBackoff(
     async () => {
@@ -1170,15 +1201,15 @@ export async function putWorker(
       );
 
       // Upload worker script with bindings
-      const uploadResponse = await api.put(
-        `/accounts/${api.accountId}/workers/scripts/${workerName}`,
-        formData,
-        {
-          headers: {
-            "Content-Type": "multipart/form-data",
-          },
+      const endpoint = dispatchNamespace
+        ? `/accounts/${api.accountId}/workers/dispatch/namespaces/${dispatchNamespace}/scripts/${workerName}`
+        : `/accounts/${api.accountId}/workers/scripts/${workerName}`;
+
+      const uploadResponse = await api.put(endpoint, formData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
         },
-      );
+      });
 
       // Check if the upload was successful
       if (!uploadResponse.ok) {
