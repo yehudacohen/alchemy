@@ -349,6 +349,15 @@ export interface WranglerJsonSpec {
   pipelines?: { binding: string; pipeline: string }[];
 
   /**
+   * Secrets Store bindings
+   */
+  secrets_store_secrets?: {
+    binding: string;
+    store_id: string;
+    secret_name: string;
+  }[];
+
+  /**
    * Version metadata bindings
    */
   version_metadata?: {
@@ -415,6 +424,11 @@ function processBindings(
     localConnectionString: string;
   }[] = [];
   const pipelines: { binding: string; pipeline: string }[] = [];
+  const secretsStoreSecrets: {
+    binding: string;
+    store_id: string;
+    secret_name: string;
+  }[] = [];
 
   for (const eventSource of eventSources ?? []) {
     if (isQueueEventSource(eventSource)) {
@@ -570,6 +584,16 @@ function processBindings(
       });
     } else if (binding.type === "json") {
       // TODO(sam): anything to do here? not sure wrangler.json supports this
+    } else if (binding.type === "secrets_store") {
+      if (binding.secrets) {
+        for (const [secretName, _secret] of Object.entries(binding.secrets)) {
+          secretsStoreSecrets.push({
+            binding: bindingName,
+            store_id: binding.id,
+            secret_name: secretName,
+          });
+        }
+      }
     } else {
       // biome-ignore lint/correctness/noVoidTypeReturn: it returns never
       return assertNever(binding);
@@ -631,5 +655,9 @@ function processBindings(
 
   if (pipelines.length > 0) {
     spec.pipelines = pipelines;
+  }
+
+  if (secretsStoreSecrets.length > 0) {
+    spec.secrets_store_secrets = secretsStoreSecrets;
   }
 }
