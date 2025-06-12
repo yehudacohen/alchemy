@@ -38,27 +38,18 @@ jobs:
         with:
           # Direct prompt for automatic review without requiring @claude mention
           direct_prompt: |
-            Please review this pull request and provide comprehensive feedback. Focus on:
+            Please review this pull request and provide comprehensive feedback.
 
-            1. Code quality and best practices
-            2. Potential bugs or issues
-            3. Performance considerations
-            4. Security concerns
-            5. Test coverage and quality
-            6. Documentation and comments
-            7. Adherence to the project's coding standards (see CLAUDE.md if available)
-
-            For Alchemy-specific code:
-            - Ensure proper use of alchemy.secret() instead of new Secret()
-            - Check that dependencies are added as peer dependencies
-            - Verify Resource naming conventions (interface and export names must match)
-            - Confirm proper phase handling in Resource implementations
-            - Validate test structure and cleanup patterns
+            Focus on:
+            - Code quality and best practices
+            - Potential bugs or issues
+            - Performance considerations
+            - Security implications
+            - Test coverage
+            - Documentation updates if needed
 
             Provide constructive feedback with specific suggestions for improvement.
-            If the changes look good, mention that as well.
-
-            Be thorough but concise in your review.
+            Use inline comments to highlight specific areas of concern.
 
           allowed_tools: "Bash(bun:*)"
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
