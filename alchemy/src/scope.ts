@@ -8,7 +8,7 @@ import {
   createDummyLogger,
   createLoggerInstance,
   type LoggerApi,
-} from "./util/cli.tsx";
+} from "./util/cli.ts";
 import type { ITelemetryClient } from "./util/telemetry/client.ts";
 
 export interface ScopeOptions {
@@ -21,6 +21,7 @@ export interface ScopeOptions {
   quiet?: boolean;
   phase?: Phase;
   telemetryClient?: ITelemetryClient;
+  logger?: LoggerApi;
 }
 
 // TODO: support browser
@@ -101,7 +102,7 @@ export class Scope {
           phase: this.phase,
           stage: this.stage,
           appName: this.appName ?? "",
-        });
+        }, options.logger);
 
     this.stateStore =
       options.stateStore ??

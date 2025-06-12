@@ -15,7 +15,7 @@ import {
 import { Scope } from "./scope.ts";
 import { serialize } from "./serde.ts";
 import type { State } from "./state.ts";
-import { formatFQN } from "./util/cli.tsx";
+import { formatFQN } from "./util/cli.ts";
 import { logger } from "./util/logger.ts";
 import type { Telemetry } from "./util/telemetry/index.ts";
 
@@ -118,7 +118,6 @@ async function _apply<Out extends Resource>(
             message: "Skipped Resource (no changes)",
             status: "success",
           });
-          logger.log(`Skipping ${resource[ResourceFQN]} (no changes)`);
         }
         options?.resolveInnerScope?.(
           new Scope({
@@ -147,9 +146,6 @@ async function _apply<Out extends Resource>(
         resource: formatFQN(resource[ResourceFQN]),
         message: `${phase === "create" ? "Creating" : "Updating"} Resource...`,
       });
-      logger.log(
-        `${phase === "create" ? "Create" : "Update"}:  "${resource[ResourceFQN]}"`,
-      );
     }
 
     scope.telemetryClient.record({
@@ -201,9 +197,6 @@ async function _apply<Out extends Resource>(
         message: `${phase === "create" ? "Created" : "Updated"} Resource`,
         status: "success",
       });
-      logger.log(
-        `${phase === "create" ? "Created" : "Updated"}: "${resource[ResourceFQN]}"`,
-      );
     }
 
     const status = phase === "create" ? "created" : "updated";

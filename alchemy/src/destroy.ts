@@ -10,7 +10,7 @@ import {
   ResourceSeq,
 } from "./resource.ts";
 import { Scope } from "./scope.ts";
-import { formatFQN } from "./util/cli.tsx";
+import { formatFQN } from "./util/cli.ts";
 import { logger } from "./util/logger.ts";
 
 export class DestroyedSignal extends Error {}
@@ -70,7 +70,6 @@ export async function destroy<Type extends string>(
       parent: instance[ResourceScope],
       scopeName: instance[ResourceID],
     });
-    logger.log("Destroying scope", scope.chain.join("/"));
     return await destroy(scope, options);
   }
 
@@ -95,7 +94,6 @@ export async function destroy<Type extends string>(
         resource: formatFQN(instance[ResourceFQN]),
         message: "Deleting Resource...",
       });
-      logger.log(`Delete:  "${instance[ResourceFQN]}"`);
     }
 
     const state = await scope.state.get(instance[ResourceID]);
@@ -158,7 +156,6 @@ export async function destroy<Type extends string>(
         message: "Deleted Resource",
         status: "success",
       });
-      logger.log(`Deleted: "${instance[ResourceFQN]}"`);
     }
   } catch (error) {
     logger.error(error);
