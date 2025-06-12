@@ -3,6 +3,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { AsyncQueue } from "../util/async-queue.ts";
 import { getContentType } from "../util/content-type.ts";
+import { CloudflareApiError } from "./api-error.ts";
 import type { CloudflareApi } from "./api.ts";
 import type { Assets } from "./assets.ts";
 import type { AssetsConfig, WorkerProps } from "./worker.ts";
@@ -83,6 +84,21 @@ export async function uploadAssets(
 
   const sessionData =
     (await uploadSessionResponse.json()) as UploadSessionResponse;
+
+  if (!sessionData?.success) {
+    if (sessionData?.errors) {
+      throw new CloudflareApiError(
+        `Failed to start assets upload session:\n${sessionData.errors
+          .map((error) => `- ${error.code}: ${error.message}`)
+          .join("\n")}`,
+        uploadSessionResponse,
+      );
+    }
+    throw new CloudflareApiError(
+      `Failed to start assets upload session: ${uploadSessionResponse.statusText}`,
+      uploadSessionResponse,
+    );
+  }
 
   // If there are no buckets, assets are already uploaded or empty
   if (!sessionData.result.buckets || sessionData.result.buckets.length === 0) {
