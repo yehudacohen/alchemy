@@ -4,14 +4,12 @@ import { type } from "arktype";
 
 const BRANCH_PREFIX = process.env.BRANCH_PREFIX ?? process.env.USER;
 
-const app = await alchemy("cloudflare-worker", {
+const app = await alchemy("cloudflare-worker-bootstrap", {
   stage: BRANCH_PREFIX,
-  phase: process.argv.includes("--destroy") ? "destroy" : "up",
   stateStore:
     process.env.ALCHEMY_STATE_STORE === "cloudflare"
       ? (scope) => new R2RestStateStore(scope)
       : undefined,
-  password: process.env.ALCHEMY_PASSWORD,
 });
 
 type Message = typeof Message.infer;

@@ -20,6 +20,39 @@ import { TelemetryClient } from "./util/telemetry/client.ts";
 import type { LoggerApi } from "./util/cli.ts";
 
 /**
+ * Parses CLI arguments to extract alchemy options
+ */
+function parseCliArgs(): Partial<AlchemyOptions> {
+  const args = process.argv.slice(2);
+  const options: Partial<AlchemyOptions> = {};
+
+  // Parse phase from CLI arguments
+  if (args.includes("--destroy")) {
+    options.phase = "destroy";
+  } else if (args.includes("--read")) {
+    options.phase = "read";
+  }
+
+  // Parse quiet flag
+  if (args.includes("--quiet")) {
+    options.quiet = true;
+  }
+
+  // Parse stage argument (--stage my-stage)
+  const stageIndex = args.indexOf("--stage");
+  if (stageIndex !== -1 && stageIndex + 1 < args.length) {
+    options.stage = args[stageIndex + 1];
+  }
+
+  // Get password from environment variables
+  if (process.env.ALCHEMY_PASSWORD) {
+    options.password = process.env.ALCHEMY_PASSWORD;
+  }
+
+  return options;
+}
+
+/**
  * Type alias for semantic highlighting of `alchemy` as a type keyword
  */
 export type alchemy = Alchemy;
@@ -29,9 +62,16 @@ export const alchemy: Alchemy = _alchemy as any;
 /**
  * The Alchemy interface provides core functionality and is augmented by providers.
  * Supports both application scoping with secrets and template string interpolation.
+ * Automatically parses CLI arguments for common options.
  *
  * @example
- * // Create an application scope with stage and secret handling
+ * // Simple usage with automatic CLI argument parsing
+ * const app = await alchemy("my-app");
+ * // Now supports: --destroy, --read, --quiet, --stage my-stage
+ * // Environment variables: PASSWORD, ALCHEMY_PASSWORD, ALCHEMY_STAGE, USER
+ *
+ * @example
+ * // Create an application scope with explicit options (overrides CLI args)
  * const app = await alchemy("github:alchemy", {
  *   stage: "prod",
  *   phase: "up",
@@ -69,8 +109,15 @@ export interface Alchemy {
   /**
    * Creates a new application scope with the given name and options.
    * Used to create and manage resources with proper secret handling.
+   * Automatically parses CLI arguments: --destroy, --read, --quiet, --stage <name>
+   * Environment variables: PASSWORD, ALCHEMY_PASSWORD, ALCHEMY_STAGE, USER
    *
    * @example
+   * // Simple usage with CLI argument parsing
+   * const app = await alchemy("my-app");
+   *
+   * @example
+   * // With explicit options (overrides CLI args)
    * const app = await alchemy("my-app", {
    *   stage: "prod",
    *   // Required for encrypting/decrypting secrets
@@ -115,20 +162,29 @@ async function _alchemy(
 ): Promise<Scope | string | never> {
   if (typeof args[0] === "string") {
     const [appName, options] = args as [string, AlchemyOptions?];
-    const phase = isRuntime ? "read" : (options?.phase ?? "up");
+
+    // Parse CLI arguments and merge with provided options (explicit options take precedence)
+    const cliOptions = parseCliArgs();
+    const mergedOptions = {
+      ...cliOptions,
+      ...options,
+    };
+
+    const phase = isRuntime ? "read" : (mergedOptions?.phase ?? "up");
     const telemetryClient =
-      options?.parent?.telemetryClient ??
+      mergedOptions?.parent?.telemetryClient ??
       TelemetryClient.create({
         phase,
-        enabled: options?.telemetry ?? true,
-        quiet: options?.quiet ?? false,
+        enabled: mergedOptions?.telemetry ?? true,
+        quiet: mergedOptions?.quiet ?? false,
       });
     const root = new Scope({
-      ...options,
+      ...mergedOptions,
       appName,
-      stage: options?.stage ?? process.env.ALCHEMY_STAGE,
+      stage:
+        mergedOptions?.stage ?? process.env.ALCHEMY_STAGE ?? process.env.USER,
       phase,
-      password: options?.password ?? process.env.ALCHEMY_PASSWORD,
+      password: mergedOptions?.password ?? process.env.ALCHEMY_PASSWORD,
       telemetryClient,
     });
     try {
@@ -138,7 +194,7 @@ async function _alchemy(
       // see Scope.finalize for where we pop the global scope
       Scope.globals.push(root);
     }
-    if (options?.phase === "destroy") {
+    if (mergedOptions?.phase === "destroy") {
       await destroy(root);
       return process.exit(0);
     }

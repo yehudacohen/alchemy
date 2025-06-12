@@ -4,10 +4,6 @@ import { DOStateStore, Nuxt, Pipeline, R2Bucket } from "alchemy/cloudflare";
 const BRANCH_PREFIX = process.env.BRANCH_PREFIX ?? "";
 
 const app = await alchemy("cloudflare-nuxt-pipeline", {
-  stage: process.env.USER ?? "dev",
-  phase: process.argv.includes("--destroy") ? "destroy" : "up",
-  quiet: !process.argv.includes("--verbose"),
-  password: process.env.SECRET_PASSPHRASE,
   stateStore:
     process.env.ALCHEMY_STATE_STORE === "cloudflare"
       ? (scope) => new DOStateStore(scope)

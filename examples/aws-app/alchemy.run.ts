@@ -6,10 +6,6 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const app = await alchemy("aws-app", {
-  // decide the mode/stage however you want
-  phase: process.argv[2] === "destroy" ? "destroy" : "up",
-  stage: process.argv[3],
-  quiet: process.argv.includes("--quiet"),
   stateStore:
     process.env.ALCHEMY_STATE_STORE === "cloudflare"
       ? (scope) => new DOStateStore(scope)
