@@ -1,3 +1,13 @@
+## v0.28.0
+
+### &nbsp;&nbsp;&nbsp;🐞 Bug Fixes
+
+- Remove interactive CLI that brought in Ink and React from alchemy dependency and &nbsp;-&nbsp; by **Sam Goodwin** in https://github.com/sam-goodwin/alchemy/issues/360 [<samp>(e7797)</samp>](https://github.com/sam-goodwin/alchemy/commit/e77976f7)
+
+##### &nbsp;&nbsp;&nbsp;&nbsp;[View changes on GitHub](https://github.com/sam-goodwin/alchemy/compare/v0.27.0...v0.28.0)
+
+---
+
 ## v0.27.0
 
 ### &nbsp;&nbsp;&nbsp;🐞 Bug Fixes
