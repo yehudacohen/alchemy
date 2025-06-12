@@ -92,7 +92,7 @@ export const createFallbackLogger = (alchemyInfo: AlchemyInfo): LoggerApi => {
     task: (_id: string, data: Task) => {
       const prefix = data.prefix ? `[${data.prefix}]` : "";
 
-      // Pad the prefix to ensure consistent alignment (12 characters total)
+      // Pad the prefix to ensure consistent alignment (12 characters total including brackets)
       const paddedPrefix = prefix.padEnd(12);
       const prefixWithColor =
         data.prefixColor && prefix
@@ -107,7 +107,7 @@ export const createFallbackLogger = (alchemyInfo: AlchemyInfo): LoggerApi => {
       } else if (prefixWithColor) {
         console.log(`${prefixWithColor}${message}`);
       } else {
-        console.log(message);
+        console.log(`${message}`);
       }
     },
     exit: () => {},

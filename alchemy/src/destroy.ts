@@ -89,8 +89,8 @@ export async function destroy<Type extends string>(
   try {
     if (!quiet) {
       logger.task(instance[ResourceFQN], {
-        prefix: "DELETING",
-        prefixColor: "magenta",
+        prefix: "deleting",
+        prefixColor: "redBright",
         resource: formatFQN(instance[ResourceFQN]),
         message: "Deleting Resource...",
       });
@@ -150,7 +150,7 @@ export async function destroy<Type extends string>(
 
     if (!quiet) {
       logger.task(instance[ResourceFQN], {
-        prefix: "DELETED",
+        prefix: "deleted",
         prefixColor: "greenBright",
         resource: formatFQN(instance[ResourceFQN]),
         message: "Deleted Resource",
