@@ -220,33 +220,34 @@ const _SecretsStore = Resource("cloudflare::SecretsStore", async function <
 
     await insertSecrets(api, storeId, props);
   } else {
-    try {
+    // If adopt is true, first check if a store with this name already exists
+    if (props.adopt) {
+      console.log(`Checking for existing secrets store '${name}' to adopt`);
+      const existingStore = await findSecretsStoreByName(api, name);
+
+      if (existingStore) {
+        console.log(`Found existing secrets store '${name}', adopting it`);
+        storeId = existingStore.id;
+        createdAt = existingStore.createdAt || Date.now();
+      } else {
+        console.log(
+          `No existing secrets store '${name}' found, creating new one`,
+        );
+        const { id } = await createSecretsStore(api, {
+          ...props,
+          name,
+        });
+        createdAt = Date.now();
+        storeId = id;
+      }
+    } else {
+      // Default behavior: create a new store
       const { id } = await createSecretsStore(api, {
         ...props,
         name,
       });
       createdAt = Date.now();
       storeId = id;
-    } catch (error) {
-      if (
-        props.adopt &&
-        error instanceof Error &&
-        error.message.includes("already exists")
-      ) {
-        console.log(`Secrets store '${name}' already exists, adopting it`);
-        const existingStore = await findSecretsStoreByName(api, name);
-
-        if (!existingStore) {
-          throw new Error(
-            `Failed to find existing secrets store '${name}' for adoption`,
-          );
-        }
-
-        storeId = existingStore.id;
-        createdAt = existingStore.createdAt || Date.now();
-      } else {
-        throw error;
-      }
     }
 
     await insertSecrets(api, storeId, props);
