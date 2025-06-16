@@ -1,3 +1,23 @@
+## v0.29.0
+
+### &nbsp;&nbsp;&nbsp;🚀 Features
+
+- Add automatic CLI argument parsing to alchemy() function &nbsp;-&nbsp; by **Sam Goodwin** in https://github.com/sam-goodwin/alchemy/issues/356 [<samp>(ddf55)</samp>](https://github.com/sam-goodwin/alchemy/commit/ddf55085)
+- **github**: Add GitHub Comment resource for issue and PR comments &nbsp;-&nbsp; by **Sam Goodwin** in https://github.com/sam-goodwin/alchemy/issues/365 [<samp>(a4a82)</samp>](https://github.com/sam-goodwin/alchemy/commit/a4a82185)
+
+### &nbsp;&nbsp;&nbsp;🐞 Bug Fixes
+
+- **cloudflare**:
+  - Handle null upload result &nbsp;-&nbsp; by **Sam Goodwin** in https://github.com/sam-goodwin/alchemy/issues/367 [<samp>(d6681)</samp>](https://github.com/sam-goodwin/alchemy/commit/d66817af)
+  - SecretsStore adoption logic to check existing store before creating &nbsp;-&nbsp; by **Tyler van Hensbergen** in https://github.com/sam-goodwin/alchemy/issues/378 [<samp>(3d542)</samp>](https://github.com/sam-goodwin/alchemy/commit/3d542533)
+  - 404 error when deploying dofs state store &nbsp;-&nbsp; by **John Royal** in https://github.com/sam-goodwin/alchemy/issues/379 [<samp>(f5b7e)</samp>](https://github.com/sam-goodwin/alchemy/commit/f5b7e5d9)
+- **core**:
+  - Export Scope class &nbsp;-&nbsp; by **Sam Goodwin** [<samp>(78877)</samp>](https://github.com/sam-goodwin/alchemy/commit/788773ca)
+
+##### &nbsp;&nbsp;&nbsp;&nbsp;[View changes on GitHub](https://github.com/sam-goodwin/alchemy/compare/v0.28.0...v0.29.0)
+
+---
+
 ## v0.28.0
 
 ### &nbsp;&nbsp;&nbsp;🐞 Bug Fixes
