@@ -1,3 +1,13 @@
+## v0.30.0
+
+### &nbsp;&nbsp;&nbsp;🚀 Features
+
+- Implement alchemy create CLI &nbsp;-&nbsp; by **Sam Goodwin** in https://github.com/sam-goodwin/alchemy/issues/376 [<samp>(85a8e)</samp>](https://github.com/sam-goodwin/alchemy/commit/85a8e2f8)
+
+##### &nbsp;&nbsp;&nbsp;&nbsp;[View changes on GitHub](https://github.com/sam-goodwin/alchemy/compare/v0.29.3...v0.30.0)
+
+---
+
 ## v0.29.3
 
 ### &nbsp;&nbsp;&nbsp;🚀 Features
