@@ -1,9 +1,15 @@
 import { alchemy } from "./alchemy.ts";
 
+declare global {
+  var __ALCHEMY_SECRETS__: {
+    [name: string]: Secret;
+  };
+}
+
 // a global registry of all secrets that we will use when serializing an application
 const globalSecrets: {
   [name: string]: Secret;
-} = {};
+} = (globalThis.__ALCHEMY_SECRETS__ ??= {});
 
 let i = 0;
 function nextName() {

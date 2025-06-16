@@ -4201,7 +4201,7 @@
 
     "alchemy/@types/bun": ["@types/bun@1.2.16", "", { "dependencies": { "bun-types": "1.2.16" } }, "sha512-1aCZJ/6nSiViw339RsaNhkNoEloLaPzZhxMOYEa7OzRzO41IGg5n/7I43/ZIAW/c+Q6cT12Vf7fOZOoVIzb5BQ=="],
 
-    "alchemy/@types/node": ["@types/node@24.0.1", "", { "dependencies": { "undici-types": "~7.8.0" } }, "sha512-MX4Zioh39chHlDJbKmEgydJDS3tspMP/lnQC67G3SWsTnb9NeYVWOjkxpOSy4oMfPs4StcWHwBrvUb4ybfnuaw=="],
+    "alchemy/@types/node": ["@types/node@24.0.3", "", { "dependencies": { "undici-types": "~7.8.0" } }, "sha512-R4I/kzCYAdRLzfiCabn9hxWfbuHS573x+r0dJMkkzThEa7pbrcDWK+9zu3e7aBOouf+rQAciqPFMnxwr0aWgKg=="],
 
     "alchemy/braintrust": ["braintrust@0.0.201", "", { "dependencies": { "@ai-sdk/provider": "^1.0.1", "@braintrust/core": "0.0.86", "@next/env": "^14.2.3", "@vercel/functions": "^1.0.2", "ai": "^3.2.16", "argparse": "^2.0.1", "chalk": "^4.1.2", "cli-progress": "^3.12.0", "cors": "^2.8.5", "dotenv": "^16.4.5", "esbuild": "^0.25.3", "eventsource-parser": "^1.1.2", "express": "^4.21.2", "graceful-fs": "^4.2.11", "http-errors": "^2.0.0", "minimatch": "^9.0.3", "mustache": "^4.2.0", "pluralize": "^8.0.0", "simple-git": "^3.21.0", "slugify": "^1.6.6", "source-map": "^0.7.4", "uuid": "^9.0.1", "zod": "^3.22.4", "zod-to-json-schema": "^3.22.5" }, "bin": { "braintrust": "dist/cli.js" } }, "sha512-qH4esyOskiQ25OzbmlnPMVKEImDuFANEuYknNEsgS2f3M7t5SfbZxdelbYWcFPbUwQO3TR3XktszWcc3+oAZKg=="],
 
@@ -5428,6 +5428,8 @@
     "@tanstack/start-plugin-core/h3/unenv/pathe": ["pathe@1.1.2", "", {}, "sha512-whLdWMYL2TwI08hn8/ZqAbrVemu0LNaNNJZX73O6qaIdCTfXutsLhMkjdENX0qhsQ9uIimo4/aQOmXkoon2nDQ=="],
 
     "@tanstack/start-server-core/h3/unenv/pathe": ["pathe@1.1.2", "", {}, "sha512-whLdWMYL2TwI08hn8/ZqAbrVemu0LNaNNJZX73O6qaIdCTfXutsLhMkjdENX0qhsQ9uIimo4/aQOmXkoon2nDQ=="],
+
+    "alchemy/@types/bun/bun-types/@types/node": ["@types/node@24.0.1", "", { "dependencies": { "undici-types": "~7.8.0" } }, "sha512-MX4Zioh39chHlDJbKmEgydJDS3tspMP/lnQC67G3SWsTnb9NeYVWOjkxpOSy4oMfPs4StcWHwBrvUb4ybfnuaw=="],
 
     "alchemy/braintrust/@braintrust/core/@asteasolutions/zod-to-openapi": ["@asteasolutions/zod-to-openapi@6.4.0", "", { "dependencies": { "openapi3-ts": "^4.1.2" }, "peerDependencies": { "zod": "^3.20.2" } }, "sha512-8cxfF7AHHx2PqnN4Cd8/O8CBu/nVYJP9DpnfVLW3BFb66VJDnqI/CczZnkqMc3SNh6J9GiX7JbJ5T4BSP4HZ2Q=="],
 
