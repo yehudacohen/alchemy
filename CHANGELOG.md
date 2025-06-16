@@ -1,3 +1,17 @@
+## v0.29.3
+
+### &nbsp;&nbsp;&nbsp;🚀 Features
+
+- **cloudflare**: Allow binding individual secrets &nbsp;-&nbsp; by **Tyler van Hensbergen** in https://github.com/sam-goodwin/alchemy/issues/393 [<samp>(39483)</samp>](https://github.com/sam-goodwin/alchemy/commit/394833a4)
+
+### &nbsp;&nbsp;&nbsp;🐞 Bug Fixes
+
+- **core**: Ensure global Secret list is stored on globalThis &nbsp;-&nbsp; by **Sam Goodwin** [<samp>(8733a)</samp>](https://github.com/sam-goodwin/alchemy/commit/8733a38f)
+
+##### &nbsp;&nbsp;&nbsp;&nbsp;[View changes on GitHub](https://github.com/sam-goodwin/alchemy/compare/v0.29.2...v0.29.3)
+
+---
+
 ## v0.29.2
 
 ### &nbsp;&nbsp;&nbsp;🐞 Bug Fixes
