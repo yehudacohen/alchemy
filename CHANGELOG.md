@@ -1,3 +1,13 @@
+## v0.29.2
+
+### &nbsp;&nbsp;&nbsp;🐞 Bug Fixes
+
+- **core**: Use Symbol instead of instanceof for checking Secret and Scope &nbsp;-&nbsp; by **Sam Goodwin** in https://github.com/sam-goodwin/alchemy/issues/391 [<samp>(be1c1)</samp>](https://github.com/sam-goodwin/alchemy/commit/be1c156e)
+
+##### &nbsp;&nbsp;&nbsp;&nbsp;[View changes on GitHub](https://github.com/sam-goodwin/alchemy/compare/v0.29.1...v0.29.2)
+
+---
+
 ## v0.29.1
 
 ### &nbsp;&nbsp;&nbsp;🐞 Bug Fixes
