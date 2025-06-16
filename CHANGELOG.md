@@ -1,3 +1,13 @@
+## v0.29.1
+
+### &nbsp;&nbsp;&nbsp;🐞 Bug Fixes
+
+- **core**: Ensure Scope AsyncLocalStorage is unique singleton even with multiple alchemy instances &nbsp;-&nbsp; by **Sam Goodwin** in https://github.com/sam-goodwin/alchemy/issues/390 [<samp>(1c113)</samp>](https://github.com/sam-goodwin/alchemy/commit/1c113177)
+
+##### &nbsp;&nbsp;&nbsp;&nbsp;[View changes on GitHub](https://github.com/sam-goodwin/alchemy/compare/v0.29.0...v0.29.1)
+
+---
+
 ## v0.29.0
 
 ### &nbsp;&nbsp;&nbsp;🚀 Features
