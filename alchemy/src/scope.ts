@@ -27,10 +27,15 @@ export interface ScopeOptions {
 // TODO: support browser
 const DEFAULT_STAGE = process.env.ALCHEMY_STAGE ?? process.env.USER ?? "dev";
 
+declare global {
+  var __ALCHEMY_STORAGE__: AsyncLocalStorage<Scope>;
+}
+
 export class Scope {
   public static readonly KIND = "alchemy::Scope" as const;
 
-  public static storage = new AsyncLocalStorage<Scope>();
+  public static storage = (globalThis.__ALCHEMY_STORAGE__ ??=
+    new AsyncLocalStorage<Scope>());
   public static globals: Scope[] = [];
 
   public static get(): Scope | undefined {
