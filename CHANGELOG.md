@@ -1,3 +1,19 @@
+## v0.30.1
+
+### &nbsp;&nbsp;&nbsp;🚀 Features
+
+- **cloudflare**:
+  - Auto-create default secrets store &nbsp;-&nbsp; by **Sam Goodwin** in https://github.com/sam-goodwin/alchemy/issues/395 [<samp>(3251d)</samp>](https://github.com/sam-goodwin/alchemy/commit/3251d1e1)
+  - Add SecretKey binding support for Cloudflare Workers &nbsp;-&nbsp; by **Sam Goodwin** in https://github.com/sam-goodwin/alchemy/issues/385 [<samp>(08278)</samp>](https://github.com/sam-goodwin/alchemy/commit/082785a1)
+
+### &nbsp;&nbsp;&nbsp;🐞 Bug Fixes
+
+- **cloudflare**: Secret binding type &nbsp;-&nbsp; by **Tyler van Hensbergen** in https://github.com/sam-goodwin/alchemy/issues/398 [<samp>(724d9)</samp>](https://github.com/sam-goodwin/alchemy/commit/724d9c26)
+
+##### &nbsp;&nbsp;&nbsp;&nbsp;[View changes on GitHub](https://github.com/sam-goodwin/alchemy/compare/v0.30.0...v0.30.1)
+
+---
+
 ## v0.30.0
 
 ### &nbsp;&nbsp;&nbsp;🚀 Features
