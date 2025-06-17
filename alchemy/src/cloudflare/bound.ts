@@ -47,7 +47,7 @@ export type Bound<T extends Binding> = T extends _DurableObjectNamespace<
               : T extends Secret
                 ? string
                 : T extends CloudflareSecret
-                  ? string
+                  ? SecretsStoreSecret
                   : T extends SecretKey
                     ? CryptoKey
                     : T extends Assets
