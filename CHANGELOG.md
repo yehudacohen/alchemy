@@ -1,3 +1,14 @@
+## v0.31.0
+
+### &nbsp;&nbsp;&nbsp;🐞 Bug Fixes
+
+- Bug in create vitejs &nbsp;-&nbsp; by **Sam Goodwin** [<samp>(4efe2)</samp>](https://github.com/sam-goodwin/alchemy/commit/4efe232e)
+- Move required and internal peerDeps to deps &nbsp;-&nbsp; by **Sam Goodwin** in https://github.com/sam-goodwin/alchemy/issues/402 [<samp>(31d92)</samp>](https://github.com/sam-goodwin/alchemy/commit/31d924d2)
+
+##### &nbsp;&nbsp;&nbsp;&nbsp;[View changes on GitHub](https://github.com/sam-goodwin/alchemy/compare/v0.30.1...v0.31.0)
+
+---
+
 ## v0.30.1
 
 ### &nbsp;&nbsp;&nbsp;🚀 Features
