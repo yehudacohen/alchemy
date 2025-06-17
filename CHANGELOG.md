@@ -1,3 +1,13 @@
+## v0.32.1
+
+### &nbsp;&nbsp;&nbsp;🐞 Bug Fixes
+
+- **cloudflare**: Fix SSR for astro by setting not_found_hanlding=none &nbsp;-&nbsp; by **Sam Goodwin** in https://github.com/sam-goodwin/alchemy/issues/407 [<samp>(7750f)</samp>](https://github.com/sam-goodwin/alchemy/commit/7750f024)
+
+##### &nbsp;&nbsp;&nbsp;&nbsp;[View changes on GitHub](https://github.com/sam-goodwin/alchemy/compare/v0.32.0...v0.32.1)
+
+---
+
 ## v0.32.0
 
 ### &nbsp;&nbsp;&nbsp;🚀 Features
