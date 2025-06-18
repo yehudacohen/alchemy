@@ -926,6 +926,13 @@ export const _Worker = Resource(
         }
       }
 
+      // Get dispatch namespace if specified
+      const dispatchNamespace = props.namespace
+        ? typeof props.namespace === "string"
+          ? props.namespace
+          : props.namespace.namespace
+        : undefined;
+
       // Upload any assets and get completion tokens
       let assetUploadResult: AssetUploadResult | undefined;
       if (assetsBindings.length > 0) {
@@ -934,12 +941,12 @@ export const _Worker = Resource(
         const assetBinding = assetsBindings[0];
 
         // Upload the assets and get the completion token
-        assetUploadResult = await uploadAssets(
-          api,
+        assetUploadResult = await uploadAssets(api, {
           workerName,
-          assetBinding.assets,
-          props.assets,
-        );
+          assets: assetBinding.assets,
+          assetConfig: props.assets,
+          namespace: dispatchNamespace,
+        });
       }
 
       // Prepare metadata with bindings
@@ -955,13 +962,6 @@ export const _Worker = Resource(
         },
         assetUploadResult,
       );
-
-      // Get dispatch namespace if specified
-      const dispatchNamespace = props.namespace
-        ? typeof props.namespace === "string"
-          ? props.namespace
-          : props.namespace.namespace
-        : undefined;
 
       // Deploy worker (either as version or live worker)
       const versionResult = await putWorker(

@@ -1,6 +1,9 @@
+import * as fs from "node:fs/promises";
+import * as path from "node:path";
 import { describe, expect } from "vitest";
 import { alchemy } from "../../src/alchemy.ts";
 import { createCloudflareApi } from "../../src/cloudflare/api.ts";
+import { Assets } from "../../src/cloudflare/assets.ts";
 import { DispatchNamespace } from "../../src/cloudflare/dispatch-namespace.ts";
 import { Worker } from "../../src/cloudflare/worker.ts";
 import { BRANCH_PREFIX } from "../util.ts";
@@ -130,6 +133,107 @@ describe("Dispatch Namespace Resource", () => {
       await alchemy.destroy(scope);
       if (targetWorker) {
         await assertWorkerDoesNotExist(targetWorker.name);
+      }
+      if (dispatcherWorker) {
+        await assertWorkerDoesNotExist(dispatcherWorker.name);
+      }
+      if (dispatchNamespace) {
+        await assertDispatchNamespaceNotExists(dispatchNamespace.namespace);
+      }
+    }
+  });
+
+  test("dispatch namespace with asset bindings", async (scope) => {
+    const workerName = `${BRANCH_PREFIX}-asset-worker`;
+    const dispatcherWorkerName = `${BRANCH_PREFIX}-asset-dispatcher`;
+    const namespaceName = `${BRANCH_PREFIX}-asset-namespace`;
+    let tempDir: string | undefined;
+
+    let assetWorker: Worker | undefined;
+    let dispatcherWorker: Worker | undefined;
+    let dispatchNamespace: DispatchNamespace | undefined;
+
+    try {
+      // 1. Create a temporary directory with test assets
+      tempDir = path.join(".out", "alchemy-dispatch-assets-test");
+      await fs.rm(tempDir, { recursive: true, force: true });
+      await fs.mkdir(tempDir, { recursive: true });
+
+      // Create test files
+      const htmlContent = "Hello from dispatch namespace assets!";
+      const cssContent = "body { color: blue; }";
+
+      await Promise.all([
+        fs.writeFile(path.join(tempDir, "index.html"), htmlContent),
+        fs.writeFile(path.join(tempDir, "styles.css"), cssContent),
+      ]);
+
+      // 2. Create assets resource
+      const assets = await Assets("dispatch-static-assets", {
+        path: tempDir,
+      });
+
+      // 3. Create a dispatch namespace
+      dispatchNamespace = await DispatchNamespace("asset-dispatch-namespace", {
+        namespace: namespaceName,
+        adopt: true,
+      });
+
+      // 4. Create a worker in the dispatch namespace with asset bindings
+      assetWorker = await Worker(workerName, {
+        name: workerName,
+        script: `
+          export default {
+            async fetch(request, env, ctx) {
+              return env.ASSETS.fetch(request);
+            }
+          }
+        `,
+        namespace: dispatchNamespace,
+        url: false,
+        bindings: {
+          ASSETS: assets,
+        },
+      });
+
+      // 5. Create a dispatcher worker that routes to the asset worker
+      dispatcherWorker = await Worker(dispatcherWorkerName, {
+        name: dispatcherWorkerName,
+        script: `
+          export default {
+            async fetch(request, env, ctx) {
+              return await env.NAMESPACE.get('${workerName}').fetch(request);
+            }
+          }
+        `,
+        bindings: {
+          NAMESPACE: dispatchNamespace,
+        },
+        url: true,
+      });
+
+      // 6. Test static asset serving through dispatch namespace
+      const htmlResponse = await fetchAndExpectOK(
+        `${dispatcherWorker.url}/index.html`,
+      );
+      const htmlText = await htmlResponse.text();
+      expect(htmlText).toEqual(htmlContent);
+
+      // Test CSS file
+      const cssResponse = await fetchAndExpectOK(
+        `${dispatcherWorker.url}/styles.css`,
+      );
+      const cssText = await cssResponse.text();
+      expect(cssText).toEqual(cssContent);
+    } finally {
+      // Clean up temporary directory
+      if (tempDir) {
+        await fs.rm(tempDir, { recursive: true, force: true });
+      }
+
+      await alchemy.destroy(scope);
+      if (assetWorker) {
+        await assertWorkerDoesNotExist(assetWorker.name);
       }
       if (dispatcherWorker) {
         await assertWorkerDoesNotExist(dispatcherWorker.name);
