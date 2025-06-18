@@ -1,3 +1,13 @@
+## v0.34.0
+
+### &nbsp;&nbsp;&nbsp;🐞 Bug Fixes
+
+- **cloudflare**: Add preview IDs for KV, D1, and R2 in wrangler.json &nbsp;-&nbsp; by **Sam Goodwin** in https://github.com/sam-goodwin/alchemy/issues/413 [<samp>(4a59d)</samp>](https://github.com/sam-goodwin/alchemy/commit/4a59d3a3)
+
+##### &nbsp;&nbsp;&nbsp;&nbsp;[View changes on GitHub](https://github.com/sam-goodwin/alchemy/compare/v0.33.1...v0.34.0)
+
+---
+
 ## v0.33.1
 
 ### &nbsp;&nbsp;&nbsp;🐞 Bug Fixes
