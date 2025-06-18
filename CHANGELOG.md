@@ -1,3 +1,13 @@
+## v0.33.1
+
+### &nbsp;&nbsp;&nbsp;🐞 Bug Fixes
+
+- **cloudflare**: Use dispatch namespace asset upload for WFP &nbsp;-&nbsp; by **Sam Goodwin** in https://github.com/sam-goodwin/alchemy/issues/412 [<samp>(bf6b5)</samp>](https://github.com/sam-goodwin/alchemy/commit/bf6b5b80)
+
+##### &nbsp;&nbsp;&nbsp;&nbsp;[View changes on GitHub](https://github.com/sam-goodwin/alchemy/compare/v0.33.0...v0.33.1)
+
+---
+
 ## v0.33.0
 
 ### &nbsp;&nbsp;&nbsp;🚀 Features
