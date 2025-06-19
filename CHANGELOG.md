@@ -1,3 +1,13 @@
+## v0.34.1
+
+### &nbsp;&nbsp;&nbsp;🚀 Features
+
+- **aws**: S3StateStore &nbsp;-&nbsp; by **Sam Goodwin** in https://github.com/sam-goodwin/alchemy/issues/419 [<samp>(73b90)</samp>](https://github.com/sam-goodwin/alchemy/commit/73b907b5)
+
+##### &nbsp;&nbsp;&nbsp;&nbsp;[View changes on GitHub](https://github.com/sam-goodwin/alchemy/compare/v0.34.0...v0.34.1)
+
+---
+
 ## v0.34.0
 
 ### &nbsp;&nbsp;&nbsp;🐞 Bug Fixes
