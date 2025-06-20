@@ -1,3 +1,18 @@
+## v0.36.0
+
+### &nbsp;&nbsp;&nbsp;🚀 Features
+
+- **docker**: Docker provider &nbsp;-&nbsp; by **Pavitra Golchha** in https://github.com/sam-goodwin/alchemy/issues/189 [<samp>(6f973)</samp>](https://github.com/sam-goodwin/alchemy/commit/6f973983)
+
+### &nbsp;&nbsp;&nbsp;🐞 Bug Fixes
+
+- **cli**: Improve package manager handling in create-alchemy &nbsp;-&nbsp; by **Nico Baier** in https://github.com/sam-goodwin/alchemy/issues/423 [<samp>(d0c7c)</samp>](https://github.com/sam-goodwin/alchemy/commit/d0c7ce83)
+- **core**: Allow colors in CI environments, only disable for NO_COLOR &nbsp;-&nbsp; by **Sam Goodwin** in https://github.com/sam-goodwin/alchemy/issues/429 [<samp>(a194a)</samp>](https://github.com/sam-goodwin/alchemy/commit/a194ab5a)
+
+##### &nbsp;&nbsp;&nbsp;&nbsp;[View changes on GitHub](https://github.com/sam-goodwin/alchemy/compare/v0.35.1...v0.36.0)
+
+---
+
 ## v0.35.1
 
 ### &nbsp;&nbsp;&nbsp;🐞 Bug Fixes
