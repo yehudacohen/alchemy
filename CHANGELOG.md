@@ -1,3 +1,13 @@
+## v0.34.2
+
+### &nbsp;&nbsp;&nbsp;🐞 Bug Fixes
+
+- **cloudflare**: Export WorkerStub &nbsp;-&nbsp; by **Sam Goodwin** in https://github.com/sam-goodwin/alchemy/issues/424 [<samp>(34cb0)</samp>](https://github.com/sam-goodwin/alchemy/commit/34cb09b8)
+
+##### &nbsp;&nbsp;&nbsp;&nbsp;[View changes on GitHub](https://github.com/sam-goodwin/alchemy/compare/v0.34.1...v0.34.2)
+
+---
+
 ## v0.34.1
 
 ### &nbsp;&nbsp;&nbsp;🚀 Features
