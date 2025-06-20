@@ -1,3 +1,13 @@
+## v0.35.1
+
+### &nbsp;&nbsp;&nbsp;🐞 Bug Fixes
+
+- **fs**: Better support for windows file system &nbsp;-&nbsp; by **Michael K** in https://github.com/sam-goodwin/alchemy/issues/430 [<samp>(8dd9f)</samp>](https://github.com/sam-goodwin/alchemy/commit/8dd9f196)
+
+##### &nbsp;&nbsp;&nbsp;&nbsp;[View changes on GitHub](https://github.com/sam-goodwin/alchemy/compare/v0.35.0...v0.35.1)
+
+---
+
 ## v0.35.0
 
 ### &nbsp;&nbsp;&nbsp;🐞 Bug Fixes
