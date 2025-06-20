@@ -1055,23 +1055,6 @@ export const _Worker = Resource(
       // Delete any queue consumers attached to this worker first
       await deleteQueueConsumers(api, workerName);
 
-      // @ts-ignore
-      await uploadWorkerScript({
-        ...props,
-        entrypoint: undefined,
-        noBundle: false,
-        script:
-          props.format === "cjs"
-            ? "addEventListener('fetch', event => { event.respondWith(new Response('hello world')); });"
-            : "export default { fetch(request) { return new Response('hello world'); }, queue: () => {} }",
-        bindings: {} as B,
-        // we are writing a stub worker (to remove binding/event source dependencies)
-        // queue consumers will no longer exist by this point
-        eventSources: undefined,
-        // stub worker doesn't need dispatch namespace
-        namespace: undefined,
-      });
-
       await withExponentialBackoff(
         () =>
           deleteWorker(this, api, {
@@ -1211,7 +1194,7 @@ export async function deleteWorker<B extends Bindings>(
 
   // Delete worker
   const deleteResponse = await api.delete(
-    `/accounts/${api.accountId}/workers/scripts/${workerName}`,
+    `/accounts/${api.accountId}/workers/scripts/${workerName}?force=true`,
   );
 
   // Check for success (2xx status code)
