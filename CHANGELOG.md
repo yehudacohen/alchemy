@@ -1,3 +1,17 @@
+## v0.37.1
+
+### &nbsp;&nbsp;&nbsp;🚀 Features
+
+- **cloudflare**: Relax Durable Object RPC type constraint &nbsp;-&nbsp; by **Sam Goodwin** in https://github.com/sam-goodwin/alchemy/issues/445 [<samp>(107e7)</samp>](https://github.com/sam-goodwin/alchemy/commit/107e79de)
+
+### &nbsp;&nbsp;&nbsp;🐞 Bug Fixes
+
+- **cloudflare**: DOStateStore init uploads a worker and not a version &nbsp;-&nbsp; by **Sam Goodwin** in https://github.com/sam-goodwin/alchemy/issues/447 [<samp>(30cc6)</samp>](https://github.com/sam-goodwin/alchemy/commit/30cc6424)
+
+##### &nbsp;&nbsp;&nbsp;&nbsp;[View changes on GitHub](https://github.com/sam-goodwin/alchemy/compare/v0.37.0...v0.37.1)
+
+---
+
 ## v0.37.0
 
 ### &nbsp;&nbsp;&nbsp;🚀 Features
