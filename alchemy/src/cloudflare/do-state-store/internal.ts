@@ -152,7 +152,7 @@ export async function upsertStateStoreWorker(
 
   // Put the worker with migration tag v1
   const response = await api.post(
-    `/accounts/${api.accountId}/workers/scripts/${workerName}/versions`,
+    `/accounts/${api.accountId}/workers/scripts/${workerName}`,
     formData,
   );
   if (!response.ok) {
