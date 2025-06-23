@@ -153,7 +153,7 @@ export async function upsertStateStoreWorker(
   );
 
   // Put the worker with migration tag v1
-  const response = await api.post(
+  const response = await api.put(
     `/accounts/${api.accountId}/workers/scripts/${workerName}`,
     formData,
   );
@@ -209,7 +209,7 @@ export async function getAccountSubdomain(api: CloudflareApi) {
   const res = await api.get(`/accounts/${api.accountId}/workers/subdomain`);
   if (!res.ok) {
     throw new Error(
-      `Failed to get account subdomain: ${res.status} ${res.statusText}`,
+      `Failed to get account subdomain: ${res.status} ${res.statusText}: ${await res.text().catch(() => "unknown error")}`,
     );
   }
   const json: { result: { subdomain: string } } = await res.json();
@@ -237,5 +237,7 @@ async function bundleWorkerScript() {
   if (!result.outputFiles?.[0]) {
     throw new Error("Failed to bundle worker.ts");
   }
-  return result.outputFiles[0].text;
+  return new File([result.outputFiles[0].text], "worker.js", {
+    type: "application/javascript+module",
+  });
 }
