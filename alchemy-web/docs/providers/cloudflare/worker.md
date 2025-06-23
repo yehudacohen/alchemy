@@ -174,6 +174,32 @@ const frontend = await Worker("frontend", {
 });
 ```
 
+## Self-Binding
+
+A worker can bind to itself using `Self` or `WorkerRef`:
+
+```ts
+import { Worker, Self, WorkerRef } from "alchemy/cloudflare";
+
+// Using Self
+const workerWithSelf = await Worker("my-worker", {
+  name: "my-worker",
+  entrypoint: "./src/worker.ts",
+  bindings: {
+    SELF: Self,
+  },
+});
+
+// Using WorkerRef with the worker's own ID
+const workerWithRef = await Worker("my-worker", {
+  name: "my-worker",
+  entrypoint: "./src/worker.ts",
+  bindings: {
+    SELF: WorkerRef("my-worker"),
+  },
+});
+```
+
 ## Circular Worker Bindings
 
 When workers need to bind to each other (circular dependency), use `WorkerStub` to break the cycle:
