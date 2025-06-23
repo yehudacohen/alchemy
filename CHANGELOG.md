@@ -1,3 +1,13 @@
+## v0.37.2
+
+### &nbsp;&nbsp;&nbsp;🐞 Bug Fixes
+
+- **cloudflare**: Defensively resolve __dirname and worker.ts > worker.js in DOStateStore &nbsp;-&nbsp; by **Sam Goodwin** in https://github.com/sam-goodwin/alchemy/issues/452 [<samp>(c63fd)</samp>](https://github.com/sam-goodwin/alchemy/commit/c63fdd60)
+
+##### &nbsp;&nbsp;&nbsp;&nbsp;[View changes on GitHub](https://github.com/sam-goodwin/alchemy/compare/v0.37.1...v0.37.2)
+
+---
+
 ## v0.37.1
 
 ### &nbsp;&nbsp;&nbsp;🚀 Features
