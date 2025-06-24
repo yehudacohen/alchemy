@@ -1,3 +1,13 @@
+## v0.39.1
+
+### &nbsp;&nbsp;&nbsp;🐞 Bug Fixes
+
+- **core**: Stage scope not being adopted &nbsp;-&nbsp; by **Michael K** in https://github.com/sam-goodwin/alchemy/issues/469 [<samp>(b949a)</samp>](https://github.com/sam-goodwin/alchemy/commit/b949aade)
+
+##### &nbsp;&nbsp;&nbsp;&nbsp;[View changes on GitHub](https://github.com/sam-goodwin/alchemy/compare/v0.39.0...v0.39.1)
+
+---
+
 ## v0.39.0
 
 ### &nbsp;&nbsp;&nbsp;🚀 Features
