@@ -1,3 +1,11 @@
+## v0.40.1
+
+*No significant changes*
+
+##### &nbsp;&nbsp;&nbsp;&nbsp;[View changes on GitHub](https://github.com/sam-goodwin/alchemy/compare/v0.40.0...v0.40.1)
+
+---
+
 ## v0.40.0
 
 ### &nbsp;&nbsp;&nbsp;🚀 Features
