@@ -1,3 +1,13 @@
+## v0.41.1
+
+### &nbsp;&nbsp;&nbsp;🐞 Bug Fixes
+
+- **cloudflare**: Consistent ports for miniflare dev server &nbsp;-&nbsp; by **John Royal** in https://github.com/sam-goodwin/alchemy/issues/496 [<samp>(5564c)</samp>](https://github.com/sam-goodwin/alchemy/commit/5564cb91)
+
+##### &nbsp;&nbsp;&nbsp;&nbsp;[View changes on GitHub](https://github.com/sam-goodwin/alchemy/compare/v0.41.0...v0.41.1)
+
+---
+
 ## v0.41.0
 
 ### &nbsp;&nbsp;&nbsp;🚀 Features
