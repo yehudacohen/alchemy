@@ -1,3 +1,13 @@
+## v0.42.1
+
+### &nbsp;&nbsp;&nbsp;🐞 Bug Fixes
+
+- **cloudflare**: Pass through props.url from Website to Worker &nbsp;-&nbsp; by **Sam Goodwin** in https://github.com/sam-goodwin/alchemy/issues/516 [<samp>(dfb9f)</samp>](https://github.com/sam-goodwin/alchemy/commit/dfb9f106)
+
+##### &nbsp;&nbsp;&nbsp;&nbsp;[View changes on GitHub](https://github.com/sam-goodwin/alchemy/compare/v0.42.0...v0.42.1)
+
+---
+
 ## v0.42.0
 
 ### &nbsp;&nbsp;&nbsp;🚀 Features
