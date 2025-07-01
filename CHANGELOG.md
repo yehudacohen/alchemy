@@ -1,3 +1,13 @@
+## v0.43.0
+
+### &nbsp;&nbsp;&nbsp;🐞 Bug Fixes
+
+- **cloudflare**: Align migration table of D1Database with wrangler & Drizzle &nbsp;-&nbsp; by **Sam Goodwin** in https://github.com/sam-goodwin/alchemy/issues/473 [<samp>(813c9)</samp>](https://github.com/sam-goodwin/alchemy/commit/813c92e6)
+
+##### &nbsp;&nbsp;&nbsp;&nbsp;[View changes on GitHub](https://github.com/sam-goodwin/alchemy/compare/v0.42.1...v0.43.0)
+
+---
+
 ## v0.42.1
 
 ### &nbsp;&nbsp;&nbsp;🐞 Bug Fixes
