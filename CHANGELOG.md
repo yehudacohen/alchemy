@@ -1,3 +1,20 @@
+## v0.42.0
+
+### &nbsp;&nbsp;&nbsp;🚀 Features
+
+- **cloudflare**:
+  - Miniflare container bindings &nbsp;-&nbsp; by **John Royal** in https://github.com/sam-goodwin/alchemy/issues/493 [<samp>(6740e)</samp>](https://github.com/sam-goodwin/alchemy/commit/6740eab1)
+  - Resource for orange-js &nbsp;-&nbsp; by **Zeb Piasecki** in https://github.com/sam-goodwin/alchemy/issues/228 [<samp>(a5363)</samp>](https://github.com/sam-goodwin/alchemy/commit/a53638fe)
+  - Add RedirectRule resource for Cloudflare single redirects &nbsp;-&nbsp; by **Justin Bennett** in https://github.com/sam-goodwin/alchemy/issues/500 [<samp>(55f13)</samp>](https://github.com/sam-goodwin/alchemy/commit/55f13ec0)
+
+### &nbsp;&nbsp;&nbsp;🐞 Bug Fixes
+
+- **fs**: Fix using "*" in filepaths on windows &nbsp;-&nbsp; by **Michael K** in https://github.com/sam-goodwin/alchemy/issues/512 [<samp>(c0c22)</samp>](https://github.com/sam-goodwin/alchemy/commit/c0c221b5)
+
+##### &nbsp;&nbsp;&nbsp;&nbsp;[View changes on GitHub](https://github.com/sam-goodwin/alchemy/compare/v0.41.2...v0.42.0)
+
+---
+
 ## v0.41.2
 
 ### &nbsp;&nbsp;&nbsp;🚀 Features
