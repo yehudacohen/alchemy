@@ -29,7 +29,7 @@
     "alchemy/templates/*",
     "examples/*",
     "stacks",
-    ".smoke/*"
+    "smoke/*"
   ],
   "devDependencies": {
     "@biomejs/biome": "beta",
