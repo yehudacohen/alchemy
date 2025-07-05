@@ -1,3 +1,13 @@
+## v0.43.5
+
+### &nbsp;&nbsp;&nbsp;🐞 Bug Fixes
+
+- Remove debug logs from create CLI &nbsp;-&nbsp; by **Sam Goodwin** [<samp>(d41eb)</samp>](https://github.com/sam-goodwin/alchemy/commit/d41ebae7)
+
+##### &nbsp;&nbsp;&nbsp;&nbsp;[View changes on GitHub](https://github.com/sam-goodwin/alchemy/compare/v0.43.4...v0.43.5)
+
+---
+
 ## v0.43.4
 
 ### &nbsp;&nbsp;&nbsp;🐞 Bug Fixes
