@@ -1,3 +1,13 @@
+## v0.43.4
+
+### &nbsp;&nbsp;&nbsp;🐞 Bug Fixes
+
+- **cloudflare**: Include .env in astro, typescript and astro project templates &nbsp;-&nbsp; by **Sam Goodwin** in https://github.com/sam-goodwin/alchemy/issues/557 [<samp>(ee009)</samp>](https://github.com/sam-goodwin/alchemy/commit/ee009e2a)
+
+##### &nbsp;&nbsp;&nbsp;&nbsp;[View changes on GitHub](https://github.com/sam-goodwin/alchemy/compare/v0.43.3...v0.43.4)
+
+---
+
 ## v0.43.3
 
 ### &nbsp;&nbsp;&nbsp;🐞 Bug Fixes
