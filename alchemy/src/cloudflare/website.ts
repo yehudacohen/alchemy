@@ -185,6 +185,8 @@ export default {
         await WranglerJson("wrangler.jsonc", {
           path: wranglerPath,
           worker: workerProps,
+          // @ts-expect-error - props.wrangler can be string | object, this is fine
+          main: props.wrangler?.main ?? props.main,
           // hard-code the assets directory because we haven't yet included the assets binding
           assets: {
             binding: "ASSETS",
