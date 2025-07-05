@@ -10,7 +10,7 @@ import {
   type AssetsConfig,
   type WorkerProps,
 } from "./worker.ts";
-import { WranglerJson } from "./wrangler.json.ts";
+import { WranglerJson, type WranglerJsonSpec } from "./wrangler.json.ts";
 
 export interface WebsiteProps<B extends Bindings>
   extends Omit<WorkerProps<B>, "name" | "assets" | "entrypoint"> {
@@ -101,6 +101,25 @@ export interface WebsiteProps<B extends Bindings>
   dev?: {
     command: string;
     url: string;
+  };
+
+  /**
+   * Transform hooks to modify generated configuration files
+   */
+  transform?: {
+    /**
+     * Hook to modify the wrangler.json object before it's written
+     *
+     * This function receives the generated wrangler.json spec and should return
+     * a modified version. It's applied as the final transformation before the
+     * file is written to disk.
+     *
+     * @param spec - The generated wrangler.json specification
+     * @returns The modified wrangler.json specification
+     */
+    wrangler?: (
+      spec: WranglerJsonSpec,
+    ) => WranglerJsonSpec | Promise<WranglerJsonSpec>;
   };
 }
 
@@ -193,6 +212,7 @@ export default {
             // path must be relative to the wrangler.jsonc file
             directory: path.relative(wranglerDir, assetsDirPath),
           },
+          transform: props.transform,
         });
       }
 
