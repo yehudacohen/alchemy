@@ -83,9 +83,6 @@ export async function installDependencies(
   const commands = getPackageManagerCommands(pm);
 
   try {
-    console.log(await fs.readJson(`${targetCwd}/package.json`));
-    console.log({ dependencies });
-    console.log({ devDependencies });
     if (!dependencies && !devDependencies) {
       await execa(commands.install, {
         cwd: targetCwd,
