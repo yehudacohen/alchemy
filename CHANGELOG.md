@@ -1,3 +1,13 @@
+## v0.43.2
+
+### &nbsp;&nbsp;&nbsp;🐞 Bug Fixes
+
+- **cloudflare**: Do not resolve wrangler.main before calling WranglerJson in Website &nbsp;-&nbsp; by **Michael K** [<samp>(cea1d)</samp>](https://github.com/sam-goodwin/alchemy/commit/cea1da04)
+
+##### &nbsp;&nbsp;&nbsp;&nbsp;[View changes on GitHub](https://github.com/sam-goodwin/alchemy/compare/v0.43.1...v0.43.2)
+
+---
+
 ## v0.43.1
 
 ### &nbsp;&nbsp;&nbsp;🚀 Features
