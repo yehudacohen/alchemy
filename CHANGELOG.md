@@ -1,3 +1,13 @@
+## v0.44.1
+
+### &nbsp;&nbsp;&nbsp;🐞 Bug Fixes
+
+- **cloudflare**: Do not working with replace &nbsp;-&nbsp; by **Michael K** in https://github.com/sam-goodwin/alchemy/issues/587 [<samp>(16264)</samp>](https://github.com/sam-goodwin/alchemy/commit/16264513)
+
+##### &nbsp;&nbsp;&nbsp;&nbsp;[View changes on GitHub](https://github.com/sam-goodwin/alchemy/compare/v0.44.0...v0.44.1)
+
+---
+
 ## v0.44.0
 
 ### &nbsp;&nbsp;&nbsp;🚀 Features
