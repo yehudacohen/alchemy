@@ -703,6 +703,7 @@ function processBindings(
       dispatchNamespaces.push({
         binding: bindingName,
         namespace: binding.namespaceName,
+        experimental_remote: true,
       });
     } else if (binding.type === "secret_key") {
       // no-op
