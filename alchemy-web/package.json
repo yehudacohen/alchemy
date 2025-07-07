@@ -16,7 +16,6 @@
     "@cloudflare/workers-types": "^4.20250613.0",
     "alchemy": "workspace:*",
     "astro": "^5.6.1",
-    "starlight-llms-txt": "^0.5.1",
     "starlight-nextjs-theme": "^0.2.0",
     "typescript": "^5.8.3"
   },
