@@ -241,6 +241,10 @@ async function setupVibeRules(context: ProjectContext): Promise<void> {
   s.start("Configuring vibe-rules...");
 
   try {
+    await installDependencies(context, {
+      devDependencies: ["vibe-rules"],
+    });
+
     await installAlchemyRules({
       editor: selectedEditor,
       packageManager: context.packageManager,

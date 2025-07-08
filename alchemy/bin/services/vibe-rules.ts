@@ -33,12 +33,9 @@ export async function ensureVibeRulesPostinstall(
 }
 
 export async function installAlchemyRules(input: InstallInput): Promise<void> {
-  const packageManager = input.packageManager || "bun";
-  const commands = getPackageManagerCommands(packageManager);
+  const commands = getPackageManagerCommands(input.packageManager || "bun");
 
-  const args = ["vibe-rules", "install", input.editor];
-
-  await execa(commands.x, args, {
+  await execa(commands.x, ["vibe-rules", "install", input.editor], {
     stdio: "pipe",
     cwd: input.cwd,
   });
