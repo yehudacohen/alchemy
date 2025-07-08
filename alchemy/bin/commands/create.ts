@@ -241,6 +241,8 @@ async function setupVibeRules(context: ProjectContext): Promise<void> {
   s.start("Configuring vibe-rules...");
 
   try {
+    await ensureVibeRulesPostinstall(context.path, selectedEditor);
+
     await installDependencies(context, {
       devDependencies: ["vibe-rules"],
     });
@@ -250,8 +252,6 @@ async function setupVibeRules(context: ProjectContext): Promise<void> {
       packageManager: context.packageManager,
       cwd: context.path,
     });
-
-    await ensureVibeRulesPostinstall(context.path, selectedEditor);
 
     // we need to install dependencies to trigger the postinstall script
     await installDependencies(context);
