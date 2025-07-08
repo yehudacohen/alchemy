@@ -1,3 +1,13 @@
+## v0.44.3
+
+### &nbsp;&nbsp;&nbsp;🐞 Bug Fixes
+
+- **cli**: Setup postinstall script before installing vibe-rules &nbsp;-&nbsp; by **Sam Goodwin** [<samp>(31643)</samp>](https://github.com/sam-goodwin/alchemy/commit/31643384)
+
+##### &nbsp;&nbsp;&nbsp;&nbsp;[View changes on GitHub](https://github.com/sam-goodwin/alchemy/compare/v0.44.2...v0.44.3)
+
+---
+
 ## v0.44.2
 
 ### &nbsp;&nbsp;&nbsp;🚀 Features
