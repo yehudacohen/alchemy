@@ -8,8 +8,8 @@ import {
   unlinkSync,
   writeFileSync,
 } from "node:fs";
-import path from "node:path";
 import { isDeepStrictEqual } from "node:util";
+import path from "pathe";
 import { BUILD_DATE } from "../build-date.ts";
 import type { Context } from "../context.ts";
 import type { BundleProps } from "../esbuild/bundle.ts";
@@ -980,7 +980,7 @@ export const _Worker = Resource(
       props.cwd = props.projectRoot;
     }
 
-    const cwd = props.cwd ? path.resolve(props.cwd) : process.cwd();
+    const cwd = path.resolve(props.cwd ?? process.cwd());
     const relativeCwd =
       cwd === process.cwd() ? undefined : path.relative(process.cwd(), cwd);
 
