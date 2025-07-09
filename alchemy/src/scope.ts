@@ -1,6 +1,7 @@
 import { AsyncLocalStorage } from "node:async_hooks";
 import util from "node:util";
 import type { Phase } from "./alchemy.ts";
+import { D1StateStore } from "./cloudflare/d1-state-store.ts";
 import { DOStateStore } from "./cloudflare/do-state-store/index.ts";
 import { destroy, destroyAll } from "./destroy.ts";
 import { FileSystemStateStore } from "./fs/file-system-state-store.ts";
@@ -171,12 +172,7 @@ export class Scope {
     }
 
     this.stateStore =
-      options.stateStore ??
-      this.parent?.stateStore ??
-      ((scope) =>
-        process.env.ALCHEMY_STATE_STORE === "cloudflare"
-          ? new DOStateStore(scope)
-          : new FileSystemStateStore(scope));
+      options.stateStore ?? this.parent?.stateStore ?? defaultStateStore;
     this.state = this.stateStore(this);
     if (!options.telemetryClient && !this.parent?.telemetryClient) {
       throw new Error("Telemetry client is required");
@@ -206,11 +202,23 @@ export class Scope {
   }
 
   public get chain(): string[] {
+    // Since the root scope name is the same as the app name, this ensures
+    // the root scope chain is "<app-name>" instead of "<app-name>/<app-name>".
+    if (
+      !this.parent &&
+      this.appName &&
+      this.scopeName &&
+      this.appName === this.scopeName
+    ) {
+      return [this.appName];
+    }
+
     const thisScope = this.scopeName ? [this.scopeName] : [];
-    const app = this.appName ? [this.appName] : [];
     if (this.parent) {
       return [...this.parent.chain, ...thisScope];
     }
+
+    const app = this.appName ? [this.appName] : [];
     return [...app, ...thisScope];
   }
 
@@ -488,6 +496,17 @@ export class Scope {
 )`;
   }
 }
+
+const defaultStateStore: StateStoreType = (scope: Scope) => {
+  switch (process.env.ALCHEMY_STATE_STORE) {
+    case "cloudflare-d1":
+      return new D1StateStore(scope);
+    case "cloudflare":
+      return new DOStateStore(scope);
+    default:
+      return new FileSystemStateStore(scope);
+  }
+};
 
 declare global {
   // for runtime

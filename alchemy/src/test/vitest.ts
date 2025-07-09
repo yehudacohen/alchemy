@@ -1,8 +1,11 @@
 import path from "node:path";
 import { afterAll, beforeAll, it } from "vitest";
 import { alchemy } from "../alchemy.ts";
-import { DOStateStore } from "../cloudflare/index.ts";
+import { D1StateStore } from "../cloudflare/d1-state-store.ts";
+import { DOStateStore } from "../cloudflare/do-state-store/index.ts";
+import { FileSystemStateStore } from "../fs/file-system-state-store.ts";
 import { Scope } from "../scope.ts";
+import { SQLiteStateStore } from "../sqlite/sqlite-state-store.ts";
 import type { StateStoreType } from "../state.ts";
 import { NoopTelemetryClient } from "../util/telemetry/client.ts";
 
@@ -123,13 +126,21 @@ export function test(
   if (!("quiet" in defaultOptions)) {
     defaultOptions.quiet = true;
   }
-
-  if (
-    defaultOptions.stateStore === undefined &&
-    process.env.ALCHEMY_STATE_STORE === "cloudflare"
-  ) {
-    defaultOptions.stateStore = (scope) => new DOStateStore(scope);
-  }
+  defaultOptions.stateStore ??= (scope) => {
+    const storeType = process.env.ALCHEMY_STATE_STORE;
+    switch (storeType) {
+      case "dofs":
+        return new DOStateStore(scope);
+      case "fs":
+        return new FileSystemStateStore(scope);
+      case "d1":
+        return new D1StateStore(scope);
+      default:
+        return new SQLiteStateStore(scope, {
+          filename: `.alchemy/${path.relative(process.cwd(), meta.filename)}.sqlite`,
+        });
+    }
+  };
 
   test.skipIf = (condition: boolean) => {
     if (condition) {
