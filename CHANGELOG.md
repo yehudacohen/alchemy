@@ -1,3 +1,24 @@
+## v0.45.0
+
+### &nbsp;&nbsp;&nbsp;🚀 Features
+
+- **cloudflare**:
+  - Default source_map to true for Workers &nbsp;-&nbsp; by **Sam Goodwin** in https://github.com/sam-goodwin/alchemy/issues/610 [<samp>(73652)</samp>](https://github.com/sam-goodwin/alchemy/commit/7365264c)
+  - Remote worker hot reload + tail &nbsp;-&nbsp; by **John Royal** in https://github.com/sam-goodwin/alchemy/issues/543 [<samp>(815f2)</samp>](https://github.com/sam-goodwin/alchemy/commit/815f2c61)
+  - Container.adopt &nbsp;-&nbsp; by **Sam Goodwin** in https://github.com/sam-goodwin/alchemy/issues/615 [<samp>(b327e)</samp>](https://github.com/sam-goodwin/alchemy/commit/b327e754)
+- **sqlite**:
+  - Sqlite state store with drizzle &nbsp;-&nbsp; by **John Royal** in https://github.com/sam-goodwin/alchemy/issues/593 [<samp>(f05e6)</samp>](https://github.com/sam-goodwin/alchemy/commit/f05e65e2)
+
+### &nbsp;&nbsp;&nbsp;🐞 Bug Fixes
+
+- **cloudflare**:
+  - Handle "./" in esbuild paths &nbsp;-&nbsp; by **John Royal** in https://github.com/sam-goodwin/alchemy/issues/614 [<samp>(4560f)</samp>](https://github.com/sam-goodwin/alchemy/commit/4560f904)
+  - Normalize paths on windows &nbsp;-&nbsp; by **John Royal** in https://github.com/sam-goodwin/alchemy/issues/616 [<samp>(3f354)</samp>](https://github.com/sam-goodwin/alchemy/commit/3f354b42)
+
+##### &nbsp;&nbsp;&nbsp;&nbsp;[View changes on GitHub](https://github.com/sam-goodwin/alchemy/compare/v0.44.4...v0.45.0)
+
+---
+
 ## v0.44.4
 
 ### &nbsp;&nbsp;&nbsp;🐞 Bug Fixes
