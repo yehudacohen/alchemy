@@ -1,3 +1,13 @@
+## v0.45.3
+
+### &nbsp;&nbsp;&nbsp;🐞 Bug Fixes
+
+- **cloudflare**: Inline sourceMap for dev mode to avoid syntax error &nbsp;-&nbsp; by **Sam Goodwin** in https://github.com/sam-goodwin/alchemy/issues/639 [<samp>(4884d)</samp>](https://github.com/sam-goodwin/alchemy/commit/4884de08)
+
+##### &nbsp;&nbsp;&nbsp;&nbsp;[View changes on GitHub](https://github.com/sam-goodwin/alchemy/compare/v0.45.2...v0.45.3)
+
+---
+
 ## v0.45.2
 
 ### &nbsp;&nbsp;&nbsp;🐞 Bug Fixes
