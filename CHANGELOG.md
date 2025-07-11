@@ -1,3 +1,13 @@
+## v0.45.2
+
+### &nbsp;&nbsp;&nbsp;🐞 Bug Fixes
+
+- **cloudflare**: Set cwd on Worker dev command &nbsp;-&nbsp; by **Sam Goodwin** in https://github.com/sam-goodwin/alchemy/issues/638 [<samp>(31ee8)</samp>](https://github.com/sam-goodwin/alchemy/commit/31ee81ea)
+
+##### &nbsp;&nbsp;&nbsp;&nbsp;[View changes on GitHub](https://github.com/sam-goodwin/alchemy/compare/v0.45.1...v0.45.2)
+
+---
+
 ## v0.45.1
 
 ### &nbsp;&nbsp;&nbsp;🐞 Bug Fixes
