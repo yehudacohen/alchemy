@@ -1,3 +1,13 @@
+## v0.45.4
+
+### &nbsp;&nbsp;&nbsp;🐞 Bug Fixes
+
+- **cloudflare**: Add duplex: "half" in miniflare http server &nbsp;-&nbsp; by **John Royal** in https://github.com/sam-goodwin/alchemy/issues/643 [<samp>(bfc4f)</samp>](https://github.com/sam-goodwin/alchemy/commit/bfc4f1a2)
+
+##### &nbsp;&nbsp;&nbsp;&nbsp;[View changes on GitHub](https://github.com/sam-goodwin/alchemy/compare/v0.45.3...v0.45.4)
+
+---
+
 ## v0.45.3
 
 ### &nbsp;&nbsp;&nbsp;🐞 Bug Fixes
