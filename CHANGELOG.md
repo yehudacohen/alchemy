@@ -1,3 +1,13 @@
+## v0.45.5
+
+### &nbsp;&nbsp;&nbsp;🐞 Bug Fixes
+
+- **cloudflare**: Adopt Worker with Queue event source &nbsp;-&nbsp; by **Sam Goodwin** in https://github.com/sam-goodwin/alchemy/issues/646 [<samp>(75d69)</samp>](https://github.com/sam-goodwin/alchemy/commit/75d6944f)
+
+##### &nbsp;&nbsp;&nbsp;&nbsp;[View changes on GitHub](https://github.com/sam-goodwin/alchemy/compare/v0.45.4...v0.45.5)
+
+---
+
 ## v0.45.4
 
 ### &nbsp;&nbsp;&nbsp;🐞 Bug Fixes
