@@ -44,6 +44,7 @@ jobs:
         id: deploy
         run: |
           bun run build
+          bun install # to install the built `alchemy` CLI
           bun deploy:website --destroy
         env:
           ALCHEMY_PASSWORD: ${{ env.ALCHEMY_PASSWORD }}
