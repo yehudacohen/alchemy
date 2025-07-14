@@ -1,6 +1,6 @@
 /**
  * Compatibility presets for Cloudflare Workers
- * 
+ *
  * These presets provide common sets of compatibility flags to avoid
  * users having to remember which flags they need for common use cases.
  */
@@ -23,12 +23,12 @@ export type CompatibilityPreset = keyof typeof COMPATIBILITY_PRESETS;
  */
 export function unionCompatibilityFlags(
   preset: CompatibilityPreset | undefined,
-  userFlags: string[] = []
+  userFlags: string[] = [],
 ): string[] {
   if (!preset) {
     return userFlags;
   }
-  
+
   const presetFlags = COMPATIBILITY_PRESETS[preset];
   return Array.from(new Set([...presetFlags, ...userFlags]));
 }
