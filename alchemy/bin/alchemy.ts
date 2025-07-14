@@ -5,6 +5,7 @@ import { createAlchemy } from "./commands/create.ts";
 import { deploy } from "./commands/deploy.ts";
 import { destroy } from "./commands/destroy.ts";
 import { dev } from "./commands/dev.ts";
+import { login } from "./commands/login.ts";
 import { run } from "./commands/run.ts";
 import { getPackageVersion } from "./services/get-package-version.ts";
 import { t } from "./trpc.ts";
@@ -62,6 +63,7 @@ const router = t.router({
       };
       await createAlchemy(combinedInput);
     }),
+  login,
   deploy,
   destroy,
   dev,
