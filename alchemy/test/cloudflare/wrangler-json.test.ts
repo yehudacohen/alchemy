@@ -643,18 +643,21 @@ describe("WranglerJson Resource", () => {
       const worker = await Worker(name, {
         format: "esm",
         entrypoint,
+        adopt: true,
         bindings: {
-          D1: await D1Database("test-d1-db-dev-remote", {
+          D1: await D1Database(`${BRANCH_PREFIX}-test-d1-db-dev-remote`, {
+            adopt: true,
             dev: { remote: true },
           }),
-          KV: await KVNamespace("test-kv-ns-dev-remote", {
+          KV: await KVNamespace(`${BRANCH_PREFIX}-test-kv-ns-dev-remote`, {
+            adopt: true,
             dev: { remote: true },
           }),
-          R2: await R2Bucket("test-r2-bucket-dev-remote", {
+          R2: await R2Bucket(`${BRANCH_PREFIX}-test-r2-bucket-dev-remote`, {
+            adopt: true,
             dev: { remote: true },
           }),
         },
-        adopt: true,
       });
 
       const { spec } = await WranglerJson(
