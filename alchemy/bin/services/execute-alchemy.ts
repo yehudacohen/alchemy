@@ -96,7 +96,6 @@ export async function execAlchemy(
   // Detect package manager
   const packageManager = await detectPackageManager(cwd);
   const runtime = detectRuntime();
-  console.log({ packageManager, runtime });
 
   const argsString = args.join(" ");
   const execArgsString = execArgs.join(" ");
