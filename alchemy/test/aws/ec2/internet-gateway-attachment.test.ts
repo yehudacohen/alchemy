@@ -3,17 +3,17 @@ import {
   EC2Client,
 } from "@aws-sdk/client-ec2";
 import { describe, expect } from "vitest";
-import { alchemy } from "../../../src/alchemy.js";
-import { InternetGatewayAttachment } from "../../../src/aws/ec2/internet-gateway-attachment.js";
+import { alchemy } from "../../../src/alchemy.ts";
+import { InternetGatewayAttachment } from "../../../src/aws/ec2/internet-gateway-attachment.ts";
 import {
   INTERNET_GATEWAY_TIMEOUT,
   InternetGateway,
-} from "../../../src/aws/ec2/internet-gateway.js";
-import { Vpc } from "../../../src/aws/ec2/vpc.js";
-import { destroy } from "../../../src/destroy.js";
-import { BRANCH_PREFIX } from "../../util.js";
+} from "../../../src/aws/ec2/internet-gateway.ts";
+import { Vpc } from "../../../src/aws/ec2/vpc.ts";
+import { destroy } from "../../../src/destroy.ts";
+import { BRANCH_PREFIX } from "../../util.ts";
 
-import "../../../src/test/vitest.js";
+import "../../../src/test/vitest.ts";
 
 const test = alchemy.test(import.meta, {
   prefix: BRANCH_PREFIX,

@@ -3,14 +3,362 @@ import { XMLParser } from "fast-xml-parser";
 import type { Context } from "../../context.ts";
 import { Resource } from "../../resource.ts";
 import { ignore } from "../../util/ignore.ts";
+import { logger } from "../../util/logger.ts";
 import {
   mergeTimeoutConfig,
   type TimeoutConfig,
   waitForResourceState,
-} from "../../util/timeout.js";
+} from "../../util/timeout.ts";
 import { retry } from "../retry.ts";
 import { callEC2Api, createEC2Client } from "./utils.ts";
 import type { Vpc } from "./vpc.ts";
+
+/**
+ * Properties for creating or updating a Subnet
+ */
+export interface SubnetProps {
+  /**
+   * The VPC to create the subnet in
+   */
+  vpc: Vpc | string;
+
+  /**
+   * The CIDR block for the subnet
+   */
+  cidrBlock: string;
+
+  /**
+   * The availability zone for the subnet
+   */
+  availabilityZone: string;
+
+  /**
+   * Whether instances launched in this subnet should be assigned a public IP address
+   * @default false
+   */
+  mapPublicIpOnLaunch?: boolean;
+
+  /**
+   * Tags to apply to the subnet
+   */
+  tags?: Record<string, string>;
+
+  /**
+   * Timeout configuration for subnet operations
+   * @default Subnet-specific sensible defaults (30 attempts, 1000ms delay)
+   */
+  timeout?: Partial<TimeoutConfig>;
+}
+
+/**
+ * Output returned after Subnet creation/update
+ */
+export interface Subnet extends Resource<"aws::Subnet">, SubnetProps {
+  /**
+   * The ID of the subnet
+   */
+  subnetId: string;
+
+  /**
+   * The ID of the VPC the subnet belongs to
+   */
+  vpcId: string;
+
+  /**
+   * The current state of the subnet
+   */
+  state: "pending" | "available";
+
+  /**
+   * The number of available IP addresses in the subnet
+   */
+  availableIpAddressCount: number;
+
+  /**
+   * Whether this is the default subnet for the availability zone
+   */
+  defaultForAz: boolean;
+}
+
+/**
+ * Wait for subnet to be in available state
+ */
+async function waitForSubnetAvailable(
+  client: AwsClient,
+  subnetId: string,
+  timeoutConfig: TimeoutConfig,
+): Promise<void> {
+  const checkFunction = async () => {
+    const response = await callEC2Api<DescribeSubnetsResponse>(
+      client,
+      "DescribeSubnets",
+      parseSubnetXmlResponse,
+      {
+        "SubnetId.1": subnetId,
+      },
+    );
+    return response.Subnets?.[0];
+  };
+
+  const isReady = (subnet: AwsSubnet | undefined) => {
+    return subnet?.State === "available";
+  };
+
+  await waitForResourceState(
+    checkFunction,
+    isReady,
+    timeoutConfig,
+    subnetId,
+    "Subnet",
+    "is now available",
+  );
+}
+
+/**
+ * Wait for Subnet to be deleted
+ */
+async function waitForSubnetDeleted(
+  client: AwsClient,
+  subnetId: string,
+  timeoutConfig: TimeoutConfig,
+): Promise<void> {
+  const checkFunction = async () => {
+    try {
+      const response = await callEC2Api<DescribeSubnetsResponse>(
+        client,
+        "DescribeSubnets",
+        parseSubnetXmlResponse,
+        {
+          "SubnetId.1": subnetId,
+        },
+      );
+      return response.Subnets?.[0];
+    } catch (error: any) {
+      // If Subnet is not found, it's been deleted - return undefined
+      if (
+        error.code === "InvalidSubnetID.NotFound" ||
+        error.code === "InvalidSubnet.NotFound"
+      ) {
+        return undefined;
+      }
+      throw error;
+    }
+  };
+
+  const isReady = (subnet: AwsSubnet | undefined) => {
+    // Subnet is deleted if it doesn't exist
+    return !subnet;
+  };
+
+  await waitForResourceState(
+    checkFunction,
+    isReady,
+    timeoutConfig,
+    subnetId,
+    "Subnet",
+    "be deleted",
+  );
+}
+
+/**
+ * AWS Subnet Resource
+ *
+ * Creates and manages subnets within a VPC. Subnets are used to segment
+ * your VPC into smaller networks for organizing resources.
+ *
+ * @example
+ * // Create a public subnet for web servers
+ * const publicSubnet = await Subnet("public-subnet", {
+ *   vpc: myVpc,
+ *   cidrBlock: "10.0.1.0/24",
+ *   availabilityZone: `${process.env.AWS_REGION}a` || "us-east-1a",
+ *   mapPublicIpOnLaunch: true,
+ *   tags: {
+ *     Name: "public-subnet",
+ *     Type: "public"
+ *   }
+ * });
+ *
+ * @example
+ * // Create a private subnet for databases
+ * const privateSubnet = await Subnet("private-subnet", {
+ *   vpc: myVpc,
+ *   cidrBlock: "10.0.2.0/24",
+ *   availabilityZone: "us-west-2b",
+ *   mapPublicIpOnLaunch: false,
+ *   tags: {
+ *     Name: "private-subnet",
+ *     Type: "private"
+ *   }
+ * });
+ *
+ * @example
+ * // Create a subnet with custom timeout configuration
+ * const customSubnet = await Subnet("custom-subnet", {
+ *   vpc: myVpc,
+ *   cidrBlock: "10.0.3.0/24",
+ *   availabilityZone: "us-west-2c",
+ *   timeout: {
+ *     maxAttempts: 50,
+ *     delayMs: 500
+ *   }
+ * });
+ */
+export const Subnet = Resource(
+  "aws::Subnet",
+  async function (
+    this: Context<Subnet>,
+    _id: string,
+    props: SubnetProps,
+  ): Promise<Subnet> {
+    const client = await createEC2Client();
+    const vpcId = typeof props.vpc === "string" ? props.vpc : props.vpc.vpcId;
+
+    // Validate timeout config early, but use default for deletion if invalid
+    let timeoutConfig: TimeoutConfig;
+    try {
+      timeoutConfig = mergeTimeoutConfig(SUBNET_TIMEOUT, props.timeout);
+    } catch (error) {
+      if (this.phase === "delete") {
+        // Use default timeout for deletion to avoid blocking cleanup
+        timeoutConfig = SUBNET_TIMEOUT;
+      } else {
+        // Re-throw validation error during creation/update
+        throw error;
+      }
+    }
+
+    if (this.phase === "delete") {
+      if (this.output?.subnetId) {
+        logger.log(`🗑️ Deleting Subnet: ${this.output.subnetId}`);
+        await retry(async () => {
+          await ignore("InvalidSubnetID.NotFound", async () => {
+            await callEC2Api(client, "DeleteSubnet", parseSubnetXmlResponse, {
+              SubnetId: this.output!.subnetId,
+            });
+          });
+        });
+
+        // Wait for Subnet to be fully deleted to avoid dependency violations
+        logger.log(
+          `  Waiting for Subnet ${this.output.subnetId} to be fully deleted...`,
+        );
+        await waitForSubnetDeleted(client, this.output.subnetId, timeoutConfig);
+        logger.log(`  ✅ Subnet ${this.output.subnetId} deletion completed`);
+      }
+      return this.destroy();
+    }
+
+    let subnet: AwsSubnet;
+
+    if (this.phase === "update" && this.output?.subnetId) {
+      // Get existing subnet
+      const response = await callEC2Api<DescribeSubnetsResponse>(
+        client,
+        "DescribeSubnets",
+        parseSubnetXmlResponse,
+        {
+          "SubnetId.1": this.output.subnetId,
+        },
+      );
+
+      if (!response.Subnets?.[0]) {
+        throw new Error(`Subnet ${this.output.subnetId} not found`);
+      }
+
+      subnet = response.Subnets[0];
+
+      // Update public IP assignment if it has changed
+      if (props.mapPublicIpOnLaunch !== undefined) {
+        await callEC2Api(
+          client,
+          "ModifySubnetAttribute",
+          parseSubnetXmlResponse,
+          {
+            SubnetId: subnet.SubnetId,
+            "MapPublicIpOnLaunch.Value": props.mapPublicIpOnLaunch.toString(),
+          },
+        );
+      }
+
+      // Update tags if provided
+      if (props.tags) {
+        const tagParams: Record<string, string> = {};
+        Object.entries(props.tags).forEach(([key, value], index) => {
+          tagParams[`Tag.${index + 1}.Key`] = key;
+          tagParams[`Tag.${index + 1}.Value`] = value;
+        });
+
+        await callEC2Api(client, "CreateTags", parseSubnetXmlResponse, {
+          "ResourceId.1": subnet.SubnetId,
+          ...tagParams,
+        });
+      }
+    } else {
+      // Create new subnet
+      const createSubnetParams: CreateSubnetParams = {
+        VpcId: vpcId,
+        CidrBlock: props.cidrBlock,
+        AvailabilityZone: props.availabilityZone,
+      };
+
+      // Add tags if specified
+      if (props.tags) {
+        createSubnetParams.TagSpecifications = [
+          {
+            ResourceType: "subnet",
+            Tags: Object.entries(props.tags).map(([key, value]) => ({
+              Key: key,
+              Value: value,
+            })),
+          },
+        ];
+      }
+
+      const createParams =
+        convertCreateSubnetParamsToAwsFormat(createSubnetParams);
+
+      const response = await callEC2Api<CreateSubnetResponse>(
+        client,
+        "CreateSubnet",
+        parseSubnetXmlResponse,
+        createParams,
+      );
+
+      if (!response.Subnet) {
+        throw new Error("Failed to create subnet");
+      }
+
+      subnet = response.Subnet;
+
+      // Set public IP assignment if specified
+      if (props.mapPublicIpOnLaunch !== undefined) {
+        await callEC2Api(
+          client,
+          "ModifySubnetAttribute",
+          parseSubnetXmlResponse,
+          {
+            SubnetId: subnet.SubnetId,
+            "MapPublicIpOnLaunch.Value": props.mapPublicIpOnLaunch.toString(),
+          },
+        );
+      }
+
+      // Wait for subnet to be available
+      await waitForSubnetAvailable(client, subnet.SubnetId, timeoutConfig);
+    }
+
+    return this({
+      subnetId: subnet.SubnetId,
+      vpcId: subnet.VpcId,
+      state: subnet.State as "pending" | "available",
+      availableIpAddressCount: subnet.AvailableIpAddressCount,
+      defaultForAz: subnet.DefaultForAz,
+      ...props,
+      vpc: vpcId,
+    });
+  },
+);
 
 /**
  * Parse XML responses specifically for Subnet operations
@@ -275,350 +623,3 @@ interface CreateSubnetResponse {
 interface DescribeSubnetsResponse {
   Subnets: AwsSubnet[];
 }
-
-/**
- * Properties for creating or updating a Subnet
- */
-export interface SubnetProps {
-  /**
-   * The VPC to create the subnet in
-   */
-  vpc: Vpc | string;
-
-  /**
-   * The CIDR block for the subnet
-   */
-  cidrBlock: string;
-
-  /**
-   * The availability zone for the subnet
-   */
-  availabilityZone: string;
-
-  /**
-   * Whether instances launched in this subnet should be assigned a public IP address
-   * @default false
-   */
-  mapPublicIpOnLaunch?: boolean;
-
-  /**
-   * Tags to apply to the subnet
-   */
-  tags?: Record<string, string>;
-
-  /**
-   * Timeout configuration for subnet operations
-   * @default Subnet-specific sensible defaults (30 attempts, 1000ms delay)
-   */
-  timeout?: Partial<TimeoutConfig>;
-}
-
-/**
- * Output returned after Subnet creation/update
- */
-export interface Subnet extends Resource<"aws::Subnet">, SubnetProps {
-  /**
-   * The ID of the subnet
-   */
-  subnetId: string;
-
-  /**
-   * The ID of the VPC the subnet belongs to
-   */
-  vpcId: string;
-
-  /**
-   * The current state of the subnet
-   */
-  state: "pending" | "available";
-
-  /**
-   * The number of available IP addresses in the subnet
-   */
-  availableIpAddressCount: number;
-
-  /**
-   * Whether this is the default subnet for the availability zone
-   */
-  defaultForAz: boolean;
-}
-
-/**
- * Wait for subnet to be in available state
- */
-async function waitForSubnetAvailable(
-  client: AwsClient,
-  subnetId: string,
-  timeoutConfig: TimeoutConfig,
-): Promise<void> {
-  const checkFunction = async () => {
-    const response = await callEC2Api<DescribeSubnetsResponse>(
-      client,
-      "DescribeSubnets",
-      parseSubnetXmlResponse,
-      {
-        "SubnetId.1": subnetId,
-      },
-    );
-    return response.Subnets?.[0];
-  };
-
-  const isReady = (subnet: AwsSubnet | undefined) => {
-    return subnet?.State === "available";
-  };
-
-  await waitForResourceState(
-    checkFunction,
-    isReady,
-    timeoutConfig,
-    subnetId,
-    "Subnet",
-    "is now available",
-  );
-}
-
-/**
- * Wait for Subnet to be deleted
- */
-async function waitForSubnetDeleted(
-  client: AwsClient,
-  subnetId: string,
-  timeoutConfig: TimeoutConfig,
-): Promise<void> {
-  const checkFunction = async () => {
-    try {
-      const response = await callEC2Api<DescribeSubnetsResponse>(
-        client,
-        "DescribeSubnets",
-        parseSubnetXmlResponse,
-        {
-          "SubnetId.1": subnetId,
-        },
-      );
-      return response.Subnets?.[0];
-    } catch (error: any) {
-      // If Subnet is not found, it's been deleted - return undefined
-      if (
-        error.code === "InvalidSubnetID.NotFound" ||
-        error.code === "InvalidSubnet.NotFound"
-      ) {
-        return undefined;
-      }
-      throw error;
-    }
-  };
-
-  const isReady = (subnet: AwsSubnet | undefined) => {
-    // Subnet is deleted if it doesn't exist
-    return !subnet;
-  };
-
-  await waitForResourceState(
-    checkFunction,
-    isReady,
-    timeoutConfig,
-    subnetId,
-    "Subnet",
-    "be deleted",
-  );
-}
-
-/**
- * AWS Subnet Resource
- *
- * Creates and manages subnets within a VPC. Subnets are used to segment
- * your VPC into smaller networks for organizing resources.
- *
- * @example
- * // Create a public subnet for web servers
- * const publicSubnet = await Subnet("public-subnet", {
- * vpc: myVpc,
- * cidrBlock: "10.0.1.0/24",
- * availabilityZone: `${process.env.AWS_REGION}a` || "us-east-1a",
- * mapPublicIpOnLaunch: true,
- * tags: {
- * Name: "public-subnet",
- * Type: "public"
- * }
- * });
- *
- * @example
- * // Create a private subnet for databases
- * const privateSubnet = await Subnet("private-subnet", {
- * vpc: myVpc,
- * cidrBlock: "10.0.2.0/24",
- * availabilityZone: "us-west-2b",
- * mapPublicIpOnLaunch: false,
- * tags: {
- * Name: "private-subnet",
- * Type: "private"
- * }
- * });
- *
- * @example
- * // Create a subnet with custom timeout configuration
- * const customSubnet = await Subnet("custom-subnet", {
- * vpc: myVpc,
- * cidrBlock: "10.0.3.0/24",
- * availabilityZone: "us-west-2c",
- * timeout: {
- * maxAttempts: 50,
- * delayMs: 500
- * }
- * });
- */
-export const Subnet = Resource(
-  "aws::Subnet",
-  async function (
-    this: Context<Subnet>,
-    _id: string,
-    props: SubnetProps,
-  ): Promise<Subnet> {
-    const client = await createEC2Client();
-    const vpcId = typeof props.vpc === "string" ? props.vpc : props.vpc.vpcId;
-
-    // Validate timeout config early, but use default for deletion if invalid
-    let timeoutConfig: TimeoutConfig;
-    try {
-      timeoutConfig = mergeTimeoutConfig(SUBNET_TIMEOUT, props.timeout);
-    } catch (error) {
-      if (this.phase === "delete") {
-        // Use default timeout for deletion to avoid blocking cleanup
-        timeoutConfig = SUBNET_TIMEOUT;
-      } else {
-        // Re-throw validation error during creation/update
-        throw error;
-      }
-    }
-
-    if (this.phase === "delete") {
-      if (this.output?.subnetId) {
-        console.log(`🗑️ Deleting Subnet: ${this.output.subnetId}`);
-        await retry(async () => {
-          await ignore("InvalidSubnetID.NotFound", async () => {
-            await callEC2Api(client, "DeleteSubnet", parseSubnetXmlResponse, {
-              SubnetId: this.output!.subnetId,
-            });
-          });
-        });
-
-        // Wait for Subnet to be fully deleted to avoid dependency violations
-        console.log(
-          `  Waiting for Subnet ${this.output.subnetId} to be fully deleted...`,
-        );
-        await waitForSubnetDeleted(client, this.output.subnetId, timeoutConfig);
-        console.log(`  ✅ Subnet ${this.output.subnetId} deletion completed`);
-      }
-      return this.destroy();
-    }
-
-    let subnet: AwsSubnet;
-
-    if (this.phase === "update" && this.output?.subnetId) {
-      // Get existing subnet
-      const response = await callEC2Api<DescribeSubnetsResponse>(
-        client,
-        "DescribeSubnets",
-        parseSubnetXmlResponse,
-        {
-          "SubnetId.1": this.output.subnetId,
-        },
-      );
-
-      if (!response.Subnets?.[0]) {
-        throw new Error(`Subnet ${this.output.subnetId} not found`);
-      }
-
-      subnet = response.Subnets[0];
-
-      // Update public IP assignment if it has changed
-      if (props.mapPublicIpOnLaunch !== undefined) {
-        await callEC2Api(
-          client,
-          "ModifySubnetAttribute",
-          parseSubnetXmlResponse,
-          {
-            SubnetId: subnet.SubnetId,
-            "MapPublicIpOnLaunch.Value": props.mapPublicIpOnLaunch.toString(),
-          },
-        );
-      }
-
-      // Update tags if provided
-      if (props.tags) {
-        const tagParams: Record<string, string> = {};
-        Object.entries(props.tags).forEach(([key, value], index) => {
-          tagParams[`Tag.${index + 1}.Key`] = key;
-          tagParams[`Tag.${index + 1}.Value`] = value;
-        });
-
-        await callEC2Api(client, "CreateTags", parseSubnetXmlResponse, {
-          "ResourceId.1": subnet.SubnetId,
-          ...tagParams,
-        });
-      }
-    } else {
-      // Create new subnet
-      const createSubnetParams: CreateSubnetParams = {
-        VpcId: vpcId,
-        CidrBlock: props.cidrBlock,
-        AvailabilityZone: props.availabilityZone,
-      };
-
-      // Add tags if specified
-      if (props.tags) {
-        createSubnetParams.TagSpecifications = [
-          {
-            ResourceType: "subnet",
-            Tags: Object.entries(props.tags).map(([key, value]) => ({
-              Key: key,
-              Value: value,
-            })),
-          },
-        ];
-      }
-
-      const createParams =
-        convertCreateSubnetParamsToAwsFormat(createSubnetParams);
-
-      const response = await callEC2Api<CreateSubnetResponse>(
-        client,
-        "CreateSubnet",
-        parseSubnetXmlResponse,
-        createParams,
-      );
-
-      if (!response.Subnet) {
-        throw new Error("Failed to create subnet");
-      }
-
-      subnet = response.Subnet;
-
-      // Set public IP assignment if specified
-      if (props.mapPublicIpOnLaunch !== undefined) {
-        await callEC2Api(
-          client,
-          "ModifySubnetAttribute",
-          parseSubnetXmlResponse,
-          {
-            SubnetId: subnet.SubnetId,
-            "MapPublicIpOnLaunch.Value": props.mapPublicIpOnLaunch.toString(),
-          },
-        );
-      }
-
-      // Wait for subnet to be available
-      await waitForSubnetAvailable(client, subnet.SubnetId, timeoutConfig);
-    }
-
-    return this({
-      subnetId: subnet.SubnetId,
-      vpcId: subnet.VpcId,
-      state: subnet.State as "pending" | "available",
-      availableIpAddressCount: subnet.AvailableIpAddressCount,
-      defaultForAz: subnet.DefaultForAz,
-      ...props,
-      vpc: vpcId,
-    });
-  },
-);

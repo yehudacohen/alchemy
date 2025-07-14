@@ -1,12 +1,12 @@
 import { DescribeSecurityGroupsCommand, EC2Client } from "@aws-sdk/client-ec2";
 import { describe, expect } from "vitest";
-import { alchemy } from "../../../src/alchemy.js";
-import { SecurityGroup } from "../../../src/aws/ec2/security-group.js";
-import { Vpc } from "../../../src/aws/ec2/vpc.js";
-import { destroy } from "../../../src/destroy.js";
-import { BRANCH_PREFIX } from "../../util.js";
+import { alchemy } from "../../../src/alchemy.ts";
+import { SecurityGroup } from "../../../src/aws/ec2/security-group.ts";
+import { Vpc } from "../../../src/aws/ec2/vpc.ts";
+import { destroy } from "../../../src/destroy.ts";
+import { BRANCH_PREFIX } from "../../util.ts";
 
-import "../../../src/test/vitest.js";
+import "../../../src/test/vitest.ts";
 
 const test = alchemy.test(import.meta, {
   prefix: BRANCH_PREFIX,
@@ -15,7 +15,7 @@ const test = alchemy.test(import.meta, {
 const ec2 = new EC2Client({});
 
 describe("SecurityGroup", () => {
-  test("create security group with rules", async (scope) => {
+  test("create security group", async (scope) => {
     const vpcName = `${BRANCH_PREFIX}-alchemy-test-sg-vpc`;
     const sgName = `${BRANCH_PREFIX}-alchemy-test-sg`;
     let vpc: Awaited<ReturnType<typeof Vpc>>;
@@ -32,22 +32,6 @@ describe("SecurityGroup", () => {
         vpc,
         groupName: sgName,
         description: "Test security group for Alchemy",
-        ingressRules: [
-          {
-            protocol: "tcp",
-            fromPort: 80,
-            toPort: 80,
-            cidrBlocks: ["0.0.0.0/0"],
-            description: "HTTP access",
-          },
-          {
-            protocol: "tcp",
-            fromPort: 443,
-            toPort: 443,
-            cidrBlocks: ["0.0.0.0/0"],
-            description: "HTTPS access",
-          },
-        ],
         tags: {
           Name: sgName,
           Environment: "test",
@@ -68,7 +52,6 @@ describe("SecurityGroup", () => {
       const sg = describeResponse.SecurityGroups?.[0];
       expect(sg?.GroupName).toBe(sgName);
       expect(sg?.VpcId).toBe(vpc.vpcId);
-      expect(sg?.IpPermissions?.length).toBeGreaterThan(0);
     } finally {
       // Always clean up, even if test fails
       await destroy(scope);

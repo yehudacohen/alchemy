@@ -3,123 +3,17 @@ import { XMLParser } from "fast-xml-parser";
 import type { Context } from "../../context.ts";
 import { Resource } from "../../resource.ts";
 import { ignore } from "../../util/ignore.ts";
+import { logger } from "../../util/logger.ts";
 import {
   mergeTimeoutConfig,
   type TimeoutConfig,
   waitForResourceState,
-} from "../../util/timeout.js";
+} from "../../util/timeout.ts";
 import { retry } from "../retry.ts";
 import type { InternetGateway } from "./internet-gateway.ts";
 import type { NatGateway } from "./nat-gateway.ts";
 import type { RouteTable } from "./route-table.ts";
-import { callEC2Api, createEC2Client } from "./utils.js";
-
-/**
- * Route timeout constants
- */
-export const ROUTE_TIMEOUT: TimeoutConfig = {
-  maxAttempts: 30,
-  delayMs: 1000, // 1 second - Routes are fast resources
-};
-
-/**
- * AWS Route API response types
- */
-interface DescribeRouteTablesResponse {
-  RouteTables: Array<{
-    RouteTableId: string;
-    VpcId: string;
-    Routes?: Array<{
-      DestinationCidrBlock?: string;
-      GatewayId?: string;
-      InstanceId?: string;
-      NatGatewayId?: string;
-      State: string;
-      Origin: string;
-    }>;
-  }>;
-}
-
-/**
- * Raw XML parsing interfaces for type safety
- */
-interface RawRouteTableXmlItem {
-  routeTableId: string;
-  vpcId: string;
-  routeSet?: {
-    item?: Array<RawRouteXmlItem> | RawRouteXmlItem;
-  };
-}
-
-interface RawRouteXmlItem {
-  destinationCidrBlock?: string;
-  gatewayId?: string;
-  instanceId?: string;
-  networkInterfaceId?: string;
-  vpcPeeringConnectionId?: string;
-  natGatewayId?: string;
-  transitGatewayId?: string;
-  state: string;
-  origin: string;
-}
-
-/**
- * Parse XML responses specifically for Route operations
- */
-function parseRouteXmlResponse<T>(xmlText: string): T {
-  const parser = new XMLParser({
-    ignoreAttributes: true,
-    parseAttributeValue: true,
-    parseTagValue: true,
-    trimValues: true,
-  });
-
-  const parsed = parser.parse(xmlText);
-  const result: Record<string, unknown> = {};
-
-  // Parse DescribeRouteTablesResponse
-  if (parsed.DescribeRouteTablesResponse) {
-    const routeTableSet = parsed.DescribeRouteTablesResponse.routeTableSet;
-    if (routeTableSet?.item) {
-      const routeTables = Array.isArray(routeTableSet.item)
-        ? routeTableSet.item
-        : [routeTableSet.item];
-      result.RouteTables = routeTables.map((rt: RawRouteTableXmlItem) => ({
-        RouteTableId: rt.routeTableId,
-        VpcId: rt.vpcId,
-        Routes: rt.routeSet?.item
-          ? (Array.isArray(rt.routeSet.item)
-              ? rt.routeSet.item
-              : [rt.routeSet.item]
-            ).map((route: RawRouteXmlItem) => ({
-              DestinationCidrBlock: route.destinationCidrBlock,
-              GatewayId: route.gatewayId,
-              InstanceId: route.instanceId,
-              NetworkInterfaceId: route.networkInterfaceId,
-              VpcPeeringConnectionId: route.vpcPeeringConnectionId,
-              NatGatewayId: route.natGatewayId,
-              TransitGatewayId: route.transitGatewayId,
-              State: route.state,
-              Origin: route.origin,
-            }))
-          : [],
-      }));
-    } else {
-      result.RouteTables = [];
-    }
-  }
-
-  // Handle success responses
-  if (
-    parsed.CreateRouteResponse ||
-    parsed.ReplaceRouteResponse ||
-    parsed.DeleteRouteResponse
-  ) {
-    result.success = true;
-  }
-
-  return result as T;
-}
+import { callEC2Api, createEC2Client } from "./utils.ts";
 
 /**
  * Properties for creating or updating a Route
@@ -256,7 +150,7 @@ export const Route = Resource(
 
     if (this.phase === "delete") {
       if (this.output?.routeTableId) {
-        console.log(
+        logger.log(
           `🗑️ Deleting Route: ${this.output.destinationCidrBlock} from Route Table ${this.output.routeTableId}`,
         );
         await retry(async () => {
@@ -269,7 +163,7 @@ export const Route = Resource(
         });
 
         // Wait for route to be fully deleted
-        console.log(
+        logger.log(
           `  Waiting for Route ${this.output.destinationCidrBlock} to be fully deleted...`,
         );
         await waitForRouteDeleted(
@@ -278,7 +172,7 @@ export const Route = Resource(
           this.output.destinationCidrBlock,
           _timeoutConfig,
         );
-        console.log(
+        logger.log(
           `  ✅ Route ${this.output.destinationCidrBlock} deletion completed`,
         );
       }
@@ -443,4 +337,111 @@ async function waitForRouteDeleted(
     "Route",
     "be deleted",
   );
+}
+
+/**
+ * Route timeout constants
+ */
+export const ROUTE_TIMEOUT: TimeoutConfig = {
+  maxAttempts: 30,
+  delayMs: 1000, // 1 second - Routes are fast resources
+};
+
+/**
+ * AWS Route API response types
+ */
+interface DescribeRouteTablesResponse {
+  RouteTables: Array<{
+    RouteTableId: string;
+    VpcId: string;
+    Routes?: Array<{
+      DestinationCidrBlock?: string;
+      GatewayId?: string;
+      InstanceId?: string;
+      NatGatewayId?: string;
+      State: string;
+      Origin: string;
+    }>;
+  }>;
+}
+
+/**
+ * Raw XML parsing interfaces for type safety
+ */
+interface RawRouteTableXmlItem {
+  routeTableId: string;
+  vpcId: string;
+  routeSet?: {
+    item?: Array<RawRouteXmlItem> | RawRouteXmlItem;
+  };
+}
+
+interface RawRouteXmlItem {
+  destinationCidrBlock?: string;
+  gatewayId?: string;
+  instanceId?: string;
+  networkInterfaceId?: string;
+  vpcPeeringConnectionId?: string;
+  natGatewayId?: string;
+  transitGatewayId?: string;
+  state: string;
+  origin: string;
+}
+
+/**
+ * Parse XML responses specifically for Route operations
+ */
+function parseRouteXmlResponse<T>(xmlText: string): T {
+  const parser = new XMLParser({
+    ignoreAttributes: true,
+    parseAttributeValue: true,
+    parseTagValue: true,
+    trimValues: true,
+  });
+
+  const parsed = parser.parse(xmlText);
+  const result: Record<string, unknown> = {};
+
+  // Parse DescribeRouteTablesResponse
+  if (parsed.DescribeRouteTablesResponse) {
+    const routeTableSet = parsed.DescribeRouteTablesResponse.routeTableSet;
+    if (routeTableSet?.item) {
+      const routeTables = Array.isArray(routeTableSet.item)
+        ? routeTableSet.item
+        : [routeTableSet.item];
+      result.RouteTables = routeTables.map((rt: RawRouteTableXmlItem) => ({
+        RouteTableId: rt.routeTableId,
+        VpcId: rt.vpcId,
+        Routes: rt.routeSet?.item
+          ? (Array.isArray(rt.routeSet.item)
+              ? rt.routeSet.item
+              : [rt.routeSet.item]
+            ).map((route: RawRouteXmlItem) => ({
+              DestinationCidrBlock: route.destinationCidrBlock,
+              GatewayId: route.gatewayId,
+              InstanceId: route.instanceId,
+              NetworkInterfaceId: route.networkInterfaceId,
+              VpcPeeringConnectionId: route.vpcPeeringConnectionId,
+              NatGatewayId: route.natGatewayId,
+              TransitGatewayId: route.transitGatewayId,
+              State: route.state,
+              Origin: route.origin,
+            }))
+          : [],
+      }));
+    } else {
+      result.RouteTables = [];
+    }
+  }
+
+  // Handle success responses
+  if (
+    parsed.CreateRouteResponse ||
+    parsed.ReplaceRouteResponse ||
+    parsed.DeleteRouteResponse
+  ) {
+    result.success = true;
+  }
+
+  return result as T;
 }

@@ -1,7 +1,7 @@
 import { fromNodeProviderChain } from "@aws-sdk/credential-providers";
 import { loadConfig } from "@smithy/node-config-provider";
 import { AwsClient } from "aws4fetch";
-import { flattenParams } from "../util/params.js";
+import { flattenParams } from "../util/params.ts";
 
 /**
  * Get AWS region from configuration

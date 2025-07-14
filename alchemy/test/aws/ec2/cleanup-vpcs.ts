@@ -23,7 +23,7 @@ import {
 } from "@aws-sdk/client-ec2";
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { BRANCH_PREFIX } from "../../util.js";
+import { BRANCH_PREFIX } from "../../util.ts";
 
 const ec2 = new EC2Client({});
 

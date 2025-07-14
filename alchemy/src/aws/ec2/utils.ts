@@ -1,7 +1,8 @@
 import { fromNodeProviderChain } from "@aws-sdk/credential-providers";
 import { AwsClient } from "aws4fetch";
-import { flattenParams } from "../../util/params.js";
-import { getRegion } from "../utils.js";
+import { logger } from "../../util/logger.ts";
+import { flattenParams } from "../../util/params.ts";
+import { getRegion } from "../utils.ts";
 
 /**
  * Shared EC2 utilities for all EC2 resources
@@ -61,7 +62,7 @@ export async function callEC2Api<T>(
 
         // If this is an auth failure and we haven't retried yet, create a fresh client and retry
         if (errorCode === "AuthFailure" && attempt === 1) {
-          console.log(
+          logger.log(
             `🔄 Auth failure detected, refreshing credentials and retrying ${action}...`,
           );
           // Create a fresh client with new credentials

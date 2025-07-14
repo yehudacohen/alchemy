@@ -3,12 +3,344 @@ import { XMLParser } from "fast-xml-parser";
 import type { Context } from "../../context.ts";
 import { Resource } from "../../resource.ts";
 import { ignore } from "../../util/ignore.ts";
+import { logger } from "../../util/logger.ts";
 import {
   mergeTimeoutConfig,
   type TimeoutConfig,
   waitForResourceState,
-} from "../../util/timeout.js";
-import { callEC2Api, createEC2Client } from "./utils.js";
+} from "../../util/timeout.ts";
+import { callEC2Api, createEC2Client } from "./utils.ts";
+
+/**
+ * Properties for creating or updating an Internet Gateway
+ */
+export interface InternetGatewayProps {
+  /**
+   * Tags to apply to the Internet Gateway
+   */
+  tags?: Record<string, string>;
+
+  /**
+   * Timeout configuration for Internet Gateway operations
+   * @default Internet Gateway-specific sensible defaults (60 attempts, 2000ms delay)
+   */
+  timeout?: Partial<TimeoutConfig>;
+}
+
+/**
+ * Output returned after Internet Gateway creation/update
+ */
+export interface InternetGateway
+  extends Resource<"aws::InternetGateway">,
+    InternetGatewayProps {
+  /**
+   * The ID of the Internet Gateway
+   */
+  internetGatewayId: string;
+
+  /**
+   * The current state of the Internet Gateway
+   */
+  state: "available";
+
+  /**
+   * Information about the VPCs attached to the Internet Gateway
+   */
+  attachments?: Array<{
+    vpcId: string;
+    state: "attaching" | "attached" | "detaching" | "detached";
+  }>;
+
+  /**
+   * The ID of the AWS account that owns the Internet Gateway
+   */
+  ownerId?: string;
+}
+
+/**
+ * Wait for Internet Gateway to be in available state
+ */
+async function waitForInternetGatewayAvailable(
+  client: AwsClient,
+  internetGatewayId: string,
+  timeoutConfig: TimeoutConfig,
+): Promise<void> {
+  const checkFunction = async () => {
+    const response = await callEC2Api<DescribeInternetGatewaysResponse>(
+      client,
+      "DescribeInternetGateways",
+      parseInternetGatewayXmlResponse,
+      {
+        "InternetGatewayId.1": internetGatewayId,
+      },
+    );
+    return response.InternetGateways?.[0];
+  };
+
+  const isReady = (igw: AwsInternetGateway | undefined) => {
+    return igw?.State === "available" || igw !== undefined; // IGWs are usually immediately available
+  };
+
+  await waitForResourceState(
+    checkFunction,
+    isReady,
+    timeoutConfig,
+    internetGatewayId,
+    "Internet Gateway",
+    "is now available",
+  );
+}
+
+/**
+ * Wait for Internet Gateway to be deleted
+ */
+async function waitForInternetGatewayDeleted(
+  client: AwsClient,
+  internetGatewayId: string,
+  timeoutConfig: TimeoutConfig,
+): Promise<void> {
+  const checkFunction = async () => {
+    try {
+      const response = await callEC2Api<DescribeInternetGatewaysResponse>(
+        client,
+        "DescribeInternetGateways",
+        parseInternetGatewayXmlResponse,
+        {
+          "InternetGatewayId.1": internetGatewayId,
+        },
+      );
+      return response.InternetGateways?.[0];
+    } catch (error: any) {
+      // If Internet Gateway is not found, it's been deleted - return undefined
+      if (
+        error.code === "InvalidInternetGatewayID.NotFound" ||
+        error.code === "InvalidInternetGateway.NotFound"
+      ) {
+        return undefined;
+      }
+      throw error;
+    }
+  };
+
+  const isReady = (igw: AwsInternetGateway | undefined) => {
+    // Internet Gateway is deleted if it doesn't exist
+    return !igw;
+  };
+
+  await waitForResourceState(
+    checkFunction,
+    isReady,
+    timeoutConfig,
+    internetGatewayId,
+    "Internet Gateway",
+    "deletion completed",
+  );
+}
+
+/**
+ * AWS Internet Gateway Resource
+ *
+ * An Internet Gateway is a horizontally scaled, redundant, and highly available VPC component
+ * that allows communication between your VPC and the internet. It serves two purposes:
+ * 1. Provide a target in your VPC route tables for internet-routable traffic
+ * 2. Perform network address translation (NAT) for instances with public IPv4 addresses
+ *
+ * @example
+ * ```typescript
+ * // Create a basic Internet Gateway
+ * const igw = new InternetGateway({
+ *   tags: {
+ *     Name: "my-internet-gateway",
+ *     Environment: "production"
+ *   }
+ * });
+ * ```
+ *
+ * @example
+ * ```typescript
+ * // Create Internet Gateway with custom timeout configuration
+ * const igw = new InternetGateway({
+ *   tags: { Name: "custom-igw" },
+ *   timeoutConfig: {
+ *     maxAttempts: 30,
+ *     delayMs: 1000
+ *   }
+ * });
+ * ```
+ *
+ * @example
+ * ```typescript
+ * // Create Internet Gateway and attach to VPC
+ * const vpc = new VPC({ cidrBlock: "10.0.0.0/16" });
+ * const igw = new InternetGateway({ tags: { Name: "vpc-igw" } });
+ * const attachment = new InternetGatewayAttachment({
+ *   internetGatewayId: igw.internetGatewayId,
+ *   vpcId: vpc.vpcId
+ * });
+ * ```
+ *
+ * @example
+ * ```typescript
+ * // Access Internet Gateway properties
+ * const igw = new InternetGateway({ tags: { Name: "example-igw" } });
+ * logger.log(`Internet Gateway ID: ${igw.internetGatewayId}`);
+ * logger.log(`State: ${igw.state}`);
+ * ```
+ *
+ * Creates and manages Internet Gateways that provide internet access to VPCs.
+ * Note: Use InternetGatewayAttachment to attach the gateway to a VPC.
+ *
+ * @example
+ * // Create a basic Internet Gateway
+ * const igw = await InternetGateway("main-igw", {
+ *   tags: {
+ *     Name: "main-internet-gateway",
+ *     Environment: "production"
+ *   }
+ * });
+ *
+ * @example
+ * // Create an Internet Gateway for development environment
+ * const devIgw = await InternetGateway("dev-igw", {
+ *   tags: {
+ *     Name: "dev-internet-gateway",
+ *     Environment: "development",
+ *     Team: "backend"
+ *   }
+ * });
+ *
+ * @example
+ * // Create an Internet Gateway with custom timeout configuration
+ * const customIgw = await InternetGateway("custom-igw", {
+ *   timeout: {
+ *     maxAttempts: 90,
+ *     delayMs: 1500
+ *   },
+ *   tags: {
+ *     Name: "custom-timeout-igw",
+ *     Purpose: "high-availability"
+ *   }
+ * });
+ */
+export const InternetGateway = Resource(
+  "aws::InternetGateway",
+  async function (
+    this: Context<InternetGateway>,
+    _id: string,
+    props: InternetGatewayProps,
+  ): Promise<InternetGateway> {
+    const client = await createEC2Client();
+    const timeoutConfig = mergeTimeoutConfig(
+      INTERNET_GATEWAY_TIMEOUT,
+      props.timeout,
+    );
+
+    if (this.phase === "delete") {
+      if (this.output?.internetGatewayId) {
+        logger.log(
+          `🗑️ Deleting Internet Gateway: ${this.output.internetGatewayId}`,
+        );
+
+        // Simply delete the Internet Gateway - attachments should handle themselves
+        await ignore("InvalidInternetGatewayID.NotFound", async () => {
+          await callEC2Api(
+            client,
+            "DeleteInternetGateway",
+            parseInternetGatewayXmlResponse,
+            {
+              InternetGatewayId: this.output.internetGatewayId,
+            },
+          );
+        });
+
+        // Wait for Internet Gateway to be fully deleted
+        await waitForInternetGatewayDeleted(
+          client,
+          this.output.internetGatewayId,
+          timeoutConfig,
+        );
+
+        logger.log(
+          `  ✅ Internet Gateway ${this.output.internetGatewayId} deletion completed`,
+        );
+      }
+      return this.destroy();
+    }
+
+    let internetGateway: AwsInternetGateway;
+
+    if (this.phase === "update" && this.output?.internetGatewayId) {
+      // Get existing Internet Gateway
+      const response = await callEC2Api<DescribeInternetGatewaysResponse>(
+        client,
+        "DescribeInternetGateways",
+        parseInternetGatewayXmlResponse,
+        {
+          "InternetGatewayId.1": this.output.internetGatewayId,
+        },
+      );
+
+      if (!response.InternetGateways?.[0]) {
+        throw new Error(
+          `Internet Gateway ${this.output.internetGatewayId} not found`,
+        );
+      }
+
+      internetGateway = response.InternetGateways[0];
+    } else {
+      // Create new Internet Gateway
+      const createInternetGatewayParams: CreateInternetGatewayParams = {};
+
+      // Add tags if provided
+      if (props.tags) {
+        createInternetGatewayParams.TagSpecifications = [
+          {
+            ResourceType: "internet-gateway",
+            Tags: Object.entries(props.tags).map(([key, value]) => ({
+              Key: key,
+              Value: value,
+            })),
+          },
+        ];
+      }
+
+      const createParams = convertCreateInternetGatewayParamsToAwsFormat(
+        createInternetGatewayParams,
+      );
+
+      const response = await callEC2Api<CreateInternetGatewayResponse>(
+        client,
+        "CreateInternetGateway",
+        parseInternetGatewayXmlResponse,
+        createParams,
+      );
+
+      if (!response.InternetGateway) {
+        throw new Error("Failed to create Internet Gateway");
+      }
+
+      internetGateway = response.InternetGateway;
+
+      // Wait for Internet Gateway to be available
+      await waitForInternetGatewayAvailable(
+        client,
+        internetGateway.InternetGatewayId!,
+        timeoutConfig,
+      );
+    }
+
+    return this({
+      internetGatewayId: internetGateway.InternetGatewayId!,
+      state: "available",
+      attachments: internetGateway.Attachments?.map((att) => ({
+        vpcId: att.VpcId,
+        state: att.State,
+      })),
+      ownerId: internetGateway.OwnerId,
+      ...props,
+    });
+  },
+);
 
 /**
  * Internet Gateway timeout constants
@@ -223,334 +555,3 @@ function parseInternetGatewayXmlResponse<T>(xmlText: string): T {
 
   return result as T;
 }
-
-/**
- * Properties for creating or updating an Internet Gateway
- */
-export interface InternetGatewayProps {
-  /**
-   * Tags to apply to the Internet Gateway
-   */
-  tags?: Record<string, string>;
-
-  /**
-   * Timeout configuration for Internet Gateway operations
-   * @default Internet Gateway-specific sensible defaults (60 attempts, 2000ms delay)
-   */
-  timeout?: Partial<TimeoutConfig>;
-}
-
-/**
- * Output returned after Internet Gateway creation/update
- */
-export interface InternetGateway
-  extends Resource<"aws::InternetGateway">,
-    InternetGatewayProps {
-  /**
-   * The ID of the Internet Gateway
-   */
-  internetGatewayId: string;
-
-  /**
-   * The current state of the Internet Gateway
-   */
-  state: "available";
-
-  /**
-   * Information about the VPCs attached to the Internet Gateway
-   */
-  attachments?: Array<{
-    vpcId: string;
-    state: "attaching" | "attached" | "detaching" | "detached";
-  }>;
-
-  /**
-   * The ID of the AWS account that owns the Internet Gateway
-   */
-  ownerId?: string;
-}
-
-/**
- * Wait for Internet Gateway to be in available state
- */
-async function waitForInternetGatewayAvailable(
-  client: AwsClient,
-  internetGatewayId: string,
-  timeoutConfig: TimeoutConfig,
-): Promise<void> {
-  const checkFunction = async () => {
-    const response = await callEC2Api<DescribeInternetGatewaysResponse>(
-      client,
-      "DescribeInternetGateways",
-      parseInternetGatewayXmlResponse,
-      {
-        "InternetGatewayId.1": internetGatewayId,
-      },
-    );
-    return response.InternetGateways?.[0];
-  };
-
-  const isReady = (igw: AwsInternetGateway | undefined) => {
-    return igw?.State === "available" || igw !== undefined; // IGWs are usually immediately available
-  };
-
-  await waitForResourceState(
-    checkFunction,
-    isReady,
-    timeoutConfig,
-    internetGatewayId,
-    "Internet Gateway",
-    "is now available",
-  );
-}
-
-/**
- * Wait for Internet Gateway to be deleted
- */
-async function waitForInternetGatewayDeleted(
-  client: AwsClient,
-  internetGatewayId: string,
-  timeoutConfig: TimeoutConfig,
-): Promise<void> {
-  const checkFunction = async () => {
-    try {
-      const response = await callEC2Api<DescribeInternetGatewaysResponse>(
-        client,
-        "DescribeInternetGateways",
-        parseInternetGatewayXmlResponse,
-        {
-          "InternetGatewayId.1": internetGatewayId,
-        },
-      );
-      return response.InternetGateways?.[0];
-    } catch (error: any) {
-      // If Internet Gateway is not found, it's been deleted - return undefined
-      if (
-        error.code === "InvalidInternetGatewayID.NotFound" ||
-        error.code === "InvalidInternetGateway.NotFound"
-      ) {
-        return undefined;
-      }
-      throw error;
-    }
-  };
-
-  const isReady = (igw: AwsInternetGateway | undefined) => {
-    // Internet Gateway is deleted if it doesn't exist
-    return !igw;
-  };
-
-  await waitForResourceState(
-    checkFunction,
-    isReady,
-    timeoutConfig,
-    internetGatewayId,
-    "Internet Gateway",
-    "deletion completed",
-  );
-}
-
-/**
- * AWS Internet Gateway Resource
- *
- * An Internet Gateway is a horizontally scaled, redundant, and highly available VPC component
- * that allows communication between your VPC and the internet. It serves two purposes:
- * 1. Provide a target in your VPC route tables for internet-routable traffic
- * 2. Perform network address translation (NAT) for instances with public IPv4 addresses
- *
- * @example
- * ```typescript
- * // Create a basic Internet Gateway
- * const igw = new InternetGateway({
- *   tags: {
- *     Name: "my-internet-gateway",
- *     Environment: "production"
- *   }
- * });
- * ```
- *
- * @example
- * ```typescript
- * // Create Internet Gateway with custom timeout configuration
- * const igw = new InternetGateway({
- *   tags: { Name: "custom-igw" },
- *   timeoutConfig: {
- *     maxAttempts: 30,
- *     delayMs: 1000
- *   }
- * });
- * ```
- *
- * @example
- * ```typescript
- * // Create Internet Gateway and attach to VPC
- * const vpc = new VPC({ cidrBlock: "10.0.0.0/16" });
- * const igw = new InternetGateway({ tags: { Name: "vpc-igw" } });
- * const attachment = new InternetGatewayAttachment({
- *   internetGatewayId: igw.internetGatewayId,
- *   vpcId: vpc.vpcId
- * });
- * ```
- *
- * @example
- * ```typescript
- * // Access Internet Gateway properties
- * const igw = new InternetGateway({ tags: { Name: "example-igw" } });
- * console.log(`Internet Gateway ID: ${igw.internetGatewayId}`);
- * console.log(`State: ${igw.state}`);
- * ```
- *
- * Creates and manages Internet Gateways that provide internet access to VPCs.
- * Note: Use InternetGatewayAttachment to attach the gateway to a VPC.
- *
- * @example
- * // Create a basic Internet Gateway
- * const igw = await InternetGateway("main-igw", {
- *   tags: {
- *     Name: "main-internet-gateway",
- *     Environment: "production"
- *   }
- * });
- *
- * @example
- * // Create an Internet Gateway for development environment
- * const devIgw = await InternetGateway("dev-igw", {
- *   tags: {
- *     Name: "dev-internet-gateway",
- *     Environment: "development",
- *     Team: "backend"
- *   }
- * });
- *
- * @example
- * // Create an Internet Gateway with custom timeout configuration
- * const customIgw = await InternetGateway("custom-igw", {
- *   timeout: {
- *     maxAttempts: 90,
- *     delayMs: 1500
- *   },
- *   tags: {
- *     Name: "custom-timeout-igw",
- *     Purpose: "high-availability"
- *   }
- * });
- */
-export const InternetGateway = Resource(
-  "aws::InternetGateway",
-  async function (
-    this: Context<InternetGateway>,
-    _id: string,
-    props: InternetGatewayProps,
-  ): Promise<InternetGateway> {
-    const client = await createEC2Client();
-    const timeoutConfig = mergeTimeoutConfig(
-      INTERNET_GATEWAY_TIMEOUT,
-      props.timeout,
-    );
-
-    if (this.phase === "delete") {
-      if (this.output?.internetGatewayId) {
-        console.log(
-          `🗑️ Deleting Internet Gateway: ${this.output.internetGatewayId}`,
-        );
-
-        // Simply delete the Internet Gateway - attachments should handle themselves
-        await ignore("InvalidInternetGatewayID.NotFound", async () => {
-          await callEC2Api(
-            client,
-            "DeleteInternetGateway",
-            parseInternetGatewayXmlResponse,
-            {
-              InternetGatewayId: this.output.internetGatewayId,
-            },
-          );
-        });
-
-        // Wait for Internet Gateway to be fully deleted
-        await waitForInternetGatewayDeleted(
-          client,
-          this.output.internetGatewayId,
-          timeoutConfig,
-        );
-
-        console.log(
-          `  ✅ Internet Gateway ${this.output.internetGatewayId} deletion completed`,
-        );
-      }
-      return this.destroy();
-    }
-
-    let internetGateway: AwsInternetGateway;
-
-    if (this.phase === "update" && this.output?.internetGatewayId) {
-      // Get existing Internet Gateway
-      const response = await callEC2Api<DescribeInternetGatewaysResponse>(
-        client,
-        "DescribeInternetGateways",
-        parseInternetGatewayXmlResponse,
-        {
-          "InternetGatewayId.1": this.output.internetGatewayId,
-        },
-      );
-
-      if (!response.InternetGateways?.[0]) {
-        throw new Error(
-          `Internet Gateway ${this.output.internetGatewayId} not found`,
-        );
-      }
-
-      internetGateway = response.InternetGateways[0];
-    } else {
-      // Create new Internet Gateway
-      const createInternetGatewayParams: CreateInternetGatewayParams = {};
-
-      // Add tags if provided
-      if (props.tags) {
-        createInternetGatewayParams.TagSpecifications = [
-          {
-            ResourceType: "internet-gateway",
-            Tags: Object.entries(props.tags).map(([key, value]) => ({
-              Key: key,
-              Value: value,
-            })),
-          },
-        ];
-      }
-
-      const createParams = convertCreateInternetGatewayParamsToAwsFormat(
-        createInternetGatewayParams,
-      );
-
-      const response = await callEC2Api<CreateInternetGatewayResponse>(
-        client,
-        "CreateInternetGateway",
-        parseInternetGatewayXmlResponse,
-        createParams,
-      );
-
-      if (!response.InternetGateway) {
-        throw new Error("Failed to create Internet Gateway");
-      }
-
-      internetGateway = response.InternetGateway;
-
-      // Wait for Internet Gateway to be available
-      await waitForInternetGatewayAvailable(
-        client,
-        internetGateway.InternetGatewayId!,
-        timeoutConfig,
-      );
-    }
-
-    return this({
-      internetGatewayId: internetGateway.InternetGatewayId!,
-      state: "available",
-      attachments: internetGateway.Attachments?.map((att) => ({
-        vpcId: att.VpcId,
-        state: att.State,
-      })),
-      ownerId: internetGateway.OwnerId,
-      ...props,
-    });
-  },
-);
