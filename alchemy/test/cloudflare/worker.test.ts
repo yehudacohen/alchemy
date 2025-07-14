@@ -1876,4 +1876,66 @@ describe("Worker Resource", () => {
       await assertWorkerDoesNotExist(api, workerName);
     }
   });
+
+  test("create worker with compatibility preset", async (scope) => {
+    const workerName = `${BRANCH_PREFIX}-test-worker-compatibility-preset`;
+
+    let worker: Worker | undefined;
+    try {
+      // Create a worker with the "node" compatibility preset
+      worker = await Worker(workerName, {
+        name: workerName,
+        adopt: true,
+        script: `
+          export default {
+            async fetch(request, env, ctx) {
+              return new Response('Hello from Node.js compatible worker!', {
+                status: 200,
+                headers: { 'Content-Type': 'text/plain' }
+              });
+            }
+          };
+        `,
+        format: "esm",
+        url: true,
+        compatibility: "node", // Use the "node" preset
+      });
+
+      expect(worker.id).toBeTruthy();
+      expect(worker.name).toEqual(workerName);
+      expect(worker.url).toBeTruthy();
+
+      // Verify that the "node" preset automatically includes nodejs_compat flag
+      expect(worker.compatibilityFlags).toContain("nodejs_compat");
+
+      // Test that preset flags are combined with user-provided flags
+      worker = await Worker(workerName, {
+        name: workerName,
+        adopt: true,
+        script: `
+          import crypto from 'node:crypto';
+
+          export default {
+            async fetch(request, env, ctx) {
+              return new Response('Hello from Node.js compatible worker with additional flags!', {
+                status: 200,
+                headers: { 'Content-Type': 'text/plain' }
+              });
+            }
+          };
+        `,
+        format: "esm",
+        url: true,
+        compatibility: "node",
+        compatibilityFlags: ["nodejs_als"], // Add valid compatibility flag in addition to preset
+      });
+
+      // Verify that both preset flags and user-provided flags are present
+      expect(worker.compatibilityFlags).toContain("nodejs_compat"); // From preset
+      expect(worker.compatibilityFlags).toContain("nodejs_als"); // From user
+    } finally {
+      await destroy(scope);
+      await assertWorkerDoesNotExist(api, workerName);
+    }
+  });
 });
