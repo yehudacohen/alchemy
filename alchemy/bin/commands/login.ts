@@ -1,10 +1,7 @@
 import { cancel, intro, log, outro } from "@clack/prompts";
 import pc from "picocolors";
-import z from "zod";
-import {
-  DEFAULT_SCOPES,
-  wranglerLogin,
-} from "../../src/cloudflare/auth-wrangler.ts";
+import { zod as z } from "trpc-cli";
+import { DEFAULT_SCOPES, wranglerLogin } from "../../src/cloudflare/oauth.ts";
 import { throwWithContext } from "../errors.ts";
 import { t } from "../trpc.ts";
 

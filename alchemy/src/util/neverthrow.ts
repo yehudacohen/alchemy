@@ -34,3 +34,31 @@ export const singleFlight = <Args extends any[], Value, Error>(
     });
   };
 };
+
+export class HTTPError extends Error {
+  constructor(
+    message: string,
+    public readonly status: number,
+  ) {
+    super(message);
+  }
+}
+
+// TODO: merge this with safe-fetch?
+export const fetchResult = (url: string, init: RequestInit = {}) => {
+  return ResultAsync.fromPromise(
+    fetch(url, init),
+    () => new HTTPError(`Failed to ${init.method ?? "GET"} ${url}`, 0),
+  );
+};
+
+export const fetchJSON = <T, E>(url: string, init: RequestInit = {}) => {
+  return fetchResult(url, init).andThen(decodeJSON<T, E>);
+};
+
+export const decodeJSON = <T, E>(response: Response) => {
+  return ResultAsync.fromPromise(
+    response.json(),
+    () => new HTTPError("Failed to decode JSON", response.status),
+  ).andThen((json) => (response.ok ? ok(json as T) : err(json as E)));
+};
