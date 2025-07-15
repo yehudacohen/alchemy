@@ -1,3 +1,38 @@
+## v0.46.0
+
+### &nbsp;&nbsp;&nbsp;🚀 Features
+
+- **aws**:
+  - Support aws endpoint environment variable &nbsp;-&nbsp; by **Cristian Pallarés** in https://github.com/sam-goodwin/alchemy/issues/644 [<samp>(781fe)</samp>](https://github.com/sam-goodwin/alchemy/commit/781fe919)
+- **cli**:
+  - `deploy`, `destroy`, `dev` and `run` commands &nbsp;-&nbsp; by **Sam Goodwin** in https://github.com/sam-goodwin/alchemy/issues/636 [<samp>(1ca1c)</samp>](https://github.com/sam-goodwin/alchemy/commit/1ca1c093)
+  - Add github actions in templates and git init step &nbsp;-&nbsp; by **Aman Varshney** in https://github.com/sam-goodwin/alchemy/issues/624 [<samp>(932a5)</samp>](https://github.com/sam-goodwin/alchemy/commit/932a5f9c)
+- **cloudflare**:
+  - SQLite-backed durable object state store &nbsp;-&nbsp; by **John Royal** in https://github.com/sam-goodwin/alchemy/issues/630 [<samp>(af055)</samp>](https://github.com/sam-goodwin/alchemy/commit/af0558c7)
+  - Add MySQL support to Hyperdrive resource &nbsp;-&nbsp; by **Sam Goodwin** in https://github.com/sam-goodwin/alchemy/issues/635 [<samp>(9cfc8)</samp>](https://github.com/sam-goodwin/alchemy/commit/9cfc8cff)
+  - Use functions instead of classes for static bindings &nbsp;-&nbsp; by **Sam Goodwin** in https://github.com/sam-goodwin/alchemy/issues/588 [<samp>(819f6)</samp>](https://github.com/sam-goodwin/alchemy/commit/819f6260)
+  - Login automatically or via cli &nbsp;-&nbsp; by **John Royal** in https://github.com/sam-goodwin/alchemy/issues/631 [<samp>(c59aa)</samp>](https://github.com/sam-goodwin/alchemy/commit/c59aadce)
+  - Add compatibility presets to Cloudflare Worker &nbsp;-&nbsp; by **Sam Goodwin** in https://github.com/sam-goodwin/alchemy/issues/526 [<samp>(5cdcb)</samp>](https://github.com/sam-goodwin/alchemy/commit/5cdcb22a)
+  - Rename workers &nbsp;-&nbsp; by **Michael K** in https://github.com/sam-goodwin/alchemy/issues/619 [<samp>(2b518)</samp>](https://github.com/sam-goodwin/alchemy/commit/2b518bb9)
+  - CloudflareStateStore and deprecate DOStateStore &nbsp;-&nbsp; by **John Royal** in https://github.com/sam-goodwin/alchemy/issues/665 [<samp>(779cf)</samp>](https://github.com/sam-goodwin/alchemy/commit/779cf6c9)
+
+### &nbsp;&nbsp;&nbsp;🐞 Bug Fixes
+
+- **aws**:
+  - Revert AWS_ENDPOINT environment variable &nbsp;-&nbsp; by **Cristian Pallarés** in https://github.com/sam-goodwin/alchemy/issues/663 [<samp>(fd307)</samp>](https://github.com/sam-goodwin/alchemy/commit/fd3071e9)
+- **cli**:
+  - Remove negated flags &nbsp;-&nbsp; by **Aman Varshney** in https://github.com/sam-goodwin/alchemy/issues/672 [<samp>(254bd)</samp>](https://github.com/sam-goodwin/alchemy/commit/254bd5a1)
+- **cloudflare**:
+  - Update keyword for adopting an existing vectorize index &nbsp;-&nbsp; by **Sergey Bekrin** in https://github.com/sam-goodwin/alchemy/issues/650 [<samp>(3d2c0)</samp>](https://github.com/sam-goodwin/alchemy/commit/3d2c097e)
+  - Adopt Container when binding to a Worker &nbsp;-&nbsp; by **Sam Goodwin** in https://github.com/sam-goodwin/alchemy/issues/661 [<samp>(fb9d9)</samp>](https://github.com/sam-goodwin/alchemy/commit/fb9d9d87)
+  - Remote worker tail crash &nbsp;-&nbsp; by **John Royal** in https://github.com/sam-goodwin/alchemy/issues/642 [<samp>(d47b6)</samp>](https://github.com/sam-goodwin/alchemy/commit/d47b65d8)
+- **test**:
+  - Replace tests no longer have race condition &nbsp;-&nbsp; by **Michael K** in https://github.com/sam-goodwin/alchemy/issues/653 [<samp>(45df4)</samp>](https://github.com/sam-goodwin/alchemy/commit/45df403d)
+
+##### &nbsp;&nbsp;&nbsp;&nbsp;[View changes on GitHub](https://github.com/sam-goodwin/alchemy/compare/v0.45.6...v0.46.0)
+
+---
+
 ## v0.45.6
 
 ### &nbsp;&nbsp;&nbsp;🐞 Bug Fixes
