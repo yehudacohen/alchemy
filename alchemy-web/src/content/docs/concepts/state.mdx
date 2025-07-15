@@ -125,12 +125,10 @@ const app = await alchemy("my-app", {
     // Cloudflare API credentials
     email: process.env.CLOUDFLARE_EMAIL,
     apiToken: alchemy.secret(process.env.CLOUDFLARE_API_TOKEN),
-    // Optional: customize worker name (defaults to "alchemy-state")
+    // Optional: customize worker name (defaults to "alchemy-state-service")
     scriptName: "my-app-state",
     // Overrides the default state token (ALCHEMY_STATE_TOKEN)
     stateToken: alchemy.secret(process.env.MY_STATE_TOKEN),
-    // Optional: customize worker name (defaults to "alchemy-state")
-    scriptName: "my-app-state",
   })
 });
 ```
