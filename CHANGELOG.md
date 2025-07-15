@@ -1,3 +1,13 @@
+## v0.46.1
+
+### &nbsp;&nbsp;&nbsp;🐞 Bug Fixes
+
+- **cloudflare**: Add naked import of esbuild/bundle to resolve destroy error &nbsp;-&nbsp; by **John Royal** in https://github.com/sam-goodwin/alchemy/issues/674 [<samp>(f8c11)</samp>](https://github.com/sam-goodwin/alchemy/commit/f8c11092)
+
+##### &nbsp;&nbsp;&nbsp;&nbsp;[View changes on GitHub](https://github.com/sam-goodwin/alchemy/compare/v0.46.0...v0.46.1)
+
+---
+
 ## v0.46.0
 
 ### &nbsp;&nbsp;&nbsp;🚀 Features
