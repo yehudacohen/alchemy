@@ -25,14 +25,11 @@ export const singleFlight = <Args extends any[], Value, Error>(
     const key = JSON.stringify(args ?? []);
     const cached = results.get(key);
     if (cached) {
-      console.log("returning in flight", key);
       return cached;
     }
-    console.log("not in flight, calling fn", key);
     const result = fn(...args);
     results.set(key, result);
     return ensure(result, () => {
-      console.log("removing from flight", key);
       results.delete(key);
     });
   };

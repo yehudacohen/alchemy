@@ -1369,7 +1369,7 @@ describe("Worker Resource", () => {
         adopt: true,
       });
 
-      const worker2 = await Worker("worker1", {
+      const worker2 = await Worker("worker2", {
         name: workerName2,
         bindings: {
           TARGET_WORKER: WorkerRef<{
