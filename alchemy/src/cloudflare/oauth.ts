@@ -6,6 +6,7 @@ import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import open from "open";
+import xdgAppPaths from "xdg-app-paths";
 import { HTTPServer } from "../util/http-server.ts";
 import { memoize } from "../util/memoize.ts";
 import {
@@ -15,7 +16,6 @@ import {
   HTTPError,
   singleFlight,
 } from "../util/neverthrow.ts";
-import { createXdgAppPaths } from "../util/xdg-paths.ts";
 
 const CLIENT_ID = "54d11594-84e4-41aa-b438-e81b8fa78ee7";
 const REDIRECT_URI = "http://localhost:8976/oauth/callback";
@@ -70,7 +70,7 @@ export const getRefreshedWranglerConfig = singleFlight(() =>
 );
 
 const getWranglerConfigPath = memoize(async () => {
-  const xdgConfigDir = createXdgAppPaths(".wrangler").config();
+  const xdgConfigDir = xdgAppPaths(".wrangler").config();
   const legacyConfigDir = path.join(os.homedir(), ".wrangler");
   const configDir = (await fs
     .stat(legacyConfigDir)
@@ -92,12 +92,12 @@ const readWranglerConfig = () => {
       const config = toml.parse(text.replace(/\r\n/g, "\n"));
       assert(typeof config.oauth_token === "string");
       assert(typeof config.refresh_token === "string");
-      assert(config.expiration_time instanceof Date);
+      assert(!!config.expiration_time);
       assert(Array.isArray(config.scopes));
       return {
         oauth_token: config.oauth_token,
         refresh_token: config.refresh_token,
-        expiration_time: new Date(config.expiration_time),
+        expiration_time: new Date(config.expiration_time as any),
         scopes: config.scopes as string[],
       };
     }),
@@ -110,6 +110,7 @@ const writeWranglerConfig = (config: WranglerConfig) => {
   return ResultAsync.fromSafePromise(getWranglerConfigPath()).map(
     async (configPath) => {
       const toml = await import("@iarna/toml");
+      await fs.mkdir(path.dirname(configPath), { recursive: true });
       await fs.writeFile(
         configPath,
         toml.stringify({
