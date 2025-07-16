@@ -188,7 +188,7 @@ if (!noCaptureFlag) {
 const tasks = new Listr(
   filteredExamples.map((example) => ({
     title: `${example.name}`,
-    task: async (ctx, task) => {
+    task: async (_ctx, task) => {
       let devCommand: string;
       let deployCommand: string;
       let destroyCommand: string;
@@ -267,7 +267,7 @@ const tasks = new Listr(
 );
 
 try {
-  const context = await tasks.run();
+  await tasks.run();
 
   // Print summary
   const totalTests = filteredExamples.length;
