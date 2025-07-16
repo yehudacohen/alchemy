@@ -4,7 +4,6 @@ import { spawn } from "node:child_process";
 import fs from "node:fs/promises";
 import { isDeepStrictEqual } from "node:util";
 import path from "pathe";
-import { BUILD_DATE } from "../build-date.ts";
 import type { Context } from "../context.ts";
 import type { BundleProps } from "../esbuild/bundle.ts";
 import { InnerResourceScope, Resource, ResourceKind } from "../resource.ts";
@@ -43,6 +42,7 @@ import {
   normalizeWorkerBundle,
 } from "./bundle/index.ts";
 import { wrap } from "./bundle/normalize.ts";
+import { DEFAULT_COMPATIBILITY_DATE } from "./compatibility-date.gen.ts";
 import {
   type CompatibilityPreset,
   unionCompatibilityFlags,
@@ -212,7 +212,7 @@ export interface BaseWorkerProps<
 
   /**
    * The compatibility date for the worker
-   * @default BUILD_DATE - automatically pinned to the package build date
+   * @default DEFAULT_WORKER_COMPATIBILITY_DATE - automatically pinned to the latest Workers release
    */
   compatibilityDate?: string;
 
@@ -1012,8 +1012,6 @@ export function Worker<const B extends Bindings>(
     return worker;
   });
 }
-
-export const DEFAULT_COMPATIBILITY_DATE = BUILD_DATE;
 
 export const _Worker = Resource(
   "cloudflare::Worker",
