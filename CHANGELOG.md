@@ -1,3 +1,13 @@
+## v0.48.0
+
+### &nbsp;&nbsp;&nbsp;🐞 Bug Fixes
+
+- **cloudflare**: Replace `dev: "prefer-local &nbsp;-&nbsp; by **5df4c8f7** [<samp>(remot)</samp>](https://github.com/sam-goodwin/alchemy/commit/remote"` with `local: boolean`, `watch: boolean` (#641))
+
+##### &nbsp;&nbsp;&nbsp;&nbsp;[View changes on GitHub](https://github.com/sam-goodwin/alchemy/compare/v0.47.0...v0.48.0)
+
+---
+
 ## v0.47.0
 
 ### &nbsp;&nbsp;&nbsp;🚀 Features
