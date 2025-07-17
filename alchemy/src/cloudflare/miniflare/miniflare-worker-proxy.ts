@@ -45,7 +45,8 @@ export class MiniflareWorkerProxy extends HTTPServer {
       await new Promise((resolve) => setTimeout(resolve, delay));
     }
 
-    const url = await this.options.getDirectURL();
+    const target = await this.options.getDirectURL();
+    const url = new URL(request.url ?? "/", target);
     const headers = { ...request.headers };
     // All of these headers are set by the WebSocket constructor,
     // so if we don't delete them, the request will fail.
@@ -79,9 +80,7 @@ export class MiniflareWorkerProxy extends HTTPServer {
       client.close(code, reason);
     });
     client.on("message", (data, binary) => {
-      if (server.readyState === WebSocket.OPEN) {
-        server.send(data, { binary });
-      }
+      server.send(data, { binary });
     });
     client.on("close", (code, reason) => {
       this.wsReconnectAttempts.delete(id);
