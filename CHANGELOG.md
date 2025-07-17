@@ -1,3 +1,20 @@
+## v0.48.1
+
+### &nbsp;&nbsp;&nbsp;🚀 Features
+
+- **cloudflare**: Support durable object websockets in miniflare &nbsp;-&nbsp; by **John Royal** in https://github.com/sam-goodwin/alchemy/issues/697 [<samp>(4ddd1)</samp>](https://github.com/sam-goodwin/alchemy/commit/4ddd1b75)
+
+### &nbsp;&nbsp;&nbsp;🐞 Bug Fixes
+
+- **cloudflare**:
+  - Improve atomicity of d1 migrations &nbsp;-&nbsp; by **John Royal** in https://github.com/sam-goodwin/alchemy/issues/694 [<samp>(d3a74)</samp>](https://github.com/sam-goodwin/alchemy/commit/d3a7466f)
+  - Correct workers compatibility date &nbsp;-&nbsp; by **John Royal** in https://github.com/sam-goodwin/alchemy/issues/693 [<samp>(0bbe3)</samp>](https://github.com/sam-goodwin/alchemy/commit/0bbe341d)
+  - Miniflare websocket requests don't include url path &nbsp;-&nbsp; by **John Royal** in https://github.com/sam-goodwin/alchemy/issues/701 [<samp>(6959f)</samp>](https://github.com/sam-goodwin/alchemy/commit/6959faad)
+
+##### &nbsp;&nbsp;&nbsp;&nbsp;[View changes on GitHub](https://github.com/sam-goodwin/alchemy/compare/v0.48.0...v0.48.1)
+
+---
+
 ## v0.48.0
 
 ### &nbsp;&nbsp;&nbsp;🐞 Bug Fixes
