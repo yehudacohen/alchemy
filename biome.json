@@ -6,6 +6,7 @@
     "useIgnoreFile": true
   },
   "files": {
+    "ignoreUnknown": true,
     "includes": [
       "./src/**/*.ts",
       "./**/package.json",
@@ -29,9 +30,10 @@
       "!examples/cloudflare-redwood/worker-configuration.d.ts",
       "!./alchemy/src/aws/control/types.d.ts",
       "!examples/cloudflare-tanstack-start/.output/**",
-      "!examples/cloudflare-nuxt-pipeline/.output/**"
+      "!examples/cloudflare-nuxt-pipeline/.output/**",
+      "!./alchemy/lib/**"
     ],
-    "maxSize": 10000000
+    "experimentalScannerIgnores": ["!**/node_modules", "./alchemy/lib/**"]
   },
   "assist": {
     "actions": {
