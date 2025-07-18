@@ -1,3 +1,20 @@
+## v0.49.0
+
+### &nbsp;&nbsp;&nbsp;🚀 Features
+
+- **cloudflare**: RateLimit binding for Cloudflare Workers &nbsp;-&nbsp; by **Sam Goodwin** in https://github.com/sam-goodwin/alchemy/issues/709 [<samp>(f0cf6)</samp>](https://github.com/sam-goodwin/alchemy/commit/f0cf654)
+- **core**: Force updates &nbsp;-&nbsp; by **Sam Goodwin** in https://github.com/sam-goodwin/alchemy/issues/713 [<samp>(7013f)</samp>](https://github.com/sam-goodwin/alchemy/commit/7013fc6)
+- **replace**: Replace no longer requires await &nbsp;-&nbsp; by **Michael K** in https://github.com/sam-goodwin/alchemy/issues/712 [<samp>(38e20)</samp>](https://github.com/sam-goodwin/alchemy/commit/38e20a2)
+
+### &nbsp;&nbsp;&nbsp;🐞 Bug Fixes
+
+- **cloudflare**: Fix tanstack build and dev command &nbsp;-&nbsp; by **Sam Goodwin** in https://github.com/sam-goodwin/alchemy/issues/702 [<samp>(77d6c)</samp>](https://github.com/sam-goodwin/alchemy/commit/77d6cf0)
+- **core**: Don't log if scope skipped &nbsp;-&nbsp; by **Sam Goodwin** [<samp>(5d103)</samp>](https://github.com/sam-goodwin/alchemy/commit/5d103b1)
+
+##### &nbsp;&nbsp;&nbsp;&nbsp;[View changes on GitHub](https://github.com/sam-goodwin/alchemy/compare/v0.48.3...v0.49.0)
+
+---
+
 ## v0.48.4
 
 ### &nbsp;&nbsp;&nbsp;🐞 Bug Fixes
