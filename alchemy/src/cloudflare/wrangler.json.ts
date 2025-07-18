@@ -4,12 +4,20 @@ import type { Context } from "../context.ts";
 import { formatJson } from "../fs/static-json-file.ts";
 import { Resource } from "../resource.ts";
 import { assertNever } from "../util/assert-never.ts";
-import { Self, type Bindings } from "./bindings.ts";
+import {
+  Self,
+  type Bindings,
+  type WorkerBindingRateLimit,
+} from "./bindings.ts";
 import type { DurableObjectNamespace } from "./durable-object-namespace.ts";
 import type { EventSource } from "./event-source.ts";
 import { isQueueEventSource } from "./event-source.ts";
 import { isQueue } from "./queue.ts";
 import type { Worker, WorkerProps } from "./worker.ts";
+
+type WranglerJsonRateLimit = Omit<WorkerBindingRateLimit, "type"> & {
+  type: "rate_limit";
+};
 
 /**
  * Properties for wrangler.json configuration file
@@ -447,6 +455,13 @@ export interface WranglerJsonSpec {
     namespace: string;
     experimental_remote?: boolean;
   }[];
+
+  /**
+   * Unsafe bindings section for experimental features
+   */
+  unsafe?: {
+    bindings: WranglerJsonRateLimit[];
+  };
 }
 
 /**
@@ -534,6 +549,7 @@ function processBindings(
     namespace: string;
     experimental_remote?: boolean;
   }[] = [];
+  const unsafeBindings: WranglerJsonRateLimit[] = [];
   const containers: {
     class_name: string;
   }[] = [];
@@ -721,6 +737,13 @@ function processBindings(
         namespace: binding.namespaceName,
         experimental_remote: true,
       });
+    } else if (binding.type === "ratelimit") {
+      unsafeBindings.push({
+        name: bindingName,
+        type: "rate_limit",
+        namespace_id: binding.namespace_id.toString(),
+        simple: binding.simple,
+      });
     } else if (binding.type === "secret_key") {
       // no-op
     } else if (binding.type === "container") {
@@ -801,5 +824,11 @@ function processBindings(
 
   if (dispatchNamespaces.length > 0) {
     spec.dispatch_namespaces = dispatchNamespaces;
+  }
+
+  if (unsafeBindings.length > 0) {
+    spec.unsafe = {
+      bindings: unsafeBindings,
+    };
   }
 }
