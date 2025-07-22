@@ -1,3 +1,19 @@
+## v0.51.0
+
+### &nbsp;&nbsp;&nbsp;🚀 Features
+
+- **cloudflare**: API Shield, Schema and API Gateway Operation &nbsp;-&nbsp; by **Sam Goodwin** in https://github.com/sam-goodwin/alchemy/issues/719 [<samp>(e963b)</samp>](https://github.com/sam-goodwin/alchemy/commit/e963b975)
+
+### &nbsp;&nbsp;&nbsp;🐞 Bug Fixes
+
+- **cloudflare**:
+  - Remove customViteReactPlugin from tanstack template &nbsp;-&nbsp; by **Sam Goodwin** in https://github.com/sam-goodwin/alchemy/issues/727 [<samp>(3bc50)</samp>](https://github.com/sam-goodwin/alchemy/commit/3bc50a37)
+  - Certificate pack no longer returns undefined properties and can be replaced &nbsp;-&nbsp; by **Michael K** in https://github.com/sam-goodwin/alchemy/issues/714 [<samp>(a2170)</samp>](https://github.com/sam-goodwin/alchemy/commit/a2170b32)
+
+##### &nbsp;&nbsp;&nbsp;&nbsp;[View changes on GitHub](https://github.com/sam-goodwin/alchemy/compare/v0.50.0...v0.51.0)
+
+---
+
 ## v0.50.0
 
 ### &nbsp;&nbsp;&nbsp;🐞 Bug Fixes
