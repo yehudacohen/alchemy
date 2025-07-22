@@ -142,7 +142,6 @@ export class Scope {
   private isSkipped = false;
   private finalized = false;
   private startedAt = performance.now();
-
   private deferred: (() => Promise<any>)[] = [];
 
   public get appName(): string {
@@ -345,13 +344,13 @@ export class Scope {
   }
 
   public async set<T>(key: string, value: T): Promise<void> {
-    return this.withScopeState<void>(async (state, persist) => {
+    await this.withScopeState<void>(async (state, persist) => {
       state.data[key] = value;
       await persist(state); // only one line to save!
     });
   }
 
-  public async get<T>(key: string): Promise<T> {
+  public get<T>(key: string): Promise<T> {
     return this.withScopeState<T>(async (state) => state.data[key]);
   }
 
@@ -475,6 +474,7 @@ export class Scope {
         }
         throw e;
       })) ?? [];
+
     //todo(michael): remove once we deprecate doss; see: https://github.com/sam-goodwin/alchemy/issues/585
     let hasCorruptedResources = false;
     if (pendingDeletions) {
