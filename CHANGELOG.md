@@ -1,3 +1,13 @@
+## v0.51.2
+
+### &nbsp;&nbsp;&nbsp;🐞 Bug Fixes
+
+- **cloudflare**: Dev mode supports livestore &nbsp;-&nbsp; by **John Royal** in https://github.com/sam-goodwin/alchemy/issues/700 [<samp>(abf32)</samp>](https://github.com/sam-goodwin/alchemy/commit/abf32e0d)
+
+##### &nbsp;&nbsp;&nbsp;&nbsp;[View changes on GitHub](https://github.com/sam-goodwin/alchemy/compare/v0.51.1...v0.51.2)
+
+---
+
 ## v0.51.1
 
 ### &nbsp;&nbsp;&nbsp;🐞 Bug Fixes
