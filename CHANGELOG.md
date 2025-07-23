@@ -1,3 +1,13 @@
+## v0.51.1
+
+### &nbsp;&nbsp;&nbsp;🐞 Bug Fixes
+
+- **cloudflare**: Fetch all zones in findZoneForHostname &nbsp;-&nbsp; by **Andrew Jefferson** in https://github.com/sam-goodwin/alchemy/issues/729 [<samp>(ede6e)</samp>](https://github.com/sam-goodwin/alchemy/commit/ede6e53c)
+
+##### &nbsp;&nbsp;&nbsp;&nbsp;[View changes on GitHub](https://github.com/sam-goodwin/alchemy/compare/v0.51.0...v0.51.1)
+
+---
+
 ## v0.51.0
 
 ### &nbsp;&nbsp;&nbsp;🚀 Features
