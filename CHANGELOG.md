@@ -1,3 +1,17 @@
+## v0.52.0
+
+### &nbsp;&nbsp;&nbsp;🚀 Features
+
+- **cloudflare**: Local d1 migrations and do not create DB in dev &nbsp;-&nbsp; by **John Royal** in https://github.com/sam-goodwin/alchemy/issues/722 [<samp>(5fc11)</samp>](https://github.com/sam-goodwin/alchemy/commit/5fc1150a)
+
+### &nbsp;&nbsp;&nbsp;🐞 Bug Fixes
+
+- **cloudflare**: Explicit usage of workers-types &nbsp;-&nbsp; by **Sam Goodwin** in https://github.com/sam-goodwin/alchemy/issues/736 [<samp>(08a09)</samp>](https://github.com/sam-goodwin/alchemy/commit/08a09bc8)
+
+##### &nbsp;&nbsp;&nbsp;&nbsp;[View changes on GitHub](https://github.com/sam-goodwin/alchemy/compare/v0.51.3...v0.52.0)
+
+---
+
 ## v0.51.3
 
 ### &nbsp;&nbsp;&nbsp;🐞 Bug Fixes
