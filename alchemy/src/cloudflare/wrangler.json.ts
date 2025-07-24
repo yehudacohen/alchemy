@@ -557,7 +557,7 @@ function processBindings(
   for (const eventSource of eventSources ?? []) {
     if (isQueueEventSource(eventSource)) {
       queues.consumers.push({
-        queue: eventSource.queue.id,
+        queue: eventSource.queue.name,
         max_batch_size: eventSource.settings?.batchSize,
         max_concurrency: eventSource.settings?.maxConcurrency,
         max_retries: eventSource.settings?.maxRetries,
@@ -566,7 +566,7 @@ function processBindings(
       });
     } else if (isQueue(eventSource)) {
       queues.consumers.push({
-        queue: eventSource.id,
+        queue: eventSource.name,
       });
     }
   }
@@ -645,7 +645,6 @@ function processBindings(
         script_name: binding.scriptName,
       });
     } else if (binding.type === "d1") {
-      console.log("binding.dev", binding.dev);
       d1Databases.push({
         binding: bindingName,
         database_id: binding.id,
