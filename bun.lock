@@ -536,12 +536,6 @@
         "pluralize": "^8.0.0",
       },
     },
-    "examples/cloudflare-worker-bootstrap": {
-      "name": "cloudflare-worker-bootstrap",
-      "dependencies": {
-        "alchemy": "workspace:*",
-      },
-    },
     "examples/cloudflare-worker-simple": {
       "name": "cloudflare-worker-simple",
       "version": "0.0.0",
@@ -2452,8 +2446,6 @@
     "cloudflare-sveltekit": ["cloudflare-sveltekit@workspace:examples/cloudflare-sveltekit"],
 
     "cloudflare-worker": ["cloudflare-worker@workspace:examples/cloudflare-worker"],
-
-    "cloudflare-worker-bootstrap": ["cloudflare-worker-bootstrap@workspace:examples/cloudflare-worker-bootstrap"],
 
     "cloudflare-worker-simple": ["cloudflare-worker-simple@workspace:examples/cloudflare-worker-simple"],
 
