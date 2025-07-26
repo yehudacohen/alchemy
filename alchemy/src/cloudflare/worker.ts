@@ -747,7 +747,7 @@ export const _Worker = Resource(
       compatibilityFlags,
       outdir:
         props.bundle?.outdir ??
-        path.join(process.cwd(), ".alchemy", ...this.scope.chain, id),
+        path.join(cwd, ".alchemy", ...this.scope.chain, id),
       sourceMap: "sourceMap" in props ? props.sourceMap : undefined,
     });
 
