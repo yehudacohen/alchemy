@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "react-router build",
+    "build": "react-router typegen && react-router build",
     "deploy": "alchemy deploy --env-file ../../.env",
     "destroy": "alchemy destroy --env-file ../../.env",
     "dev": "alchemy dev --env-file ../../.env",

@@ -16,10 +16,6 @@ export const server = await Worker("server", {
 
 export const client = await Vite("client", {
   assets: "dist",
-  command: "bun vite build",
-  dev: {
-    command: "bun vite dev",
-  },
   env: {
     VITE_WEBSOCKET_URL: server.url!,
   },
