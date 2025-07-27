@@ -1,3 +1,23 @@
+## v0.54.0
+
+### &nbsp;&nbsp;&nbsp;🚀 Features
+
+- **cli**: Add init command for existing projects &nbsp;-&nbsp; by **Aman Varshney** in https://github.com/sam-goodwin/alchemy/issues/710 [<samp>(1e443)</samp>](https://github.com/sam-goodwin/alchemy/commit/1e443051)
+- **cloudflare**: Wasm support + prisma example &nbsp;-&nbsp; by **John Royal** in https://github.com/sam-goodwin/alchemy/issues/741 [<samp>(2af8f)</samp>](https://github.com/sam-goodwin/alchemy/commit/2af8fa5f)
+
+### &nbsp;&nbsp;&nbsp;🐞 Bug Fixes
+
+- **cli**:
+  - Hard exit after sub-process exits &nbsp;-&nbsp; by **Sam Goodwin** [<samp>(77516)</samp>](https://github.com/sam-goodwin/alchemy/commit/77516791)
+- **cloudflare**:
+  - Do not try to delete local D1 database &nbsp;-&nbsp; by **Sam Goodwin** [<samp>(e81f7)</samp>](https://github.com/sam-goodwin/alchemy/commit/e81f7a20)
+  - Align bundle platform, mainFields and conditions with wrangler &nbsp;-&nbsp; by **Sam Goodwin** in https://github.com/sam-goodwin/alchemy/issues/745 [<samp>(b683b)</samp>](https://github.com/sam-goodwin/alchemy/commit/b683b17f)
+  - Nuxt example fails in dev &nbsp;-&nbsp; by **John Royal** in https://github.com/sam-goodwin/alchemy/issues/743 [<samp>(39cf6)</samp>](https://github.com/sam-goodwin/alchemy/commit/39cf6669)
+
+##### &nbsp;&nbsp;&nbsp;&nbsp;[View changes on GitHub](https://github.com/sam-goodwin/alchemy/compare/v0.53.0...v0.54.0)
+
+---
+
 ## v0.53.0
 
 ### &nbsp;&nbsp;&nbsp;🐞 Bug Fixes
