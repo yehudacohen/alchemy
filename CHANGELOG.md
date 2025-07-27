@@ -1,3 +1,13 @@
+## v0.55.0
+
+### &nbsp;&nbsp;&nbsp;🚀 Features
+
+- **aws**: EC2 networking resources (VPC, NAT, IGW, Subnet, Route) &nbsp;-&nbsp; by **yehudacohen** in https://github.com/sam-goodwin/alchemy/issues/657 [<samp>(e634a)</samp>](https://github.com/sam-goodwin/alchemy/commit/e634a953)
+
+##### &nbsp;&nbsp;&nbsp;&nbsp;[View changes on GitHub](https://github.com/sam-goodwin/alchemy/compare/v0.54.0...v0.55.0)
+
+---
+
 ## v0.54.0
 
 ### &nbsp;&nbsp;&nbsp;🚀 Features
