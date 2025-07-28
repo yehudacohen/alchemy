@@ -1,3 +1,13 @@
+## v0.55.1
+
+### &nbsp;&nbsp;&nbsp;🐞 Bug Fixes
+
+- **cli**: Resolve zod version conflict &nbsp;-&nbsp; by **Aman Varshney** in https://github.com/sam-goodwin/alchemy/issues/750 [<samp>(f2f7a)</samp>](https://github.com/sam-goodwin/alchemy/commit/f2f7a9dd)
+
+##### &nbsp;&nbsp;&nbsp;&nbsp;[View changes on GitHub](https://github.com/sam-goodwin/alchemy/compare/v0.55.0...v0.55.1)
+
+---
+
 ## v0.55.0
 
 ### &nbsp;&nbsp;&nbsp;🚀 Features
