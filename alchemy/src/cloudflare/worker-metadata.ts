@@ -19,7 +19,7 @@ import type {
   MultiStepMigration,
   SingleStepMigration,
 } from "./worker-migration.ts";
-import { type AssetsConfig, type WorkerProps } from "./worker.ts";
+import type { AssetsConfig, WorkerProps } from "./worker.ts";
 
 /**
  * Metadata returned by Cloudflare API for a worker script
