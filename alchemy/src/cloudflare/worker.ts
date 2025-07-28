@@ -704,7 +704,7 @@ export function Worker<const B extends Bindings>(
   return _Worker(id, props as WorkerProps<B>);
 }
 
-export const _Worker = Resource(
+const _Worker = Resource(
   "cloudflare::Worker",
   {
     alwaysUpdate: true,
