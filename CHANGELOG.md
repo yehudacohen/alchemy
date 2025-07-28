@@ -1,3 +1,15 @@
+## v0.55.2
+
+### &nbsp;&nbsp;&nbsp;🐞 Bug Fixes
+
+- **cli**:
+  - Add worker/ to vite template tsconfig.json &nbsp;-&nbsp; by **Sam Goodwin** [<samp>(0df20)</samp>](https://github.com/sam-goodwin/alchemy/commit/0df204fc)
+  - Remove command from Vite resource in vite template &nbsp;-&nbsp; by **Sam Goodwin** [<samp>(9fb33)</samp>](https://github.com/sam-goodwin/alchemy/commit/9fb33f2b)
+
+##### &nbsp;&nbsp;&nbsp;&nbsp;[View changes on GitHub](https://github.com/sam-goodwin/alchemy/compare/v0.55.1...v0.55.2)
+
+---
+
 ## v0.55.1
 
 ### &nbsp;&nbsp;&nbsp;🐞 Bug Fixes
