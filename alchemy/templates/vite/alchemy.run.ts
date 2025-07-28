@@ -7,7 +7,6 @@ const app = await alchemy("my-alchemy-app");
 
 export const worker = await Vite("website", {
   main: "worker/index.ts",
-  command: "bun run build",
 });
 
 console.log({
