@@ -1,10 +1,10 @@
-import { dim } from "kleur/colors";
 import { Listr } from "listr2";
 import { spawn } from "node:child_process";
 import { createWriteStream } from "node:fs";
 import { access, mkdir, readdir, stat, unlink } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { dim } from "picocolors";
 
 // Get the root directory of the project
 const __filename = fileURLToPath(import.meta.url);
@@ -22,6 +22,7 @@ interface ExampleProject {
   hasEnvFile: boolean;
   hasAlchemyRunFile: boolean;
   hasIndexFile: boolean;
+  hasCheckCommand: boolean;
 }
 
 async function discoverExamples(): Promise<ExampleProject[]> {
@@ -39,6 +40,7 @@ async function discoverExamples(): Promise<ExampleProject[]> {
         const envFilePath = join(rootDir, ".env");
         const alchemyRunPath = join(examplePath, "alchemy.run.ts");
         const indexPath = join(examplePath, "index.ts");
+        const pkgJson = await import(join(examplePath, "package.json"));
 
         const hasEnvFile = await fileExists(envFilePath);
         const hasAlchemyRunFile = await fileExists(alchemyRunPath);
@@ -50,6 +52,7 @@ async function discoverExamples(): Promise<ExampleProject[]> {
           hasEnvFile,
           hasAlchemyRunFile,
           hasIndexFile,
+          hasCheckCommand: !!pkgJson.scripts?.check,
         });
       }
     }
@@ -97,6 +100,8 @@ async function runCommand(
       env: {
         ...process.env,
         ...options.env,
+        ALCHEMY_E2E: "1",
+        DO_NOT_TRACK: "true",
       },
     });
 
@@ -160,7 +165,12 @@ async function verifyNoLocalStateInCI(examplePath: string): Promise<void> {
   }
 }
 
-const skippedExamples = ["aws-app", "cloudflare-tanstack-start"];
+const skippedExamples = [
+  "aws-app",
+  "cloudflare-tanstack-start",
+  // TODO(sam): re-enable. Right now it might be too slow and doesn't have dev mode
+  "planetscale-drizzle",
+];
 
 // Discover examples and generate tests
 const examples = (await discoverExamples()).filter(
@@ -216,10 +226,6 @@ const tasks = new Listr(
           command: destroyCommand,
         },
         {
-          title: "Check",
-          command: "bun run build",
-        },
-        {
           title: "Dev",
           command: devCommand,
           env: {
@@ -244,6 +250,10 @@ const tasks = new Listr(
           command: deployCommand,
         },
         {
+          title: "Check",
+          command: example.hasCheckCommand ? "bun run check" : "bun run build",
+        },
+        {
           title: "Destroy",
           command: destroyCommand,
         },
@@ -259,7 +269,7 @@ const tasks = new Listr(
           await runCommand(phase.command, {
             cwd: example.path,
             exampleName: noCaptureFlag ? undefined : example.name,
-            env: phase.env,
+            env: { DO_NOT_TRACK: "1", ...phase.env },
           });
           await verifyNoLocalStateInCI(example.path);
         }

@@ -13,14 +13,12 @@
     "deploy": "alchemy deploy --env-file ../../.env",
     "destroy": "alchemy destroy --env-file ../../.env",
     "dev": "alchemy dev --env-file ../../.env",
-    "dev:init": "rw-scripts dev-init",
     "preview": "bun run build && bun run vite preview",
     "worker:run": "rw-scripts worker-run",
     "release": "rw-scripts ensure-deploy-env && bun run clean && bun run migrate:new && RWSDK_DEPLOY=1 bun run build && wrangler deploy",
     "format": "prettier --write ./src",
     "migrate:new": "drizzle-kit generate",
     "migrate:dev": "wrangler d1 migrations apply DB --local",
-    "seed": "bun run worker:run ./src/db/seed.ts",
     "check": "bun run types",
     "types": "bun run tsc"
   },
@@ -28,7 +26,7 @@
     "alchemy": "workspace:*",
     "dotenv": "^16.5.0",
     "drizzle-orm": "^0.44.2",
-    "rwsdk": "^0.1.10"
+    "rwsdk": "^0.1.35"
   },
   "devDependencies": {
     "@types/node": "^22.14.1",

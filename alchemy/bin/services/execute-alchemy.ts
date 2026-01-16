@@ -1,18 +1,18 @@
 import { log } from "@clack/prompts";
-import { execa } from "execa";
+import { spawn } from "node:child_process";
+import { once } from "node:events";
 import { resolve } from "node:path";
 import pc from "picocolors";
 import z from "zod";
 import { detectRuntime } from "../../src/util/detect-node-runtime.ts";
 import { detectPackageManager } from "../../src/util/detect-package-manager.ts";
 import { exists } from "../../src/util/exists.ts";
+import { ExitSignal } from "../trpc.ts";
 
 export const entrypoint = z
   .string()
   .optional()
-  .describe(
-    "Path to the entrypoint file. Defaults to ./alchemy.run.ts > ./alchemy.run.js",
-  );
+  .describe("Path to the entrypoint file");
 
 export const watch = z
   .boolean()
@@ -75,13 +75,19 @@ export async function execAlchemy(
 ) {
   const args: string[] = [];
   const execArgs: string[] = [];
+
   if (quiet) args.push("--quiet");
   if (read) args.push("--read");
   if (force) args.push("--force");
   if (stage) args.push(`--stage ${stage}`);
   if (destroy) args.push("--destroy");
-  if (watch) execArgs.push("--watch");
-  if (envFile) execArgs.push(`--env-file ${envFile}`);
+  if (watch) {
+    execArgs.push("--watch");
+    args.push("--watch");
+  }
+  if (envFile && (await exists(envFile))) {
+    execArgs.push(`--env-file ${envFile}`);
+  }
   if (dev) args.push("--dev");
 
   // Check for alchemy.run.ts or alchemy.run.js (if not provided)
@@ -103,7 +109,7 @@ export async function execAlchemy(
       ),
     );
     log.info("Create an alchemy.run.ts file to define your infrastructure.");
-    process.exit(1);
+    throw new ExitSignal(1);
   }
 
   // Detect package manager
@@ -148,27 +154,31 @@ export async function execAlchemy(
           break;
       }
   }
+  process.on("SIGINT", async () => {
+    await exitPromise;
+    process.exit(sanitizeExitCode(child.exitCode));
+  });
 
-  try {
-    console.log(command);
-    await execa(command, {
-      cwd,
-      shell: true,
-      stdio: "inherit",
-      env: {
-        ...process.env,
-        FORCE_COLOR: "1",
-      },
-    });
-    process.exit(0);
-  } catch (error: any) {
-    log.error(pc.red(`Deploy failed: ${error.message}`));
-    if (error.stdout) {
-      console.log(error.stdout);
-    }
-    if (error.stderr) {
-      console.error(error.stderr);
-    }
-    process.exit(1);
-  }
+  console.log(command);
+  const child = spawn(command, {
+    cwd,
+    shell: true,
+    stdio: "inherit",
+    env: {
+      ...process.env,
+      FORCE_COLOR: "1",
+    },
+  });
+  const exitPromise = once(child, "exit");
+  await exitPromise.catch(() => {});
+  process.exit(sanitizeExitCode(child.exitCode));
 }
+
+/**
+ * If exit code is 130 (SIGINT) or null, return 0.
+ * Otherwise, return the exit code.
+ */
+const sanitizeExitCode = (exitCode: number | null) => {
+  if (exitCode === null || exitCode === 130) return 0;
+  return exitCode;
+};

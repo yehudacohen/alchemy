@@ -48,6 +48,12 @@ export type InternalCloudflareApiOptions = CloudflareAuthOptions & {
   accountId: string;
 };
 
+function computeCacheKey(options: CloudflareApiOptions): string {
+  return `${options.baseUrl}|${options.accountId}|${options.apiKey?.unencrypted}|${options.apiToken?.unencrypted}|${options.email}`;
+}
+
+const cloudflareApiCache: Record<string, CloudflareApi> = {};
+
 /**
  * Creates a CloudflareApi instance with automatic account ID discovery if not provided
  *
@@ -57,17 +63,26 @@ export type InternalCloudflareApiOptions = CloudflareAuthOptions & {
 export async function createCloudflareApi(
   options: Partial<CloudflareApiOptions> | InternalCloudflareApiOptions = {},
 ): Promise<CloudflareApi> {
+  // TODO: Implement scope-level credential resolution similar to AWS
+  // This function should check for scope.providerCredentials.cloudflare
+  // and merge those credentials with the provided options, following
+  // the same three-tier resolution pattern: global → scope → resource
+  const cacheKey = computeCacheKey(options);
+  if (cloudflareApiCache[cacheKey]) {
+    return cloudflareApiCache[cacheKey];
+  }
+
   const authOptions = await normalizeAuthOptions(options);
   const accountId =
     options.accountId ??
     process.env.CLOUDFLARE_ACCOUNT_ID ??
     process.env.CF_ACCOUNT_ID ??
     (await getCloudflareAccountId(authOptions));
-  return new CloudflareApi({
+  return (cloudflareApiCache[cacheKey] = new CloudflareApi({
     baseUrl: options.baseUrl,
     accountId,
     authOptions,
-  });
+  }));
 }
 
 /**
@@ -240,3 +255,22 @@ class TooManyRequestsError extends Error {
 }
 
 class ForbiddenError extends Error {}
+/**
+ * Cloudflare scope extensions - adds Cloudflare credential support to scope options.
+ * This uses TypeScript module augmentation to extend the ProviderCredentials interface.
+ * Since ScopeOptions and RunOptions both extend ProviderCredentials,
+ * they automatically inherit these properties.
+ *
+ * NOTE: These scope credentials are not currently being used by createCloudflareApi.
+ * See TODO above in createCloudflareApi function for implementation needed.
+ */
+declare module "../scope.ts" {
+  interface ProviderCredentials {
+    /**
+     * Cloudflare credentials configuration for this scope.
+     * All Cloudflare resources created within this scope will inherit these credentials
+     * unless overridden at the resource level.
+     */
+    cloudflare?: CloudflareApiOptions;
+  }
+}

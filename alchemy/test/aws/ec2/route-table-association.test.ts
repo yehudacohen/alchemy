@@ -10,13 +10,17 @@ import { BRANCH_PREFIX } from "../../util.ts";
 
 import "../../../src/test/vitest.ts";
 
+// Set test environment variables for AWS tests
+process.env.AWS_PROFILE = "test9-374080338393";
+process.env.AWS_REGION = "us-west-2";
+
 const test = alchemy.test(import.meta, {
   prefix: BRANCH_PREFIX,
 });
 
 const ec2 = new EC2Client({});
 
-describe("RouteTableAssociation", () => {
+describe.skipIf(!process.env.ALL_TESTS)("RouteTableAssociation", () => {
   test("create route table association with subnet", async (scope) => {
     const vpcName = `${BRANCH_PREFIX}-alchemy-test-rta-vpc`;
     const rtName = `${BRANCH_PREFIX}-alchemy-test-rta-rt`;

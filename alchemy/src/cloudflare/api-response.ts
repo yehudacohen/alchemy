@@ -37,6 +37,28 @@ export interface CloudflareApiResponse<T> {
 }
 
 /**
+ * Cloudflare API list response format
+ */
+export interface CloudflareApiListResponse<T>
+  extends CloudflareApiResponse<T[]> {
+  /**
+   * List of results
+   */
+  result: T[];
+
+  /**
+   * Pagination information (always present for list responses)
+   */
+  result_info: {
+    page: number;
+    per_page: number;
+    total_pages: number;
+    count: number;
+    total_count: number;
+  };
+}
+
+/**
  * Cloudflare API error format
  */
 export interface CloudflareApiErrorPayload {
@@ -80,8 +102,8 @@ export async function extractCloudflareResult<T>(
   label: string,
   promise: Promise<Response>,
 ): Promise<T> {
-  const response = await promise.catch(() => {
-    throw new Error(`Failed to ${label}: Failed to fetch`);
+  const response = await promise.catch((cause) => {
+    throw new Error(`Failed to ${label}: Failed to fetch`, { cause });
   });
   const json = (await response.json().catch(() => {
     throw new Error(

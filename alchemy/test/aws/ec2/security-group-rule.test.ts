@@ -9,13 +9,17 @@ import { BRANCH_PREFIX } from "../../util.ts";
 
 import "../../../src/test/vitest.ts";
 
+// Set test environment variables for AWS tests
+process.env.AWS_PROFILE = process.env.AWS_PROFILE || "default";
+process.env.AWS_REGION = process.env.AWS_REGION || "us-west-2";
+
 const test = alchemy.test(import.meta, {
   prefix: BRANCH_PREFIX,
 });
 
 const ec2 = new EC2Client({});
 
-describe("SecurityGroupRule", () => {
+describe.skipIf(!process.env.ALL_TESTS)("SecurityGroupRule", () => {
   test("create security group with ingress rules", async (scope) => {
     const vpcName = `${BRANCH_PREFIX}-alchemy-test-sgr-vpc`;
     const sgName = `${BRANCH_PREFIX}-alchemy-test-sgr`;

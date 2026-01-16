@@ -1,5 +1,7 @@
 import { AsyncLocalStorage } from "node:async_hooks";
+import path from "node:path";
 import util from "node:util";
+import pc from "picocolors";
 import type { Phase } from "./alchemy.ts";
 import { destroy, destroyAll, DestroyStrategy } from "./destroy.ts";
 import {
@@ -21,6 +23,10 @@ import {
   createLoggerInstance,
   type LoggerApi,
 } from "./util/cli.ts";
+import {
+  idempotentSpawn,
+  type IdempotentSpawnOptions,
+} from "./util/idempotent-spawn.ts";
 import { logger } from "./util/logger.ts";
 import { AsyncMutex } from "./util/mutex.ts";
 import type { ITelemetryClient } from "./util/telemetry/client.ts";
@@ -31,7 +37,7 @@ export class RootScopeStateAttemptError extends Error {
   }
 }
 
-export interface ScopeOptions {
+export interface ScopeOptions extends ProviderCredentials {
   stage?: string;
   parent: Scope | undefined;
   scopeName: string;
@@ -63,8 +69,44 @@ export interface ScopeOptions {
    * @default "sequential"
    */
   destroyStrategy?: DestroyStrategy;
+  /**
+   * The telemetry client to use for the scope.
+   *
+   */
   telemetryClient?: ITelemetryClient;
+  /**
+   * The logger to use for the scope.
+   */
   logger?: LoggerApi;
+  /**
+   * The path to the .alchemy directory.
+   *
+   * @default "./.alchemy"
+   */
+  dotAlchemy?: string;
+}
+
+/**
+ * Base interface for provider credentials that can be extended by each provider.
+ * This allows providers to add their own credential properties without modifying the core scope interface.
+ *
+ * Provider credentials cannot conflict with core ScopeOptions properties.
+ *
+ * Providers can extend this interface using module augmentation:
+ *
+ * @example
+ * ```typescript
+ * // In aws/scope-extensions.ts
+ * declare module "../scope.ts" {
+ *   interface ProviderCredentials {
+ *     aws?: AwsClientProps;
+ *   }
+ * }
+ * ```
+ */
+export interface ProviderCredentials extends Record<string, unknown> {
+  // Provider credentials should not conflict with core scope properties
+  // TypeScript will enforce this at compile time when providers extend this interface
 }
 
 export type PendingDeletions = Array<{
@@ -139,11 +181,15 @@ export class Scope {
   public readonly telemetryClient: ITelemetryClient;
   public readonly dataMutex: AsyncMutex;
 
+  // Provider credentials for scope-level credential overrides
+  public readonly providerCredentials: ProviderCredentials;
+
   private isErrored = false;
   private isSkipped = false;
   private finalized = false;
   private startedAt = performance.now();
   private deferred: (() => Promise<any>)[] = [];
+  private cleanups: (() => Promise<void>)[] = [];
 
   public get appName(): string {
     if (this.parent) {
@@ -152,10 +198,34 @@ export class Scope {
     return this.scopeName;
   }
 
+  public readonly dotAlchemy: string;
+
   constructor(options: ScopeOptions) {
-    this.scopeName = options.scopeName;
+    // Extract core scope options first
+    const {
+      scopeName,
+      parent,
+      stage,
+      password,
+      stateStore,
+      quiet,
+      phase,
+      local,
+      watch,
+      force,
+      destroyStrategy,
+      telemetryClient,
+      logger,
+      dotAlchemy,
+      ...providerCredentials
+    } = options;
+
+    this.scopeName = scopeName;
     this.name = this.scopeName;
-    this.parent = options.parent ?? Scope.getScope();
+    this.parent = parent ?? Scope.getScope();
+
+    // Store provider credentials (TypeScript ensures no conflicts with core options)
+    this.providerCredentials = providerCredentials as ProviderCredentials;
 
     const isChild = this.parent !== undefined;
     if (this.scopeName?.includes(":") && isChild) {
@@ -164,19 +234,23 @@ export class Scope {
         `Scope name "${this.scopeName}" cannot contain double colons`,
       );
     }
+    this.dotAlchemy =
+      options.dotAlchemy ??
+      this.parent?.dotAlchemy ??
+      path.join(process.cwd(), ".alchemy");
 
-    this.stage = options?.stage ?? this.parent?.stage ?? DEFAULT_STAGE;
+    this.stage = stage ?? this.parent?.stage ?? DEFAULT_STAGE;
     this.parent?.children.set(this.scopeName!, this);
-    this.quiet = options.quiet ?? this.parent?.quiet ?? false;
+    this.quiet = quiet ?? this.parent?.quiet ?? false;
     if (this.parent && !this.scopeName) {
       throw new Error("Scope name is required when creating a child scope");
     }
-    this.password = options.password ?? this.parent?.password;
-    const phase = options.phase ?? this.parent?.phase;
-    if (phase === undefined) {
+    this.password = password ?? this.parent?.password;
+    const resolvedPhase = phase ?? this.parent?.phase;
+    if (resolvedPhase === undefined) {
       throw new Error("Phase is required");
     }
-    this.phase = phase;
+    this.phase = resolvedPhase;
 
     this.logger = this.quiet
       ? createDummyLogger()
@@ -186,14 +260,14 @@ export class Scope {
             stage: this.stage,
             appName: this.appName ?? "",
           },
-          options.logger,
+          logger,
         );
 
-    this.local = options.local ?? this.parent?.local ?? false;
-    this.watch = options.watch ?? this.parent?.watch ?? false;
-    this.force = options.force ?? this.parent?.force ?? false;
+    this.local = local ?? this.parent?.local ?? false;
+    this.watch = watch ?? this.parent?.watch ?? false;
+    this.force = force ?? this.parent?.force ?? false;
     this.destroyStrategy =
-      options.destroyStrategy ?? this.parent?.destroyStrategy ?? "sequential";
+      destroyStrategy ?? this.parent?.destroyStrategy ?? "sequential";
     if (this.local) {
       this.logger.warnOnce(
         "Development mode is in beta. Please report any issues to https://github.com/sam-goodwin/alchemy/issues.",
@@ -201,17 +275,35 @@ export class Scope {
     }
 
     this.stateStore =
-      options.stateStore ?? this.parent?.stateStore ?? defaultStateStore;
-    this.telemetryClient =
-      options.telemetryClient ?? this.parent?.telemetryClient!;
+      stateStore ?? this.parent?.stateStore ?? defaultStateStore;
+    this.telemetryClient = telemetryClient ?? this.parent?.telemetryClient!;
     this.state = new InstrumentedStateStore(
       this.stateStore(this),
       this.telemetryClient,
     );
-    if (!options.telemetryClient && !this.parent?.telemetryClient) {
+    if (!telemetryClient && !this.parent?.telemetryClient) {
       throw new Error("Telemetry client is required");
     }
     this.dataMutex = new AsyncMutex();
+  }
+
+  public async spawn<
+    E extends ((line: string) => string | undefined) | undefined,
+  >(
+    // TODO(sam): validate uniqueness? Ensure a flat .logs/${id}.log dir? Or nest in scope dirs?
+    id: string,
+    options: Omit<IdempotentSpawnOptions, "log" | "stateFile">,
+  ) {
+    const dotAlchemy = path.join(process.cwd(), ".alchemy");
+    const logsDir = path.join(dotAlchemy, "logs");
+    const pidsDir = path.join(dotAlchemy, "pids");
+
+    const extracted = await idempotentSpawn({
+      log: path.join(logsDir, `${id}.log`),
+      stateFile: path.join(pidsDir, `${id}.pid.json`),
+      ...options,
+    });
+    return extracted as E extends undefined ? undefined : string;
   }
 
   /**
@@ -417,6 +509,7 @@ export class Scope {
     if (!this.isErrored && !this.isSkipped) {
       // TODO: need to detect if it is in error
       const resourceIds = await this.state.list();
+
       const aliveIds = new Set(this.resources.keys());
       const orphanIds = Array.from(
         resourceIds.filter((id) => !aliveIds.has(id)),
@@ -466,6 +559,7 @@ export class Scope {
     });
 
     if (!this.parent && process.env.ALCHEMY_TEST_KILL_ON_FINALIZE) {
+      await this.cleanup();
       process.exit(0);
     }
   }
@@ -535,6 +629,28 @@ export class Scope {
       return this.run(() => fn()).then(_resolve, _reject);
     });
     return promise;
+  }
+
+  /**
+   * Run all cleanup functions registered with `onCleanup`.
+   * This should only be called on the root scope.
+   */
+  public async cleanup() {
+    if (this.parent || this.cleanups.length === 0) return;
+    this.logger.log(pc.gray("Exiting..."));
+    await Promise.allSettled(this.cleanups.map((cleanup) => cleanup()));
+  }
+
+  /**
+   * Register a cleanup function that will be called when the process exits.
+   * This should only be called on the root scope.
+   */
+  public onCleanup(fn: () => Promise<void>) {
+    if (this.parent) {
+      this.root.onCleanup(fn);
+      return;
+    }
+    this.cleanups.push(fn);
   }
 
   /**

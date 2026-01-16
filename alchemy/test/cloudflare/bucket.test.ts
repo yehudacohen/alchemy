@@ -11,7 +11,7 @@ import {
 } from "../../src/cloudflare/bucket.ts";
 import { Worker } from "../../src/cloudflare/worker.ts";
 import { destroy } from "../../src/destroy.ts";
-import { BRANCH_PREFIX } from "../util.ts";
+import { BRANCH_PREFIX, waitFor } from "../util.ts";
 import { fetchAndExpectOK } from "./fetch-utils.ts";
 
 import "../../src/test/vitest.ts";
@@ -123,7 +123,7 @@ describe("R2 Bucket Resource", async () => {
       expect(putResponse.status).toEqual(200);
 
       // Verify the file exists in the bucket
-      const keys = await Array.fromAsync(listObjects(api, bucketName, bucket));
+      const { keys } = await listObjects(api, bucketName, bucket);
       expect(keys.length).toBeGreaterThan(0);
       expect(keys).toContain(testKey);
 
@@ -216,9 +216,15 @@ describe("R2 Bucket Resource", async () => {
       expect(worker.bindings).toBeDefined();
       expect(worker.bindings!.STORAGE).toBeDefined();
 
-      // Test that the R2 binding is accessible in the worker
-      const response = await fetchAndExpectOK(`${worker.url}/r2-info`);
-      const data = (await response.json()) as {
+      // Test that the R2 binding is accessible in the worker (poll for eventual consistency)
+      const data = (await waitFor(
+        async () => {
+          const response = await fetchAndExpectOK(`${worker!.url}/r2-info`);
+          return response.json();
+        },
+        (d: any) => d?.hasR2 === true,
+        { timeoutMs: 10_000, intervalMs: 300 },
+      )) as {
         hasR2: boolean;
         bucketName: string;
       };
